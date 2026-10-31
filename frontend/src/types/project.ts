@@ -26,6 +26,7 @@ export interface WeddingFunction {
   venue?: string;
   description?: string;
   status: FunctionStatus;
+  estimatedCost: number | string;
   createdAt: string;
   updatedAt: string;
 }

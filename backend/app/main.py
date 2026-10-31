@@ -44,8 +44,29 @@ async def lifespan(app: FastAPI):
     # Ensure database schema is initialized
     from app.database.base import Base
     import app.models  # noqa: F401
-    from app.database.session import engine
+    from app.database.session import engine, SessionLocal
+    from sqlalchemy import inspect, text
     Base.metadata.create_all(bind=engine)
+
+    # Ensure estimated_cost column exists in wedding_functions and backfill
+    try:
+        inspector = inspect(engine)
+        if "wedding_functions" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("wedding_functions")]
+            if "estimated_cost" not in columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE wedding_functions ADD COLUMN estimated_cost NUMERIC(15, 2) DEFAULT 0.00 NOT NULL"))
+                    conn.commit()
+        from app.services.project_service import project_service
+        db = SessionLocal()
+        try:
+            project_service.backfill_function_costs(db)
+        except Exception as e:
+            logger.warning(f"Could not backfill function costs: {e}")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"Schema check error: {e}")
 
     sync_task = asyncio.create_task(periodic_email_sync())
     yield

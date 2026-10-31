@@ -160,6 +160,8 @@ def test_phase3_full_wedding_project_lifecycle():
     f1_data = res_f1.json()
     f1_id = f1_data["id"]
     assert f1_data["functionName"] == "Royal Sangeet & Sufi Night"
+    # Auto-estimated cost for Sangeet: ₹1,20,000 - ₹2,50,000
+    assert 120000 <= float(f1_data["estimatedCost"]) <= 250000
 
     func2_payload = {
         "functionName": "Royal Varmala & Pheras",
@@ -171,20 +173,31 @@ def test_phase3_full_wedding_project_lifecycle():
     }
     res_f2 = client.post(f"/api/v1/projects/{project_id}/functions", json=func2_payload)
     assert res_f2.status_code == 201
-    f2_id = res_f2.json()["id"]
+    f2_data = res_f2.json()
+    f2_id = f2_data["id"]
+    # Auto-estimated cost for Wedding/Pheras: ₹2,50,000 - ₹5,00,000
+    assert 250000 <= float(f2_data["estimatedCost"]) <= 500000
+
+    # Test GET /api/v1/projects/{project_id}/functions endpoint
+    res_list_funcs = client.get(f"/api/v1/projects/{project_id}/functions")
+    assert res_list_funcs.status_code == 200
+    assert len(res_list_funcs.json()) == 2
+    assert "estimatedCost" in res_list_funcs.json()[0]
 
     # Verify functions are listed in project details
     res_detail_funcs = client.get(f"/api/v1/projects/{project_id}")
     assert len(res_detail_funcs.json()["functions"]) == 2
 
-    # Update function
+    # Update function including custom estimatedCost adjustment by organizer
     res_update_f = client.put(f"/api/v1/projects/{project_id}/functions/{f1_id}", json={
         "venue": "Zenana Mahal Courtyard",
-        "status": "In Progress"
+        "status": "In Progress",
+        "estimatedCost": 195000.00
     })
     assert res_update_f.status_code == 200
     assert res_update_f.json()["venue"] == "Zenana Mahal Courtyard"
     assert res_update_f.json()["status"] == "In Progress"
+    assert float(res_update_f.json()["estimatedCost"]) == 195000.00
 
     # --- Step 8: Milestone Management & Progress Toggle ---
     ms_payload = {

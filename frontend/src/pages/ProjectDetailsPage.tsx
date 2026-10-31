@@ -18,7 +18,8 @@ import {
   Heart,
   X,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  IndianRupee
 } from 'lucide-react';
 import { projectApi } from '../services/api';
 import { 
@@ -431,120 +432,171 @@ export const ProjectDetailsPage: React.FC = () => {
       )}
 
       {/* TAB 2: WEDDING FUNCTIONS */}
-      {activeTab === 'functions' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-[#E5E0D8]">
-            <div>
-              <h2 className="font-serif text-2xl text-[#1F2421]">Palace Wedding Functions</h2>
-              <p className="text-xs text-[#736F68] mt-0.5">
-                Multi-day ceremony logistics (Mehendi, Haldi, Royal Sangeet, Pheras, Reception).
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setEditingFunction(null);
-                setIsAddFunctionOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider font-semibold hover:bg-[#343733]"
-            >
-              <Plus size={14} className="text-[#D9C496]" />
-              <span>Add Function</span>
-            </button>
-          </div>
+      {activeTab === 'functions' && (() => {
+        const totalFunctionsCost = project.functions.reduce(
+          (acc, fn) => acc + (Number(fn.estimatedCost) || 0),
+          0
+        );
 
-          {project.functions.length === 0 ? (
-            <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-12 text-center max-w-md mx-auto space-y-3">
-              <Calendar size={28} className="mx-auto text-[#9E7D3B]" />
-              <h3 className="font-serif text-lg text-[#1F2421]">No Functions Added Yet</h3>
-              <p className="text-xs text-[#736F68]">
-                Add ceremonies and function run-sheets for this palace wedding.
-              </p>
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E5E0D8]">
+              <div>
+                <h2 className="font-serif text-2xl text-[#1F2421]">Palace Wedding Functions</h2>
+                <p className="text-xs text-[#736F68] mt-0.5">
+                  Multi-day ceremony logistics (Mehendi, Haldi, Royal Sangeet, Pheras, Reception) with automated cost estimation.
+                </p>
+              </div>
               <button
                 onClick={() => {
                   setEditingFunction(null);
                   setIsAddFunctionOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider font-semibold"
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider font-semibold hover:bg-[#343733]"
               >
                 <Plus size={14} className="text-[#D9C496]" />
-                <span>Add First Function</span>
+                <span>Add Function</span>
               </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {project.functions.map((fn) => (
-                <div key={fn.id} className="bg-[#FFFFFF] border border-[#E5E0D8] p-6 space-y-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="px-2 py-0.5 text-[9px] uppercase tracking-wider font-semibold border bg-[#FAF8F5] border-[#E5E0D8] text-[#1F2421]">
-                      {fn.status}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingFunction(fn);
-                          setIsAddFunctionOpen(true);
-                        }}
-                        className="p-1.5 text-[#736F68] hover:text-[#1F2421] border border-[#E5E0D8] hover:bg-[#FAF8F5]"
-                        title="Edit Function"
-                      >
-                        <Edit3 size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteFunction(fn.id)}
-                        className="p-1.5 text-[#736F68] hover:text-[#9B2C2C] border border-[#E5E0D8] hover:bg-[#FAF8F5]"
-                        title="Delete Function"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
 
-                  <div>
-                    <h3 className="font-serif text-xl font-semibold text-[#1F2421]">
-                      {fn.functionName}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-[#9E7D3B] font-medium mt-1">
-                      <Calendar size={13} />
-                      <span>
-                        {new Date(fn.functionDate).toLocaleDateString('en-IN', {
-                          weekday: 'short',
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  </div>
+            {/* COST ESTIMATION SUMMARY BAR */}
+            <div className="bg-[#FAF8F5] border border-[#E5E0D8] p-5 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-[#1F2421] text-[#D9C496] flex items-center justify-center border border-[#9E7D3B]/40">
+                  <IndianRupee size={22} />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-semibold block">
+                    Total Estimated Add-On Functions Cost
+                  </span>
+                  <span className="font-serif text-2xl font-bold text-[#1F2421]">
+                    ₹{totalFunctionsCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-6 text-xs text-[#736F68] border-l border-[#E5E0D8] pl-6">
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wider text-[#8C877D]">Total Ceremonies</span>
+                  <span className="font-semibold text-[#1F2421] text-sm">{project.functions.length} functions</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wider text-[#8C877D]">Avg Cost / Function</span>
+                  <span className="font-semibold text-[#1F2421] text-sm">
+                    ₹{project.functions.length > 0
+                      ? Math.round(totalFunctionsCost / project.functions.length).toLocaleString('en-IN')
+                      : '0'}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-                  <div className="space-y-2 text-xs text-[#5C5850] py-3 border-y border-[#E5E0D8]/60">
-                    {(fn.startTime || fn.endTime) && (
-                      <div className="flex items-center gap-2">
-                        <Clock size={13} className="text-[#9E7D3B]" />
-                        <span>
-                          {fn.startTime || 'TBD'} — {fn.endTime || 'Late'}
+            {project.functions.length === 0 ? (
+              <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-12 text-center max-w-md mx-auto space-y-3">
+                <Calendar size={28} className="mx-auto text-[#9E7D3B]" />
+                <h3 className="font-serif text-lg text-[#1F2421]">No Functions Added Yet</h3>
+                <p className="text-xs text-[#736F68]">
+                  Add ceremonies and function run-sheets for this palace wedding.
+                </p>
+                <button
+                  onClick={() => {
+                    setEditingFunction(null);
+                    setIsAddFunctionOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider font-semibold"
+                >
+                  <Plus size={14} className="text-[#D9C496]" />
+                  <span>Add First Function</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {project.functions.map((fn) => (
+                  <div key={fn.id} className="bg-[#FFFFFF] border border-[#E5E0D8] p-6 space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 text-[9px] uppercase tracking-wider font-semibold border bg-[#FAF8F5] border-[#E5E0D8] text-[#1F2421]">
+                          {fn.status}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-semibold bg-[#FAF8F5] border border-[#D9C496] text-[#9E7D3B]">
+                          <IndianRupee size={11} />
+                          <span>Estimated Cost: ₹{Number(fn.estimatedCost || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                         </span>
                       </div>
-                    )}
-
-                    {fn.venue && (
                       <div className="flex items-center gap-2">
-                        <MapPin size={13} className="text-[#9E7D3B]" />
-                        <span>{fn.venue}</span>
+                        <button
+                          onClick={() => {
+                            setEditingFunction(fn);
+                            setIsAddFunctionOpen(true);
+                          }}
+                          className="p-1.5 text-[#736F68] hover:text-[#1F2421] border border-[#E5E0D8] hover:bg-[#FAF8F5]"
+                          title="Edit Function"
+                        >
+                          <Edit3 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteFunction(fn.id)}
+                          className="p-1.5 text-[#736F68] hover:text-[#9B2C2C] border border-[#E5E0D8] hover:bg-[#FAF8F5]"
+                          title="Delete Function"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-serif text-xl font-semibold text-[#1F2421]">
+                        {fn.functionName}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-[#9E7D3B] font-medium mt-1">
+                        <Calendar size={13} />
+                        <span>
+                          {new Date(fn.functionDate).toLocaleDateString('en-IN', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-xs text-[#5C5850] py-3 border-y border-[#E5E0D8]/60">
+                      {(fn.startTime || fn.endTime) && (
+                        <div className="flex items-center gap-2">
+                          <Clock size={13} className="text-[#9E7D3B]" />
+                          <span>
+                            {fn.startTime || 'TBD'} — {fn.endTime || 'Late'}
+                          </span>
+                        </div>
+                      )}
+
+                      {fn.venue && (
+                        <div className="flex items-center gap-2">
+                          <MapPin size={13} className="text-[#9E7D3B]" />
+                          <span>{fn.venue}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[#8C877D] uppercase tracking-wider text-[10px]">Estimated Function Budget</span>
+                        <span className="font-semibold text-[#9E7D3B]">
+                          ₹{Number(fn.estimatedCost || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {fn.description && (
+                      <p className="text-xs text-[#736F68] bg-[#FAF8F5] p-3 border border-[#E5E0D8] leading-relaxed">
+                        {fn.description}
+                      </p>
                     )}
                   </div>
-
-                  {fn.description && (
-                    <p className="text-xs text-[#736F68] bg-[#FAF8F5] p-3 border border-[#E5E0D8] leading-relaxed">
-                      {fn.description}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* TAB 3: MILESTONES & TIMELINE */}
       {activeTab === 'milestones' && (
@@ -797,32 +849,32 @@ const FunctionModal: React.FC<{
   const [venue, setVenue] = useState(existing?.venue || '');
   const [description, setDescription] = useState(existing?.description || '');
   const [status, setStatus] = useState<FunctionStatus>(existing?.status || 'Scheduled');
+  const [estimatedCost, setEstimatedCost] = useState(
+    existing?.estimatedCost !== undefined && existing?.estimatedCost !== null
+      ? String(existing.estimatedCost)
+      : ''
+  );
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const payload: Record<string, any> = {
+        functionName,
+        functionDate,
+        startTime: startTime || undefined,
+        endTime: endTime || undefined,
+        venue: venue || undefined,
+        description: description || undefined,
+        status,
+        estimatedCost: estimatedCost ? Number(estimatedCost) : undefined
+      };
+
       if (existing) {
-        await projectApi.updateFunction(projectId, existing.id, {
-          functionName,
-          functionDate,
-          startTime: startTime || undefined,
-          endTime: endTime || undefined,
-          venue: venue || undefined,
-          description: description || undefined,
-          status
-        });
+        await projectApi.updateFunction(projectId, existing.id, payload);
       } else {
-        await projectApi.addFunction(projectId, {
-          functionName,
-          functionDate,
-          startTime: startTime || undefined,
-          endTime: endTime || undefined,
-          venue: venue || undefined,
-          description: description || undefined,
-          status
-        });
+        await projectApi.addFunction(projectId, payload);
       }
       onSaved();
     } catch (err: any) {
@@ -913,6 +965,32 @@ const FunctionModal: React.FC<{
               placeholder="e.g. Manek Chowk Courtyard"
               className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#E5E0D8] text-[#1F2421]"
             />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] uppercase tracking-wider text-[#8C877D] font-semibold">
+                Estimated Function Cost (₹)
+              </label>
+              <span className="text-[10px] text-[#9E7D3B]">
+                {existing ? 'Organizer adjustment' : 'Auto-calculated if blank'}
+              </span>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-[#8C877D] font-serif">₹</span>
+              <input
+                type="number"
+                min="0"
+                step="5000"
+                value={estimatedCost}
+                onChange={(e) => setEstimatedCost(e.target.value)}
+                placeholder="Auto-calculated from function tier if left blank"
+                className="w-full pl-7 pr-3 py-2 bg-[#FAF8F5] border border-[#E5E0D8] text-[#1F2421] focus:outline-none focus:border-[#1F2421]"
+              />
+            </div>
+            <p className="text-[10px] text-[#736F68] mt-1">
+              Leave blank to automatically assign a realistic tier cost (Mehendi: ₹45k–90k, Haldi: ₹40k–85k, Sangeet: ₹1.2L–2.5L, Wedding: ₹2.5L–5L, Reception: ₹1.75L–3.5L).
+            </p>
           </div>
 
           <div>

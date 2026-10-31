@@ -39,6 +39,18 @@ class WeddingFunctionBase(BaseModel):
     venue: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
     status: FunctionStatusType = Field("Scheduled")
+    estimated_cost: Optional[Decimal] = Field(None, alias="estimatedCost", ge=0)
+
+    @field_validator("estimated_cost", mode="before")
+    def parse_cost(cls, v):
+        if v is None or v == "":
+            return None
+        if isinstance(v, (int, float, Decimal)):
+            return Decimal(str(v))
+        try:
+            return Decimal(str(v))
+        except Exception:
+            return None
 
 
 class WeddingFunctionCreate(WeddingFunctionBase):
@@ -55,11 +67,24 @@ class WeddingFunctionUpdate(BaseModel):
     venue: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
     status: Optional[FunctionStatusType] = None
+    estimated_cost: Optional[Decimal] = Field(None, alias="estimatedCost", ge=0)
+
+    @field_validator("estimated_cost", mode="before")
+    def parse_cost(cls, v):
+        if v is None or v == "":
+            return None
+        if isinstance(v, (int, float, Decimal)):
+            return Decimal(str(v))
+        try:
+            return Decimal(str(v))
+        except Exception:
+            return None
 
 
 class WeddingFunctionResponse(WeddingFunctionBase):
     id: str
     project_id: str = Field(..., alias="projectId")
+    estimated_cost: Decimal = Field(Decimal("0.00"), alias="estimatedCost")
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
 

@@ -246,6 +246,22 @@ def update_project_status(
 # Wedding Functions Endpoints
 # =====================================================================
 
+@router.get(
+    "/{project_id}/functions",
+    response_model=List[WeddingFunctionResponse],
+    summary="List all wedding functions for a project",
+    tags=["Wedding Functions"]
+)
+def list_wedding_functions(
+    project_id: str,
+    db: Session = Depends(get_db)
+):
+    project = project_service.get_project(db=db, project_id=project_id)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project '{project_id}' not found.")
+    return project.functions
+
+
 @router.post(
     "/{project_id}/functions",
     response_model=WeddingFunctionResponse,
@@ -285,6 +301,31 @@ def update_wedding_function(
     db: Session = Depends(get_db)
 ):
     func_item = project_service.update_function(db=db, project_id=project_id, func_id=func_id, func_in=func_in)
+    if not func_item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Function '{func_id}' not found.")
+    return func_item
+
+
+@router.put(
+    "/functions/{func_id}",
+    response_model=WeddingFunctionResponse,
+    summary="Update a wedding function directly by ID",
+    tags=["Wedding Functions"],
+    include_in_schema=False
+)
+@router.patch(
+    "/functions/{func_id}",
+    response_model=WeddingFunctionResponse,
+    summary="Update a wedding function directly by ID (partial)",
+    tags=["Wedding Functions"],
+    include_in_schema=False
+)
+def update_wedding_function_direct(
+    func_id: str,
+    func_in: WeddingFunctionUpdate,
+    db: Session = Depends(get_db)
+):
+    func_item = project_service.update_function(db=db, project_id="", func_id=func_id, func_in=func_in)
     if not func_item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Function '{func_id}' not found.")
     return func_item

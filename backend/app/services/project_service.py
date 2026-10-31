@@ -1,4 +1,5 @@
 import uuid
+import random
 from typing import Optional, List, Tuple
 from datetime import datetime, timezone, timedelta, date
 from decimal import Decimal
@@ -287,11 +288,42 @@ class ProjectService:
         return project
 
     # =====================================================================
-    # Functions Management
+    # Functions Management & Cost Estimation
     # =====================================================================
 
     @staticmethod
-    def add_function(db: Session, project_id: str, func_in: WeddingFunctionCreate) -> WeddingFunction:
+    def calculate_estimated_cost(function_name: str) -> Decimal:
+        """
+        Calculates a realistic random estimated cost based on function name tiers,
+        rounded to the nearest ₹5,000.
+        - 'mehendi' or 'mehndi': ₹45,000 - ₹90,000
+        - 'haldi': ₹40,000 - ₹85,000
+        - 'sangeet' or 'cocktail': ₹1,20,000 - ₹2,50,000
+        - 'wedding', 'muhurtham', or 'phera': ₹2,50,000 - ₹5,00,000
+        - 'reception': ₹1,75,000 - ₹3,50,000
+        - Other function name: ₹50,000 - ₹2,00,000
+        """
+        fn_lower = (function_name or "").lower().strip()
+        if "mehendi" in fn_lower or "mehndi" in fn_lower:
+            low, high = 45000, 90000
+        elif "haldi" in fn_lower:
+            low, high = 40000, 85000
+        elif "sangeet" in fn_lower or "cocktail" in fn_lower:
+            low, high = 120000, 250000
+        elif "wedding" in fn_lower or "muhurtham" in fn_lower or "phera" in fn_lower or "varmala" in fn_lower:
+            low, high = 250000, 500000
+        elif "reception" in fn_lower:
+            low, high = 175000, 350000
+        else:
+            low, high = 50000, 200000
+
+        raw_val = random.randint(low, high)
+        rounded_val = round(raw_val / 5000) * 5000
+        rounded_val = max(low, min(high, rounded_val))
+        return Decimal(str(rounded_val))
+
+    @classmethod
+    def add_function(cls, db: Session, project_id: str, func_in: WeddingFunctionCreate) -> WeddingFunction:
         project = db.query(WeddingProject).filter(
             or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
             WeddingProject.is_deleted == False
@@ -299,6 +331,11 @@ class ProjectService:
 
         if not project:
             raise ValueError(f"Project '{project_id}' not found.")
+
+        # Determine estimated cost: use provided if > 0, else auto-estimate
+        cost = func_in.estimated_cost
+        if cost is None or cost == Decimal("0.00") or cost == 0:
+            cost = cls.calculate_estimated_cost(func_in.function_name)
 
         func_id = f"FUNC-{uuid.uuid4().hex[:8].upper()}"
         db_func = WeddingFunction(
@@ -310,13 +347,34 @@ class ProjectService:
             end_time=func_in.end_time,
             venue=func_in.venue or project.location,
             description=func_in.description,
-            status=func_in.status
+            status=func_in.status,
+            estimated_cost=cost
         )
 
         db.add(db_func)
         db.commit()
         db.refresh(db_func)
         return db_func
+
+    @classmethod
+    def backfill_function_costs(cls, db: Session) -> int:
+        """
+        Backfills existing functions having NULL or 0 estimated_cost with realistic tier costs.
+        """
+        functions = db.query(WeddingFunction).filter(
+            or_(
+                WeddingFunction.estimated_cost == None,
+                WeddingFunction.estimated_cost == 0,
+                WeddingFunction.estimated_cost == Decimal("0.00")
+            )
+        ).all()
+        updated_count = 0
+        for fn in functions:
+            fn.estimated_cost = cls.calculate_estimated_cost(fn.function_name)
+            updated_count += 1
+        if updated_count > 0:
+            db.commit()
+        return updated_count
 
     @staticmethod
     def update_function(
