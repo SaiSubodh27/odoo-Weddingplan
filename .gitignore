@@ -40,3 +40,7 @@ ENV/
 *.sln
 *.sw?
 *.tsbuildinfo
+
+
+uploads/
+backend/uploads/
