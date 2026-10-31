@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+:root {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: #1F2421;
+  background-color: #FAF8F5;
+}
+
+/* Ensure no border radius anywhere to strictly fulfill design requirements */
+*, ::before, ::after {
+  border-radius: 0px !important;
+}
+
+/* Luxury typography styling */
+h1, h2, h3, h4, .font-serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF8F5;
+}
+::-webkit-scrollbar-thumb {
+  background: #D9D3C7;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B8B0A2;
+}
+
