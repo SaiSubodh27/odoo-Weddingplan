@@ -95,6 +95,40 @@ export const enquiryApi = {
     return res.json();
   },
 
+  async markDocumentReviewed(id: string, documentId?: string, reviewedBy: string = 'Agency Staff') {
+    const url = new URL(`${API_BASE}/enquiries/${id}/mark-document-reviewed`);
+    if (documentId) url.searchParams.set('document_id', documentId);
+    url.searchParams.set('reviewed_by', reviewedBy);
+
+    const res = await fetch(url.toString(), {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to mark document as reviewed');
+    }
+    return res.json();
+  },
+
+  async getMessages(id: string) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/messages`);
+    if (!res.ok) throw new Error('Failed to fetch enquiry messages');
+    return res.json();
+  },
+
+  async reply(id: string, payload: { body: string; subject?: string; attachRegistrationDocument?: boolean }) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to send email reply');
+    }
+    return res.json();
+  },
+
   async registerClient(id: string, data?: { partner1Name?: string; partner2Name?: string; servicePackage?: string; additionalRequirements?: string; weddingTheme?: string }) {
     const res = await fetch(`${API_BASE}/enquiries/${id}/register`, {
       method: 'POST',
@@ -114,6 +148,94 @@ export const enquiryApi = {
 
   getDownloadUrl(enquiryId: string, documentId: string) {
     return `${API_BASE}/enquiries/${enquiryId}/documents/${documentId}/download`;
+  }
+};
+
+export const emailApi = {
+  async getStatus() {
+    const res = await fetch(`${API_BASE}/emails/status`);
+    if (!res.ok) throw new Error('Failed to fetch email status');
+    return res.json();
+  },
+
+  async sync() {
+    const res = await fetch(`${API_BASE}/emails/sync`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to sync emails');
+    }
+    return res.json();
+  },
+
+  async listInbox(params?: { statusFilter?: string; search?: string; limit?: number; offset?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.statusFilter) searchParams.set('status_filter', params.statusFilter);
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.offset) searchParams.set('offset', String(params.offset));
+
+    const res = await fetch(`${API_BASE}/emails/inbox?${searchParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch inbox emails');
+    return res.json();
+  },
+
+  async get(id: string) {
+    const res = await fetch(`${API_BASE}/emails/${id}`);
+    if (!res.ok) throw new Error(`Failed to fetch email ${id}`);
+    return res.json();
+  },
+
+  async convertToEnquiry(id: string, data?: { clientName?: string }) {
+    const res = await fetch(`${API_BASE}/emails/${id}/convert-to-enquiry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {}),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to convert email to enquiry');
+    }
+    return res.json();
+  },
+
+  async associate(id: string, enquiryId: string) {
+    const res = await fetch(`${API_BASE}/emails/${id}/associate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enquiryId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to associate email');
+    }
+    return res.json();
+  },
+
+  async ignore(id: string) {
+    const res = await fetch(`${API_BASE}/emails/${id}/ignore`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to ignore email');
+    }
+    return res.json();
+  },
+
+  async simulate(formData: FormData) {
+    const res = await fetch(`${API_BASE}/emails/simulate`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to simulate email');
+    }
+    return res.json();
+  },
+
+  getAttachmentUrl(emailId: string, attachmentId: string) {
+    return `${API_BASE}/emails/${emailId}/attachments/${attachmentId}/download`;
   }
 };
 

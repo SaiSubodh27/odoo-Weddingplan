@@ -1,6 +1,8 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, status, Response
-from fastapi.responses import FileResponse
+import os
+from pathlib import Path
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, status
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -14,6 +16,9 @@ from app.schemas.enquiry import (
     EnquiryRegisterRequest,
 )
 from app.schemas.document import DocumentResponse, DocumentListResponse
+from app.schemas.email_message import EmailMessageResponse, EmailReplyRequest
+from app.models.email_message import EmailMessage
+from app.models.document import RegistrationDocument
 from app.services.enquiry_service import enquiry_service
 from app.services.document_service import document_service
 from app.services.email_service import EmailService
@@ -133,7 +138,7 @@ def add_enquiry_note(
     """
     Records an internal confidential staff note in the enquiry history.
     """
-    return enquiry_service.add_internal_note(
+    return enquiry_service.add_note(
         db=db,
         enquiry_id=enquiry_id,
         content=note_in.content,
@@ -148,33 +153,26 @@ def add_enquiry_note(
     summary="Download pre-filled client registration document template (HTML printable)",
     tags=["Registration Documents"]
 )
-def download_blank_template(
+def get_registration_template(
     enquiry_id: str,
     db: Session = Depends(get_db)
 ):
     """
-    Returns an elegant, printable Royal Knot Client Registration Dossier template
-    pre-filled with the couple's enquiry details.
+    Generates a personalized, printable/downloadable HTML registration form for this client.
     """
     enquiry = enquiry_service.get_enquiry(db=db, enquiry_id=enquiry_id)
     if not enquiry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Enquiry '{enquiry_id}' not found.")
 
     html_content = document_service.generate_blank_registration_form_html(enquiry)
-    return Response(
-        content=html_content,
-        media_type="text/html",
-        headers={
-            "Content-Disposition": f'inline; filename="TheRoyalKnot_RegistrationForm_{enquiry.id}.html"'
-        }
-    )
+    return Response(content=html_content, media_type="text/html")
 
 
 @router.post(
     "/{enquiry_id}/documents/upload",
     response_model=DocumentResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Upload a registration document (sent to client or returned by client)",
+    summary="Upload sent or received registration document",
     tags=["Registration Documents"]
 )
 async def upload_document(
@@ -200,7 +198,7 @@ async def upload_document(
         uploaded_by=uploaded_by
     )
 
-    # Automatically progress status based on document type if appropriate
+    # Automatically progress status based on document type
     if document_type == "completed_by_client" and enquiry.status in {"New", "Contacted", "Registration Document Sent"}:
         enquiry_service.mark_document_received(db=db, enquiry_id=enquiry_id)
 
@@ -256,21 +254,51 @@ def send_registration_document(
     db: Session = Depends(get_db)
 ):
     """
-    Dispatches the registration document via email and sets enquiry status to 'Registration Document Sent'.
+    Dispatches the registration document via email, logs outgoing EmailMessage,
+    attaches any uploaded document, and updates status to 'Registration Document Sent'.
     """
     enquiry = enquiry_service.get_enquiry(db=db, enquiry_id=enquiry_id)
     if not enquiry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Enquiry '{enquiry_id}' not found.")
 
     template_url = f"{settings.BACKEND_BASE_URL}/api/v1/enquiries/{enquiry.id}/registration-template"
+
+    # Check if a custom uploaded registration document exists
+    doc_attachment = None
+    sent_doc = db.query(RegistrationDocument).filter(
+        RegistrationDocument.enquiry_id == enquiry.id,
+        RegistrationDocument.document_type == "sent_to_client"
+    ).order_by(RegistrationDocument.created_at.desc()).first()
+
+    if sent_doc:
+        doc_path = Path(settings.UPLOAD_DIR) / sent_doc.stored_filename
+        if doc_path.exists():
+            with open(doc_path, "rb") as f:
+                doc_attachment = {
+                    "filename": sent_doc.original_filename,
+                    "stored_filename": sent_doc.stored_filename,
+                    "content": f.read(),
+                    "mime_type": sent_doc.mime_type
+                }
+
     email_result = EmailService.send_registration_document_email(
         to_email=enquiry.email,
         client_name=enquiry.client_name,
         enquiry_id=enquiry.id,
-        document_download_url=template_url
+        document_download_url=template_url,
+        document_attachment=doc_attachment,
+        db=db
     )
 
     enquiry_service.mark_document_sent(db=db, enquiry_id=enquiry_id)
+
+    # Note
+    enquiry_service.add_note(
+        db=db,
+        enquiry_id=enquiry_id,
+        author="Agency Staff",
+        content=f"Dispatched formal Client Registration Document to {enquiry.email}."
+    )
 
     return {
         "success": True,
@@ -293,11 +321,202 @@ def mark_document_received(
     Records receipt of the completed client registration document.
     """
     updated = enquiry_service.mark_document_received(db=db, enquiry_id=enquiry_id)
+    enquiry_service.add_note(
+        db=db,
+        enquiry_id=enquiry_id,
+        author="Agency Staff",
+        content="Marked completed registration document as received."
+    )
     return {
         "success": True,
         "message": "Completed registration document marked as received.",
         "status": updated.status,
         "received_at": updated.registration_received_at
+    }
+
+
+@router.post(
+    "/{enquiry_id}/mark-document-reviewed",
+    summary="Mark a client-returned document as reviewed by staff",
+    tags=["Registration Documents"]
+)
+def mark_document_reviewed(
+    enquiry_id: str,
+    document_id: Optional[str] = Query(None, description="Specific document ID to review"),
+    reviewed_by: str = Query("Agency Staff", description="Staff member who reviewed the document"),
+    db: Session = Depends(get_db)
+):
+    """
+    Marks the completed client registration document as reviewed and updates enquiry status to 'Under Review'.
+    """
+    enquiry = enquiry_service.get_enquiry(db=db, enquiry_id=enquiry_id)
+    if not enquiry:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Enquiry '{enquiry_id}' not found.")
+
+    if not document_id:
+        # Find latest completed document
+        latest_doc = db.query(RegistrationDocument).filter(
+            RegistrationDocument.enquiry_id == enquiry_id,
+            RegistrationDocument.document_type == "completed_by_client"
+        ).order_by(RegistrationDocument.created_at.desc()).first()
+
+        if not latest_doc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No client-returned completed document found to review."
+            )
+        document_id = latest_doc.id
+
+    doc = document_service.mark_document_reviewed(
+        db=db,
+        enquiry_id=enquiry_id,
+        document_id=document_id,
+        reviewed_by=reviewed_by
+    )
+
+    return {
+        "success": True,
+        "message": f"Document '{doc.original_filename}' marked as reviewed by {reviewed_by}.",
+        "document_id": doc.id,
+        "enquiry_status": "Under Review"
+    }
+
+
+# --- Email Conversation Thread & Staff Replies ---
+
+@router.get(
+    "/{enquiry_id}/messages",
+    response_model=List[EmailMessageResponse],
+    summary="Get full email conversation thread for this enquiry",
+    tags=["Email Integration"]
+)
+def get_enquiry_messages(
+    enquiry_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns all incoming and outgoing email messages associated with this enquiry chronologically.
+    """
+    enquiry = enquiry_service.get_enquiry(db=db, enquiry_id=enquiry_id)
+    if not enquiry:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Enquiry '{enquiry_id}' not found.")
+
+    messages = db.query(EmailMessage).filter(
+        EmailMessage.enquiry_id == enquiry_id
+    ).order_by(EmailMessage.created_at.asc()).all()
+
+    res = []
+    for m in messages:
+        att_res = []
+        for a in m.attachments:
+            att_res.append({
+                "id": a.id,
+                "emailMessageId": a.email_message_id,
+                "originalFilename": a.original_filename,
+                "fileSize": a.file_size,
+                "mimeType": a.mime_type,
+                "createdAt": a.created_at,
+                "downloadUrl": f"{settings.BACKEND_BASE_URL}/api/v1/emails/{m.id}/attachments/{a.id}/download"
+            })
+
+        res.append(
+            EmailMessageResponse(
+                id=m.id,
+                enquiryId=m.enquiry_id,
+                direction=m.direction,
+                senderName=m.sender_name,
+                senderEmail=m.sender_email,
+                recipientEmail=m.recipient_email,
+                subject=m.subject,
+                bodyText=m.body_text,
+                bodyHtml=m.body_html,
+                messageId=m.message_id,
+                threadId=m.thread_id,
+                inReplyTo=m.in_reply_to,
+                status=m.status,
+                errorMessage=m.error_message,
+                receivedAt=m.received_at,
+                sentAt=m.sent_at,
+                createdAt=m.created_at,
+                attachments=att_res
+            )
+        )
+    return res
+
+
+@router.post(
+    "/{enquiry_id}/reply",
+    summary="Send staff reply to client via email",
+    tags=["Email Integration"]
+)
+def reply_to_enquiry(
+    enquiry_id: str,
+    reply_req: EmailReplyRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Sends an email reply to the client, preserving email threading headers (In-Reply-To/References),
+    logging the outbound EmailMessage, and adding an internal staff note.
+    """
+    enquiry = enquiry_service.get_enquiry(db=db, enquiry_id=enquiry_id)
+    if not enquiry:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Enquiry '{enquiry_id}' not found.")
+
+    # Find last message for threading headers if not supplied
+    in_reply_to = reply_req.in_reply_to
+    if not in_reply_to:
+        last_incoming = db.query(EmailMessage).filter(
+            EmailMessage.enquiry_id == enquiry_id,
+            EmailMessage.direction == "incoming"
+        ).order_by(EmailMessage.created_at.desc()).first()
+        if last_incoming:
+            in_reply_to = last_incoming.message_id
+
+    subject = reply_req.subject or f"The Royal Knot — Concerning Your Wedding Enquiry ({enquiry.id})"
+
+    # Optional attachments
+    attachments = None
+    if reply_req.attach_registration_document:
+        sent_doc = db.query(RegistrationDocument).filter(
+            RegistrationDocument.enquiry_id == enquiry.id,
+            RegistrationDocument.document_type == "sent_to_client"
+        ).order_by(RegistrationDocument.created_at.desc()).first()
+
+        if sent_doc:
+            doc_path = Path(settings.UPLOAD_DIR) / sent_doc.stored_filename
+            if doc_path.exists():
+                with open(doc_path, "rb") as f:
+                    attachments = [{
+                        "filename": sent_doc.original_filename,
+                        "stored_filename": sent_doc.stored_filename,
+                        "content": f.read(),
+                        "mime_type": sent_doc.mime_type
+                    }]
+
+    send_result = EmailService.send_reply_email(
+        to_email=enquiry.email,
+        client_name=enquiry.client_name,
+        subject=subject,
+        body=reply_req.body,
+        enquiry_id=enquiry.id,
+        in_reply_to=in_reply_to,
+        attachments=attachments,
+        db=db
+    )
+
+    # Add staff note
+    enquiry_service.add_note(
+        db=db,
+        enquiry_id=enquiry_id,
+        author="Agency Staff (Email Reply)",
+        content=f"Sent email reply to {enquiry.email}:\n\"{reply_req.body[:200]}...\""
+    )
+
+    return {
+        "success": send_result.get("success", False),
+        "message": send_result.get("message", "Reply processed."),
+        "mode": send_result.get("mode"),
+        "delivery": send_result
     }
 
 

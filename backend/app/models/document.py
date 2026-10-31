@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, func
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, func
 from sqlalchemy.orm import relationship
 from app.database.base import Base
 
@@ -18,6 +18,11 @@ class RegistrationDocument(Base):
     file_size = Column(Integer, nullable=False)  # in bytes
     mime_type = Column(String(100), nullable=False)
     uploaded_by = Column(String(100), nullable=False, default="Agency Staff")
+
+    # Review status
+    is_reviewed = Column(Boolean, nullable=False, default=False)
+    reviewed_by = Column(String(100), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

@@ -11,6 +11,7 @@ EnquiryStatusType = Literal[
     "Contacted",
     "Registration Document Sent",
     "Registration Received",
+    "Under Review",
     "Registered",
     "Closed",
 ]
@@ -39,6 +40,9 @@ class DocumentSummary(BaseModel):
     original_filename: str = Field(..., alias="originalFilename")
     file_size: int = Field(..., alias="fileSize")
     mime_type: str = Field(..., alias="mimeType")
+    is_reviewed: bool = Field(False, alias="isReviewed")
+    reviewed_by: Optional[str] = Field(None, alias="reviewedBy")
+    reviewed_at: Optional[datetime] = Field(None, alias="reviewedAt")
     created_at: datetime = Field(..., alias="createdAt")
 
 
@@ -48,34 +52,39 @@ class EnquiryBase(BaseModel):
     client_name: str = Field(..., alias="clientName", min_length=2, max_length=150, description="Lead or Couple Name")
     email: str = Field(..., min_length=5, max_length=255, description="Client Contact Email")
     phone: str = Field(..., min_length=5, max_length=50, description="Client Phone Number")
-    enquiry_source: EnquirySourceType = Field("Email", alias="enquirySource", description="Source of Initial Contact")
+    enquiry_source: EnquirySourceType = Field("Email", alias="enquirySource")
 
-    wedding_date: Optional[date] = Field(None, alias="weddingDate", description="Target Wedding Date (YYYY-MM-DD)")
-    wedding_location: Optional[str] = Field(None, alias="weddingLocation", max_length=255, description="Target Venue / City")
-    expected_guest_count: Optional[int] = Field(None, alias="expectedGuestCount", ge=1, le=10000, description="Estimated Guests")
-    estimated_budget: Optional[Decimal] = Field(None, alias="estimatedBudget", ge=0, description="Estimated Budget in INR")
-    requirements: Optional[str] = Field(None, description="Client Vision or Requirements")
-    assigned_staff: Optional[str] = Field("Maharani Gayatri Singh", alias="assignedStaff", description="Assigned Planner")
-    status: EnquiryStatusType = Field("New", description="Current Status")
-    internal_notes: Optional[str] = Field(None, alias="internalNotes", description="Internal Staff Notes")
+    wedding_date: Optional[date] = Field(None, alias="weddingDate")
+    wedding_location: Optional[str] = Field(None, alias="weddingLocation", max_length=255)
+    expected_guest_count: Optional[int] = Field(None, alias="expectedGuestCount", ge=1)
+    estimated_budget: Optional[Decimal] = Field(None, alias="estimatedBudget", ge=0)
+    requirements: Optional[str] = Field(None)
+    assigned_staff: Optional[str] = Field("Maharani Gayatri Singh", alias="assignedStaff")
+    status: EnquiryStatusType = Field("New")
+    internal_notes: Optional[str] = Field(None, alias="internalNotes")
 
     @field_validator("email")
     def validate_email_format(cls, v: str) -> str:
         clean = v.strip().lower()
-        if not re.match(r"^[^@]+@[^@]+\.[^@]+$", clean):
-            raise ValueError("Invalid email format.")
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", clean):
+            raise ValueError("Invalid email address format.")
+        return clean
+
+    @field_validator("phone")
+    def validate_phone_format(cls, v: str) -> str:
+        clean = v.strip()
+        if len(clean) < 7:
+            raise ValueError("Phone number must contain at least 7 characters.")
         return clean
 
     @field_validator("estimated_budget", mode="before")
-    def parse_budget_input(cls, v):
-        if v is None or v == "":
-            return None
-        if isinstance(v, (int, float, Decimal)):
-            return Decimal(str(v))
+    def parse_budget_string(cls, v):
         if isinstance(v, str):
-            clean = v.replace("₹", "").replace(",", "").strip()
+            clean = re.sub(r"[^\d.]", "", v)
+            if not clean:
+                return None
             if "cr" in clean.lower():
-                num = float(clean.lower().replace("cr", "").strip())
+                num = float(clean.lower().replace("cr", "").replace("crore", "").strip())
                 return Decimal(str(int(num * 10_000_000)))
             if "lakh" in clean.lower():
                 num = float(clean.lower().replace("lakh", "").replace("s", "").strip())
@@ -120,6 +129,7 @@ class EnquiryResponse(EnquiryBase):
     id: str
     registration_sent_at: Optional[datetime] = Field(None, alias="registrationSentAt")
     registration_received_at: Optional[datetime] = Field(None, alias="registrationReceivedAt")
+    registration_reviewed_at: Optional[datetime] = Field(None, alias="registrationReviewedAt")
     client_id: Optional[str] = Field(None, alias="clientId")
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")

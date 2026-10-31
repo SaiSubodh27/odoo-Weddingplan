@@ -65,6 +65,13 @@ export const DashboardPage: React.FC = () => {
             <span>Record Enquiry</span>
           </Link>
           <Link
+            to="/inbox"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#FAF8F5] text-[#1F2421] text-xs uppercase tracking-wider font-medium hover:bg-[#F2EFE8] border border-[#E5E0D8] transition-colors"
+          >
+            <Mail size={13} className="text-[#9E7D3B]" />
+            <span>Gmail Inbox</span>
+          </Link>
+          <Link
             to="/enquiries"
             className="flex items-center gap-2 px-4 py-2.5 bg-[#FAF8F5] text-[#1F2421] text-xs uppercase tracking-wider font-medium hover:bg-[#F2EFE8] border border-[#E5E0D8] transition-colors"
           >

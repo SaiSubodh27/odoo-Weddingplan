@@ -5,6 +5,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
 import { ClientActivationPage } from './pages/ClientActivationPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { EmailInboxPage } from './pages/EmailInboxPage';
 import { EnquiriesPage } from './pages/EnquiriesPage';
 import { AddEnquiryPage } from './pages/AddEnquiryPage';
 import { EnquiryDetailsPage } from './pages/EnquiryDetailsPage';
@@ -41,6 +42,7 @@ export const AppContent: React.FC = () => {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="inbox" element={<EmailInboxPage />} />
         <Route path="enquiries" element={<EnquiriesPage />} />
         <Route path="enquiries/new" element={<AddEnquiryPage />} />
         <Route path="enquiries/:id" element={<EnquiryDetailsPage />} />

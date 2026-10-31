@@ -24,13 +24,14 @@ class Enquiry(Base):
     # Staff Assignment & Workflow Status
     assigned_staff = Column(String(100), nullable=True, default="Maharani Gayatri Singh")
     status = Column(String(50), nullable=False, default="New")
-    # Statuses: New, Contacted, Registration Document Sent, Registration Received, Registered, Closed
+    # Statuses: New, Contacted, Registration Document Sent, Registration Received, Under Review, Registered, Closed
 
     internal_notes = Column(Text, nullable=True)
 
     # Document Timestamps
     registration_sent_at = Column(DateTime(timezone=True), nullable=True)
     registration_received_at = Column(DateTime(timezone=True), nullable=True)
+    registration_reviewed_at = Column(DateTime(timezone=True), nullable=True)
 
     # Linked Client Record (created upon explicit registration)
     client_id = Column(String(50), ForeignKey("clients.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -43,6 +44,7 @@ class Enquiry(Base):
     # Relationships
     client = relationship("Client", backref="enquiries")
     documents = relationship("RegistrationDocument", back_populates="enquiry", cascade="all, delete-orphan")
+    messages = relationship("EmailMessage", back_populates="enquiry", cascade="all, delete-orphan", order_by="EmailMessage.created_at")
     notes_history = relationship("EnquiryNote", back_populates="enquiry", cascade="all, delete-orphan", order_by="desc(EnquiryNote.created_at)")
 
     def __repr__(self):

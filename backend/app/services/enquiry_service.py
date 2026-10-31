@@ -102,15 +102,20 @@ class EnquiryService:
 
         update_data = enquiry_in.model_dump(exclude_unset=True)
 
-        # If a new internal note is included in update, also append it to history
-        new_note = update_data.get("internal_notes")
-        if new_note and new_note != db_enquiry.internal_notes:
-            note_record = EnquiryNote(
+        # Handle notes appending
+        new_internal_note = update_data.pop("internal_notes", None)
+        if new_internal_note:
+            note = EnquiryNote(
                 enquiry_id=enquiry_id,
                 author=db_enquiry.assigned_staff or "Agency Staff",
-                content=new_note
+                content=new_internal_note
             )
-            db.add(note_record)
+            db.add(note)
+            db_enquiry.internal_notes = (
+                f"{db_enquiry.internal_notes}\n---\n{new_internal_note}"
+                if db_enquiry.internal_notes
+                else new_internal_note
+            )
 
         for field, value in update_data.items():
             setattr(db_enquiry, field, value)
@@ -120,7 +125,7 @@ class EnquiryService:
         return db_enquiry
 
     @staticmethod
-    def add_internal_note(db: Session, enquiry_id: str, content: str, author: str = "Agency Staff") -> EnquiryNote:
+    def add_note(db: Session, enquiry_id: str, content: str, author: str = "Agency Staff") -> EnquiryNote:
         enquiry = db.query(Enquiry).filter(
             Enquiry.id == enquiry_id,
             Enquiry.is_deleted == False
@@ -138,11 +143,45 @@ class EnquiryService:
             content=content
         )
         db.add(note)
-        # Also update current internal_notes field
-        enquiry.internal_notes = content
+
+        # Also append to internal_notes summary
+        enquiry.internal_notes = (
+            f"{enquiry.internal_notes}\n[{author}]: {content}"
+            if enquiry.internal_notes
+            else f"[{author}]: {content}"
+        )
+
         db.commit()
         db.refresh(note)
         return note
+
+    @staticmethod
+    def update_status(db: Session, enquiry_id: str, new_status: str, author: str = "Agency Staff") -> Enquiry:
+        enquiry = db.query(Enquiry).filter(
+            Enquiry.id == enquiry_id,
+            Enquiry.is_deleted == False
+        ).first()
+
+        if not enquiry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Enquiry '{enquiry_id}' not found."
+            )
+
+        old_status = enquiry.status
+        enquiry.status = new_status
+
+        # Create system note about status transition
+        note = EnquiryNote(
+            enquiry_id=enquiry_id,
+            author=author,
+            content=f"Workflow status changed from '{old_status}' to '{new_status}'."
+        )
+        db.add(note)
+
+        db.commit()
+        db.refresh(enquiry)
+        return enquiry
 
     @staticmethod
     def mark_document_sent(db: Session, enquiry_id: str) -> Enquiry:
@@ -281,13 +320,15 @@ class EnquiryService:
         db.refresh(client)
         db.refresh(user_account)
 
-        # 7. Send activation email
+        # 7. Send activation email and log outgoing email message
         activation_url = f"{settings.FRONTEND_BASE_URL}/activate?token={raw_token}"
         email_result = EmailService.send_account_activation_email(
             to_email=enquiry.email,
             client_name=enquiry.client_name,
             activation_url=activation_url,
-            client_id=client.id
+            client_id=client.id,
+            enquiry_id=enquiry.id,
+            db=db
         )
 
         return {

@@ -1,12 +1,13 @@
 import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List
 from fastapi import UploadFile, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.document import RegistrationDocument
-from app.models.enquiry import Enquiry
+from app.models.enquiry import Enquiry, EnquiryNote
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg"}
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
@@ -104,11 +105,53 @@ class DocumentService:
         ).order_by(RegistrationDocument.created_at.desc()).all()
 
     @classmethod
+    def mark_document_reviewed(
+        cls,
+        db: Session,
+        enquiry_id: str,
+        document_id: str,
+        reviewed_by: str = "Agency Staff"
+    ) -> RegistrationDocument:
+        """Marks a client-returned document as reviewed by staff."""
+        doc = db.query(RegistrationDocument).filter(
+            RegistrationDocument.id == document_id,
+            RegistrationDocument.enquiry_id == enquiry_id
+        ).first()
+
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document '{document_id}' not found for enquiry '{enquiry_id}'."
+            )
+
+        now = datetime.now(timezone.utc)
+        doc.is_reviewed = True
+        doc.reviewed_by = reviewed_by
+        doc.reviewed_at = now
+
+        enquiry = db.query(Enquiry).filter(Enquiry.id == enquiry_id).first()
+        if enquiry:
+            enquiry.registration_reviewed_at = now
+            enquiry.status = "Under Review"
+
+            note = EnquiryNote(
+                enquiry_id=enquiry.id,
+                author=reviewed_by,
+                content=f"Reviewed registration document '{doc.original_filename}'. Enquiry dossier updated to Under Review."
+            )
+            db.add(note)
+
+        db.commit()
+        db.refresh(doc)
+        return doc
+
+    @classmethod
     def generate_blank_registration_form_html(cls, enquiry: Enquiry) -> str:
         """
         Generates a clean, professional, printable Royal Knot Client Registration Form.
         Pre-fills initial enquiry details while providing fields for couple signatures and wedding choices.
         """
+        agency_email = settings.AGENCY_EMAIL
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -258,7 +301,7 @@ class DocumentService:
   </div>
 
   <p style="font-size: 11px; color: #8C877D; margin-top: 60px; text-align: center;">
-    Please return this completed dossier to <strong>concierge@theroyalknot.in</strong>. Once received, your private client planning portal will be activated.
+    Please return this completed dossier to <strong>{agency_email}</strong>. Once received, your private client planning portal will be activated.
   </p>
 </body>
 </html>"""

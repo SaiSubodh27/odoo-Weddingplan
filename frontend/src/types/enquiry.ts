@@ -5,6 +5,7 @@ export type EnquiryStatus =
   | 'Contacted'
   | 'Registration Document Sent'
   | 'Registration Received'
+  | 'Under Review'
   | 'Registered'
   | 'Closed';
 
@@ -22,7 +23,52 @@ export interface DocumentSummary {
   originalFilename: string;
   fileSize: number;
   mimeType: string;
+  isReviewed?: boolean;
+  reviewedBy?: string;
+  reviewedAt?: string;
   createdAt: string;
+}
+
+export interface EmailAttachment {
+  id: string;
+  emailMessageId: string;
+  originalFilename: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+  downloadUrl?: string;
+}
+
+export interface EmailMessage {
+  id: string;
+  enquiryId?: string;
+  direction: 'incoming' | 'outgoing';
+  senderName?: string;
+  senderEmail: string;
+  recipientEmail: string;
+  subject: string;
+  bodyText?: string;
+  bodyHtml?: string;
+  messageId?: string;
+  threadId?: string;
+  inReplyTo?: string;
+  status: 'RECEIVED' | 'SENT' | 'FAILED' | 'PENDING' | 'UNCLASSIFIED' | 'ENQUIRY_CREATED' | 'ASSOCIATED' | 'IGNORED';
+  errorMessage?: string;
+  receivedAt?: string;
+  sentAt?: string;
+  createdAt: string;
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailStatus {
+  imapConfigured: boolean;
+  smtpConfigured: boolean;
+  agencyEmail: string;
+  imapHost: string;
+  smtpHost?: string;
+  lastSyncAt?: string;
+  totalMessagesReceived: number;
+  totalUnclassified: number;
 }
 
 export interface Enquiry {
@@ -41,11 +87,13 @@ export interface Enquiry {
   internalNotes?: string;
   registrationSentAt?: string;
   registrationReceivedAt?: string;
+  registrationReviewedAt?: string;
   clientId?: string;
   createdAt: string;
   updatedAt: string;
   notesHistory?: EnquiryNote[];
   documents?: DocumentSummary[];
+  messages?: EmailMessage[];
 }
 
 export interface EnquiryListResponse {

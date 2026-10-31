@@ -19,6 +19,8 @@ export const getEnquiryStatusBadge = (status: EnquiryStatus) => {
   switch (status) {
     case 'Registered':
       return 'bg-[#EBF3ED] text-[#2D5A3C] border-[#C3D9C9]';
+    case 'Under Review':
+      return 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49E] font-semibold';
     case 'Registration Received':
       return 'bg-[#EBF2F7] text-[#295570] border-[#BCD4E6]';
     case 'Registration Document Sent':
@@ -147,6 +149,7 @@ export const EnquiriesPage: React.FC = () => {
             <option value="Contacted">Contacted</option>
             <option value="Registration Document Sent">Registration Document Sent</option>
             <option value="Registration Received">Registration Received</option>
+            <option value="Under Review">Under Review</option>
             <option value="Registered">Registered</option>
             <option value="Closed">Closed</option>
           </select>

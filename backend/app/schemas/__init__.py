@@ -36,6 +36,18 @@ from app.schemas.user import (
     UserLoginResponse,
 )
 
+from app.schemas.email_message import (
+    EmailAttachmentResponse,
+    EmailMessageResponse,
+    EmailListResponse,
+    EmailReplyRequest,
+    EmailComposeRequest,
+    EmailAssociateRequest,
+    EmailConvertToEnquiryRequest,
+    EmailSyncResponse,
+    EmailStatusResponse,
+)
+
 __all__ = [
     "ClientBase",
     "ClientCreate",
@@ -63,4 +75,13 @@ __all__ = [
     "AccountActivateResponse",
     "UserLoginRequest",
     "UserLoginResponse",
+    "EmailAttachmentResponse",
+    "EmailMessageResponse",
+    "EmailListResponse",
+    "EmailReplyRequest",
+    "EmailComposeRequest",
+    "EmailAssociateRequest",
+    "EmailConvertToEnquiryRequest",
+    "EmailSyncResponse",
+    "EmailStatusResponse",
 ]
