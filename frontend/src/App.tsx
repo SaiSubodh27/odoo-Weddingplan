@@ -16,6 +16,8 @@ import { WeddingsPage } from './pages/WeddingsPage';
 import { WeddingProjectPage } from './pages/WeddingProjectPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { VendorDirectoryPage } from './pages/VendorDirectoryPage';
+import { VendorPortalPage } from './pages/VendorPortalPage';
+import { FounderPortalPage } from './pages/FounderPortalPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -32,6 +34,8 @@ export const AppContent: React.FC = () => {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/activate" element={<ClientActivationPage />} />
+      <Route path="/vendor-portal" element={<VendorPortalPage />} />
+      <Route path="/founder-portal" element={<FounderPortalPage />} />
 
       {/* Protected Routes inside Dashboard Layout */}
       <Route

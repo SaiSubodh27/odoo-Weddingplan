@@ -15,6 +15,12 @@ function Lotus() {
   </svg>;
 }
 export const LoginPage: React.FC = () => {
+  const [mode,setMode]=useState<'login'|'signup'>('login');
+  const [accountType,setAccountType]=useState<'User'|'Employee'|'Vendor'>('User');
+  const [signupMethod,setSignupMethod]=useState<'email'|'phone'>('email');
+  const [fullName,setFullName]=useState('');
+  const [phone,setPhone]=useState('');
+  const [signupNotice,setSignupNotice]=useState('');
   const [email, setEmail] = useState('planner@theroyalknot.in');
   const [password, setPassword] = useState('RoyalKnot2026');
   const [show, setShow] = useState(false);
@@ -44,7 +50,8 @@ export const LoginPage: React.FC = () => {
       <h1 id="brand">THE <span>ROYAL</span> KNOT</h1>
       <p className="lovable-subtitle">WEDDING MANAGEMENT</p>
       <div className="lovable-divider" aria-hidden="true"><i />◆<i /></div>
-      <form onSubmit={handleLogin} className="lovable-form">
+      <div className="lovable-auth-switch" role="tablist" aria-label="Account access"><button type="button" role="tab" aria-selected={mode==='login'} className={mode==='login'?'active':''} onClick={()=>{setMode('login');setSignupNotice('')}}>Sign in</button><button type="button" role="tab" aria-selected={mode==='signup'} className={mode==='signup'?'active':''} onClick={()=>{setMode('signup');setSignupNotice('')}}>Sign up</button></div>
+      {mode==='signup'?<div className="lovable-signup"><p className="lovable-signup-label">I AM JOINING AS</p><div className="lovable-role-picker">{(['User','Employee','Vendor'] as const).map(role=><button key={role} type="button" className={accountType===role?'selected':''} onClick={()=>{setAccountType(role);setSignupNotice('')}}>{role}</button>)}</div><p className="lovable-signup-help">{accountType==='User'?'Create an account to manage your wedding experience.':accountType==='Employee'?'Employee accounts require approval from your agency administrator.':'Vendor accounts require verification before portal access.'}</p><div className="lovable-role-picker lovable-method-picker"><button type="button" className={signupMethod==='email'?'selected':''} onClick={()=>setSignupMethod('email')}>Email</button><button type="button" className={signupMethod==='phone'?'selected':''} onClick={()=>setSignupMethod('phone')}>Phone number</button></div><form className="lovable-form lovable-signup-form" onSubmit={e=>{e.preventDefault();setSignupNotice('Registration is not connected yet. Your details were not submitted or stored.')}}><div><label htmlFor="signup-name">FULL NAME</label><div className="lovable-input"><input id="signup-name" value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Your full name" required/></div></div>{signupMethod==='email'?<div><label htmlFor="signup-email">EMAIL ADDRESS</label><div className="lovable-input"><Mail size={16}/><input id="signup-email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@example.com" required/></div></div>:<div><label htmlFor="signup-phone">PHONE NUMBER</label><div className="lovable-input"><input id="signup-phone" type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+91 98765 43210" required/></div></div>}<button className="lovable-submit" type="submit">CREATE ACCOUNT <ArrowRight size={16}/></button></form>{signupNotice&&<p role="status" className="lovable-signup-notice">{signupNotice}</p>}<p className="lovable-signup-foot">Account registration and identity verification are pending backend integration.</p></div>:<form onSubmit={handleLogin} className="lovable-form">
         {error && <p role="alert" className="lovable-error">{error}</p>}
         <div><label htmlFor="email">EMAIL ADDRESS</label><div className="lovable-input"><Mail size={16} /><input id="email" type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} placeholder="planner@theroyalknot.in" required /></div></div>
         <div><div className="lovable-label-row"><label htmlFor="password">PASSWORD</label><button type="button" onClick={()=>alert('Please contact your agency administrator for password assistance.')}>Forgot password?</button></div>
@@ -52,7 +59,7 @@ export const LoginPage: React.FC = () => {
         </div>
         <label className="lovable-remember"><input type="checkbox" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)}/><span className="lovable-checkbox">{rememberMe&&<Check size={12} strokeWidth={3}/>}</span>Remember this terminal</label>
         <button className="lovable-submit" type="submit" disabled={isLoading}>{isLoading?'VERIFYING…':'ENTER AGENCY SYSTEM'}<ArrowRight size={16}/></button>
-      </form>
+      </form>}
       <p className="lovable-authorized"><ShieldCheck size={16}/>Secure access for authorised agency staff and registered clients</p>
     </section>
     <footer className="lovable-footer">JAIPUR OFFICE: RAMBAGH ENCLAVE <span>|</span> UDAIPUR OFFICE: PICHOLA PROMENADE</footer>
