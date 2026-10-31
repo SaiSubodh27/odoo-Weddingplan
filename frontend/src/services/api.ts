@@ -146,8 +146,16 @@ export const enquiryApi = {
     return `${API_BASE}/enquiries/${id}/registration-template`;
   },
 
+  getTemplateDownloadUrl(id: string) {
+    return `${API_BASE}/enquiries/${id}/registration-template?download=true`;
+  },
+
   getDownloadUrl(enquiryId: string, documentId: string) {
     return `${API_BASE}/enquiries/${enquiryId}/documents/${documentId}/download`;
+  },
+
+  getViewUrl(enquiryId: string, documentId: string) {
+    return `${API_BASE}/enquiries/${enquiryId}/documents/${documentId}/download?inline=true`;
   }
 };
 

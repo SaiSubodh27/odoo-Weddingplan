@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Tuple
 import logging
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.core.config import settings
 from app.models.email_message import EmailMessage, EmailAttachment
@@ -25,7 +26,7 @@ WEDDING_KEYWORDS = [
     "budget", "guests", "date", "venue", "enquiry", "inquiry"
 ]
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg", ".html", ".htm"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
@@ -108,25 +109,33 @@ class EmailSyncService:
         try:
             # 1. Connect to Gmail via SSL
             logger.info(f"Connecting to IMAP {settings.IMAP_HOST}:{settings.IMAP_PORT} as {settings.IMAP_USERNAME}...")
-            mail = imaplib.IMAP4_SSL(settings.IMAP_HOST, settings.IMAP_PORT)
-            mail.login(settings.IMAP_USERNAME, settings.IMAP_PASSWORD)
+            mail = imaplib.IMAP4_SSL(settings.IMAP_HOST, settings.IMAP_PORT, timeout=15)
+            clean_pw = settings.IMAP_PASSWORD.replace(" ", "")
+            mail.login(settings.IMAP_USERNAME, clean_pw)
 
-            status, _ = mail.select("INBOX", readonly=False)
-            if status != "OK":
+            status, select_data = mail.select("INBOX", readonly=True)
+            if status != "OK" or not select_data:
                 raise Exception("Unable to open INBOX folder.")
 
-            # 2. Search for unread messages first, or recent messages
-            status, search_data = mail.search(None, "UNSEEN")
-            mail_ids = search_data[0].split()
+            total_mailbox_count = int(select_data[0].decode() if isinstance(select_data[0], bytes) else select_data[0])
 
-            # If no unread, check latest 20 messages to ensure no missed messages
-            if not mail_ids:
-                status, search_data = mail.search(None, "ALL")
-                all_ids = search_data[0].split()
-                mail_ids = all_ids[-20:] if len(all_ids) > 20 else all_ids
+            # 2. Search for unread messages first, or evaluate the latest sequence range
+            mail_ids = []
+            try:
+                status, search_data = mail.search(None, "UNSEEN")
+                if status == "OK" and search_data and search_data[0]:
+                    unseen_ids = search_data[0].split()
+                    mail_ids = unseen_ids[-15:] if len(unseen_ids) > 15 else unseen_ids
+            except Exception as e:
+                logger.warning(f"UNSEEN search warning: {e}")
+
+            # If no unread, evaluate the latest 10 messages by sequence numbers (avoids downloading thousands of IDs)
+            if not mail_ids and total_mailbox_count > 0:
+                start_seq = max(1, total_mailbox_count - 9)
+                mail_ids = [str(seq).encode() for seq in range(start_seq, total_mailbox_count + 1)]
 
             messages_found = len(mail_ids)
-            logger.info(f"IMAP found {messages_found} messages to evaluate.")
+            logger.info(f"IMAP evaluating {messages_found} recent messages (Mailbox total: {total_mailbox_count}).")
 
             for msg_id_bytes in mail_ids:
                 try:
@@ -248,12 +257,23 @@ class EmailSyncService:
             if prior_msg and prior_msg.enquiry_id:
                 matched_enquiry = db.query(Enquiry).filter(Enquiry.id == prior_msg.enquiry_id, Enquiry.is_deleted == False).first()
 
-        # B: Check subject reference code: e.g. TRK-ENQ-2026-081
+        # B: Check subject reference code: e.g. ENQ-2026-001 or TRK-ENQ-2026-081
         if not matched_enquiry:
-            enq_match = re.search(r"TRK-ENQ-\d+-\d+", subject, re.IGNORECASE)
+            enq_match = re.search(r"(?:TRK-)?ENQ-\d+-\d+", subject, re.IGNORECASE)
             if enq_match:
                 enq_ref = enq_match.group(0).upper()
-                matched_enquiry = db.query(Enquiry).filter(Enquiry.id == enq_ref, Enquiry.is_deleted == False).first()
+                if enq_ref.startswith("TRK-"):
+                    stripped = enq_ref[4:]
+                    matched_enquiry = db.query(Enquiry).filter(
+                        or_(Enquiry.id == enq_ref, Enquiry.id == stripped),
+                        Enquiry.is_deleted == False
+                    ).first()
+                else:
+                    trk_variant = f"TRK-{enq_ref}"
+                    matched_enquiry = db.query(Enquiry).filter(
+                        or_(Enquiry.id == enq_ref, Enquiry.id == trk_variant),
+                        Enquiry.is_deleted == False
+                    ).first()
 
         # C: Check active enquiry by sender email
         if not matched_enquiry and sender_email:
@@ -273,12 +293,10 @@ class EmailSyncService:
             enquiry_id = matched_enquiry.id
 
             # Check if this email returns a completed registration document
-            if attachments_info and matched_enquiry.status in ["Registration Document Sent", "Contacted", "New"]:
-                # Check for PDF or document attachment
+            if attachments_info and matched_enquiry.status != "Closed":
                 for att in attachments_info:
                     ext = os.path.splitext(att["original_filename"])[1].lower()
-                    if ext in [".pdf", ".docx", ".doc"]:
-                        # Register document as completed_by_client
+                    if ext in ALLOWED_EXTENSIONS:
                         doc_id = f"DOC-{uuid.uuid4().hex[:12].upper()}"
                         reg_doc = RegistrationDocument(
                             id=doc_id,
@@ -295,14 +313,12 @@ class EmailSyncService:
                         matched_enquiry.registration_received_at = received_at
                         document_received = True
 
-                        # Log note
                         note = EnquiryNote(
                             enquiry_id=matched_enquiry.id,
                             author="System (Email Receiver)",
                             content=f"Received completed registration document '{att['original_filename']}' from client via email."
                         )
                         db.add(note)
-                        break
 
             # Add activity note for received email reply
             if not document_received:
@@ -512,7 +528,7 @@ class EmailSyncService:
 
     @classmethod
     def associate_with_enquiry(cls, db: Session, email_id: str, enquiry_id: str) -> EmailMessage:
-        """Manually links an unclassified email to an existing Enquiry."""
+        """Manually links an unclassified email to an existing Enquiry and extracts attached documents."""
         msg = db.query(EmailMessage).filter(EmailMessage.id == email_id).first()
         if not msg:
             raise ValueError(f"Email message '{email_id}' not found.")
@@ -524,10 +540,39 @@ class EmailSyncService:
         msg.enquiry_id = enquiry.id
         msg.status = "ASSOCIATED"
 
+        # If this email contained document attachments, convert them into completed registration documents
+        doc_created = False
+        if msg.attachments:
+            for att in msg.attachments:
+                ext = os.path.splitext(att.original_filename)[1].lower()
+                if ext in ALLOWED_EXTENSIONS:
+                    doc_id = f"DOC-{uuid.uuid4().hex[:12].upper()}"
+                    reg_doc = RegistrationDocument(
+                        id=doc_id,
+                        enquiry_id=enquiry.id,
+                        document_type="completed_by_client",
+                        original_filename=att.original_filename,
+                        stored_filename=att.stored_filename,
+                        file_size=att.file_size,
+                        mime_type=att.mime_type,
+                        uploaded_by=f"Staff Associated Email ({msg.sender_email})"
+                    )
+                    db.add(reg_doc)
+                    doc_created = True
+
+        if doc_created and enquiry.status in ["New", "Contacted", "Registration Document Sent"]:
+            enquiry.status = "Registration Received"
+            enquiry.registration_received_at = datetime.now(timezone.utc)
+
+        note_content = (
+            f"Associated email '{msg.subject}' from {msg.sender_email} with this enquiry dossier."
+            if not doc_created
+            else f"Associated email '{msg.subject}' and linked completed registration attachment(s) to enquiry dossier."
+        )
         note = EnquiryNote(
             enquiry_id=enquiry.id,
             author="Agency Staff",
-            content=f"Associated email '{msg.subject}' from {msg.sender_email} with this enquiry dossier."
+            content=note_content
         )
         db.add(note)
         db.commit()

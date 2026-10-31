@@ -25,7 +25,8 @@ import {
   Paperclip,
   CheckCircle2,
   FileSearch,
-  MessageSquare
+  MessageSquare,
+  Eye
 } from 'lucide-react';
 
 export const EnquiryDetailsPage: React.FC = () => {
@@ -147,6 +148,21 @@ export const EnquiryDetailsPage: React.FC = () => {
     setIsReviewingDoc(true);
     try {
       const res = await enquiryApi.markDocumentReviewed(enquiry.id, undefined, 'Maharani Gayatri Singh');
+      await loadEnquiryAndMessages();
+      setFeedbackMessage(res.message || 'Document marked as reviewed. Enquiry moved to Under Review.');
+      setTimeout(() => setFeedbackMessage(null), 4000);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to mark document reviewed.');
+    } finally {
+      setIsReviewingDoc(false);
+    }
+  };
+
+  const handleMarkSpecificDocReviewed = async (docId: string) => {
+    if (!enquiry) return;
+    setIsReviewingDoc(true);
+    try {
+      const res = await enquiryApi.markDocumentReviewed(enquiry.id, docId, 'Maharani Gayatri Singh');
       await loadEnquiryAndMessages();
       setFeedbackMessage(res.message || 'Document marked as reviewed. Enquiry moved to Under Review.');
       setTimeout(() => setFeedbackMessage(null), 4000);
@@ -436,8 +452,16 @@ export const EnquiryDetailsPage: React.FC = () => {
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] uppercase tracking-wider bg-[#FFFFFF] border border-[#E5E0D8] text-[#1F2421] hover:bg-[#F2EFE8]"
                   >
-                    <Download size={12} />
+                    <Eye size={12} />
                     <span>View / Print Form</span>
+                  </a>
+
+                  <a
+                    href={enquiryApi.getTemplateDownloadUrl(enquiry.id)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] uppercase tracking-wider bg-[#FFFFFF] border border-[#E5E0D8] text-[#1F2421] hover:bg-[#F2EFE8]"
+                  >
+                    <Download size={12} />
+                    <span>Download File</span>
                   </a>
 
                   <button
@@ -461,36 +485,51 @@ export const EnquiryDetailsPage: React.FC = () => {
                   <span>Step 2: Completed Dossier</span>
                   {enquiry.registrationReceivedAt && (
                     <span className="text-[10px] text-[#2D5A3C] flex items-center gap-1 font-medium">
-                      <CheckCircle size={11} /> {enquiry.status === 'Under Review' ? 'Reviewed' : 'Received'}
+                      <CheckCircle size={11} /> {enquiry.status === 'Under Review' || enquiry.status === 'Registered' ? 'Reviewed' : 'Received'}
                     </span>
                   )}
                 </div>
                 <p className="text-[11px] text-[#736F68] leading-relaxed">
-                  Clients email back completed forms. When received, review and advance to Under Review before registration.
+                  {enquiry.status === 'Under Review'
+                    ? 'Registration document reviewed and verified. Proceed with formal client registration.'
+                    : enquiry.status === 'Registration Received'
+                    ? 'Client returned their completed document. Review all submitted parameters before registering.'
+                    : 'Clients return completed forms by replying to the email thread with attachment.'}
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <button
-                    onClick={handleMarkReceived}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] uppercase tracking-wider bg-[#FFFFFF] border border-[#E5E0D8] text-[#1F2421] hover:bg-[#F2EFE8]"
-                  >
-                    <CheckCircle size={12} className="text-[#2D5A3C]" />
-                    <span>Mark Received</span>
-                  </button>
-
-                  {enquiry.status === 'Registration Received' && (
+                  {enquiry.status === 'Registration Received' ? (
                     <button
                       onClick={handleMarkReviewed}
                       disabled={isReviewingDoc}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] uppercase tracking-wider bg-[#1F2421] text-[#FAF8F5] hover:bg-[#343733]"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 text-[11px] uppercase tracking-wider bg-[#1F2421] text-[#FAF8F5] hover:bg-[#343733] font-semibold"
                     >
                       <FileSearch size={12} className="text-[#D9C496]" />
-                      <span>{isReviewingDoc ? 'Reviewing...' : 'Mark Reviewed'}</span>
+                      <span>{isReviewingDoc ? 'Reviewing...' : 'Mark Document Reviewed'}</span>
+                    </button>
+                  ) : enquiry.status === 'Under Review' ? (
+                    <button
+                      onClick={() => setShowRegisterModal(true)}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 text-[11px] uppercase tracking-wider bg-[#2D5A3C] text-[#FAF8F5] hover:bg-[#23462f] font-semibold"
+                    >
+                      <UserCheck size={12} className="text-[#D9C496]" />
+                      <span>Proceed to Register Client</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleMarkReceived}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] uppercase tracking-wider bg-[#FFFFFF] border border-[#E5E0D8] text-[#1F2421] hover:bg-[#F2EFE8]"
+                    >
+                      <CheckCircle size={12} className="text-[#2D5A3C]" />
+                      <span>Mark Received Manually</span>
                     </button>
                   )}
                 </div>
                 {enquiry.registrationReceivedAt && (
                   <div className="text-[10px] text-[#8C877D]">
                     Received on: {new Date(enquiry.registrationReceivedAt).toLocaleString('en-IN')}
+                    {enquiry.registrationReviewedAt && (
+                      <span> · Reviewed on: {new Date(enquiry.registrationReviewedAt).toLocaleString('en-IN')}</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -515,7 +554,7 @@ export const EnquiryDetailsPage: React.FC = () => {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-[10px] uppercase text-[#8C877D] mb-1">Choose File (PDF, DOCX, PNG, JPG)</label>
+                  <label className="block text-[10px] uppercase text-[#8C877D] mb-1">Choose File (PDF, DOCX, HTML, PNG, JPG)</label>
                   <div className="flex gap-2">
                     <input
                       type="file"
@@ -545,28 +584,53 @@ export const EnquiryDetailsPage: React.FC = () => {
                   {enquiry.documents.map((doc) => (
                     <div
                       key={doc.id}
-                      className="p-3 border border-[#E5E0D8] bg-[#FAF8F5] flex items-center justify-between text-xs"
+                      className="p-3 border border-[#E5E0D8] bg-[#FAF8F5] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                     >
                       <div>
-                        <div className="font-medium text-[#1F2421] flex items-center gap-2">
+                        <div className="font-medium text-[#1F2421] flex flex-wrap items-center gap-2">
                           <span>{doc.originalFilename}</span>
-                          {doc.isReviewed && (
+                          {doc.isReviewed ? (
                             <span className="text-[10px] bg-[#EBF3ED] text-[#2D5A3C] px-1.5 py-0.2 border border-[#C3D9C9] font-medium">
                               Reviewed by {doc.reviewedBy || 'Staff'}
                             </span>
-                          )}
+                          ) : doc.documentType === 'completed_by_client' ? (
+                            <span className="text-[10px] bg-[#FFF8E6] text-[#8C6D1F] px-1.5 py-0.2 border border-[#E8D49E] font-medium">
+                              Pending Review
+                            </span>
+                          ) : null}
                         </div>
                         <div className="text-[10px] text-[#8C877D] mt-0.5">
                           Type: <span className="uppercase">{doc.documentType.replace(/_/g, ' ')}</span> · {(doc.fileSize / 1024).toFixed(1)} KB · {new Date(doc.createdAt).toLocaleDateString('en-IN')}
                         </div>
                       </div>
-                      <a
-                        href={enquiryApi.getDownloadUrl(enquiry.id, doc.id)}
-                        className="flex items-center gap-1 px-2.5 py-1 text-[11px] uppercase tracking-wider text-[#1F2421] bg-[#FFFFFF] border border-[#E5E0D8] hover:bg-[#F2EFE8]"
-                      >
-                        <Download size={11} />
-                        <span>Download</span>
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={enquiryApi.getViewUrl(enquiry.id, doc.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 px-2.5 py-1 text-[11px] uppercase tracking-wider text-[#1F2421] bg-[#FFFFFF] border border-[#E5E0D8] hover:bg-[#F2EFE8]"
+                        >
+                          <Eye size={11} />
+                          <span>View</span>
+                        </a>
+                        <a
+                          href={enquiryApi.getDownloadUrl(enquiry.id, doc.id)}
+                          className="flex items-center gap-1 px-2.5 py-1 text-[11px] uppercase tracking-wider text-[#1F2421] bg-[#FFFFFF] border border-[#E5E0D8] hover:bg-[#F2EFE8]"
+                        >
+                          <Download size={11} />
+                          <span>Download</span>
+                        </a>
+                        {doc.documentType === 'completed_by_client' && !doc.isReviewed && (
+                          <button
+                            onClick={() => handleMarkSpecificDocReviewed(doc.id)}
+                            disabled={isReviewingDoc}
+                            className="flex items-center gap-1 px-2.5 py-1 text-[11px] uppercase tracking-wider text-[#8C6D1F] bg-[#FAF8F5] border border-[#9E7D3B] hover:bg-[#FDF6E2] font-semibold"
+                          >
+                            <FileSearch size={11} />
+                            <span>Mark Reviewed</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

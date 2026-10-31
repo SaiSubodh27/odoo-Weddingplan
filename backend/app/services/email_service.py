@@ -145,7 +145,8 @@ class EmailService:
             if settings.SMTP_USE_TLS:
                 server.starttls()
             if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
-                server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+                clean_pw = settings.SMTP_PASSWORD.replace(" ", "")
+                server.login(settings.SMTP_USERNAME, clean_pw)
 
             server.sendmail(sender_email, [to_email], msg.as_string())
             server.quit()

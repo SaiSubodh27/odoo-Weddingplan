@@ -116,6 +116,15 @@ def test_email_enquiry_full_lifecycle():
     assert send_doc_res.status_code == 200
     assert send_doc_res.json()["enquiry_status"] == "Registration Document Sent"
 
+    # Verify template download and view endpoints
+    tpl_view = client.get(f"/api/v1/enquiries/{enquiry_id}/registration-template")
+    assert tpl_view.status_code == 200
+    assert "The Royal Knot" in tpl_view.text
+
+    tpl_download = client.get(f"/api/v1/enquiries/{enquiry_id}/registration-template?download=true")
+    assert tpl_download.status_code == 200
+    assert "attachment" in tpl_download.headers.get("content-disposition", "")
+
     # Verify messages list now includes outgoing reply and sent document
     updated_messages = client.get(f"/api/v1/enquiries/{enquiry_id}/messages").json()
     assert any(m["direction"] == "outgoing" for m in updated_messages)
@@ -141,7 +150,15 @@ def test_email_enquiry_full_lifecycle():
     enquiry_get = client.get(f"/api/v1/enquiries/{enquiry_id}").json()
     assert enquiry_get["status"] == "Registration Received"
     assert len(enquiry_get["documents"]) >= 1
-    doc_id = enquiry_get["documents"][0]["id"]
+
+    # Find completed document returned by client
+    completed_doc = next(d for d in enquiry_get["documents"] if d["documentType"] == "completed_by_client")
+    doc_id = completed_doc["id"]
+
+    # Test downloading and viewing inline
+    view_doc = client.get(f"/api/v1/enquiries/{enquiry_id}/documents/{doc_id}/download?inline=true")
+    assert view_doc.status_code == 200
+    assert "inline" in view_doc.headers.get("content-disposition", "")
 
     # 8. Staff reviews the completed registration document
     review_res = client.post(f"/api/v1/enquiries/{enquiry_id}/mark-document-reviewed?document_id={doc_id}&reviewed_by=Maharani+Gayatri")
@@ -271,4 +288,98 @@ def test_security_oversized_file_rejected():
     )
     assert upload_res.status_code == 400
     assert "exceeds maximum allowed size" in upload_res.json()["detail"].lower()
+
+
+def test_phone_enquiry_full_document_workflow():
+    """
+    Tests complete workflow:
+    1. Employee manually records a phone enquiry.
+    2. Employee dispatches the registration document by email.
+    3. Client returns completed document by email with attachment.
+    4. System associates the returned document and moves enquiry to 'Registration Received'.
+    5. Employee opens/downloads document, marks it reviewed (moving to 'Under Review').
+    6. Employee registers the client, generating client profile and account activation link.
+    """
+    uid = uuid.uuid4().hex[:6]
+    phone_client_email = f"maharaja.vikram.{uid}@rajasthan-estates.in"
+
+    # 1. Staff manually records phone enquiry
+    phone_enq = client.post("/api/v1/enquiries", json={
+        "clientName": "Vikramaditya Rathore",
+        "email": phone_client_email,
+        "phone": "+91 98290 12345",
+        "enquirySource": "Phone",
+        "weddingDate": "2027-02-14",
+        "weddingLocation": "Umaid Bhawan Palace, Jodhpur",
+        "expectedGuestCount": 450,
+        "estimatedBudget": "35000000",
+        "requirements": "Grand 3-day royal heritage celebration with elephant procession and vintage cars."
+    })
+    assert phone_enq.status_code == 201
+    enq_data = phone_enq.json()
+    enq_id = enq_data["id"]
+    assert enq_data["status"] == "New"
+    assert enq_data["enquirySource"] == "Phone"
+
+    # 2. Staff sends registration document to client via email
+    send_res = client.post(f"/api/v1/enquiries/{enq_id}/send-document")
+    assert send_res.status_code == 200
+    assert send_res.json()["enquiry_status"] == "Registration Document Sent"
+
+    # Verify a 'sent_to_client' document was created
+    enq_after_send = client.get(f"/api/v1/enquiries/{enq_id}").json()
+    assert enq_after_send["status"] == "Registration Document Sent"
+    sent_docs = [d for d in enq_after_send["documents"] if d["documentType"] == "sent_to_client"]
+    assert len(sent_docs) >= 1
+    assert "The_Royal_Knot_Registration_Dossier" in sent_docs[0]["originalFilename"]
+
+    # 3. Client returns completed and signed HTML form via email
+    completed_html_bytes = b"<!DOCTYPE html><html><body><h1>Filled Form by Vikramaditya Rathore</h1></body></html>"
+    return_email_res = client.post(
+        "/api/v1/emails/simulate",
+        data={
+            "sender_email": phone_client_email,
+            "sender_name": "Vikramaditya Rathore",
+            "subject": f"Re: The Royal Knot \u2014 Client Registration Document (Ref: {enq_id})",
+            "body_text": "Dear Royal Knot Concierge, please find our completed registration dossier attached."
+        },
+        files={"file": (f"Completed_Dossier_{enq_id}.html", completed_html_bytes, "text/html")}
+    )
+    assert return_email_res.status_code == 200
+    assert return_email_res.json()["status"] == "ASSOCIATED"
+    assert return_email_res.json()["document_received"] is True
+
+    # 4. Enquiry status is automatically 'Registration Received'
+    enq_after_receive = client.get(f"/api/v1/enquiries/{enq_id}").json()
+    assert enq_after_receive["status"] == "Registration Received"
+    completed_docs = [d for d in enq_after_receive["documents"] if d["documentType"] == "completed_by_client"]
+    assert len(completed_docs) >= 1
+    returned_doc_id = completed_docs[0]["id"]
+
+    # 5. Staff reviews and marks the document reviewed
+    review_res = client.post(
+        f"/api/v1/enquiries/{enq_id}/mark-document-reviewed?document_id={returned_doc_id}&reviewed_by=Maharani+Gayatri"
+    )
+    assert review_res.status_code == 200
+    assert review_res.json()["enquiry_status"] == "Under Review"
+
+    enq_under_review = client.get(f"/api/v1/enquiries/{enq_id}").json()
+    assert enq_under_review["status"] == "Under Review"
+    reviewed_doc = next(d for d in enq_under_review["documents"] if d["id"] == returned_doc_id)
+    assert reviewed_doc["isReviewed"] is True
+    assert reviewed_doc["reviewedBy"] == "Maharani Gayatri"
+
+    # 6. Staff registers client
+    reg_res = client.post(f"/api/v1/enquiries/{enq_id}/register", json={
+        "partner1Name": "Vikramaditya Rathore",
+        "partner2Name": "Meenakshi Devi",
+        "servicePackage": "Full-Service",
+        "weddingTheme": "Marwar Rajputana Splendor"
+    })
+    assert reg_res.status_code == 200
+    reg_json = reg_res.json()
+    assert reg_json["success"] is True
+    assert "client_id" in reg_json
+    assert "activation_url" in reg_json
+
 

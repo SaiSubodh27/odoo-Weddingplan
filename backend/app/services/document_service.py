@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.models.document import RegistrationDocument
 from app.models.enquiry import Enquiry, EnquiryNote
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg", ".html", ".htm"}
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 
 
@@ -146,23 +146,95 @@ class DocumentService:
         return doc
 
     @classmethod
+    def generate_and_save_registration_document(cls, db: Session, enquiry: Enquiry) -> RegistrationDocument:
+        """
+        Generates the personalized Royal Knot client registration dossier HTML file,
+        persists it to upload storage, and records it as a 'sent_to_client' RegistrationDocument.
+        """
+        upload_dir = cls._ensure_upload_dir()
+        html_content = cls.generate_blank_registration_form_html(enquiry)
+        content_bytes = html_content.encode("utf-8")
+
+        doc_id = f"DOC-{uuid.uuid4().hex[:12].upper()}"
+        filename = f"The_Royal_Knot_Registration_Dossier_{enquiry.id}.html"
+        stored_filename = f"{doc_id}_{enquiry.id}_registration_dossier.html"
+        file_path = upload_dir / stored_filename
+
+        with open(file_path, "wb") as f:
+            f.write(content_bytes)
+
+        doc_record = RegistrationDocument(
+            id=doc_id,
+            enquiry_id=enquiry.id,
+            client_id=enquiry.client_id,
+            document_type="sent_to_client",
+            original_filename=filename,
+            stored_filename=stored_filename,
+            file_size=len(content_bytes),
+            mime_type="text/html",
+            uploaded_by="The Royal Knot System"
+        )
+        db.add(doc_record)
+        db.commit()
+        db.refresh(doc_record)
+        return doc_record
+
+    @classmethod
     def generate_blank_registration_form_html(cls, enquiry: Enquiry) -> str:
         """
         Generates a clean, professional, printable Royal Knot Client Registration Form.
         Pre-fills initial enquiry details while providing fields for couple signatures and wedding choices.
         """
         agency_email = settings.AGENCY_EMAIL
+        budget_str = f"₹ {enquiry.estimated_budget:,.0f}" if enquiry.estimated_budget else ""
+        date_str = str(enquiry.wedding_date) if enquiry.wedding_date else ""
+        guests_str = str(enquiry.expected_guest_count) if enquiry.expected_guest_count else ""
+
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>The Royal Knot — Client Registration Dossier #{enquiry.id}</title>
   <style>
+    @media print {{
+      .no-print {{ display: none !important; }}
+      body {{ margin: 0; padding: 20px; }}
+    }}
     body {{
-      font-family: 'Times New Roman', serif;
-      margin: 40px;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      margin: 40px auto;
+      max-width: 800px;
       color: #1F2421;
+      background: #FAF8F5;
       line-height: 1.6;
+      padding: 30px;
+    }}
+    .dossier-card {{
+      background: #FFFFFF;
+      border: 1px solid #E5E0D8;
+      padding: 40px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }}
+    .action-bar {{
+      background: #1F2421;
+      color: #FAF8F5;
+      padding: 12px 20px;
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }}
+    .btn-print {{
+      background: #9E7D3B;
+      color: #FFFFFF;
+      border: none;
+      padding: 8px 16px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      font-weight: bold;
     }}
     .header {{
       text-align: center;
@@ -174,18 +246,18 @@ class DocumentService:
       font-size: 26px;
       font-weight: bold;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 3px;
       color: #1F2421;
     }}
     .subtitle {{
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 3px;
       color: #9E7D3B;
       margin-top: 5px;
     }}
     .section-title {{
-      font-size: 14px;
+      font-size: 13px;
       text-transform: uppercase;
       letter-spacing: 1.5px;
       font-weight: bold;
@@ -201,108 +273,144 @@ class DocumentService:
       margin-bottom: 15px;
     }}
     td {{
-      padding: 8px 12px;
+      padding: 10px 12px;
       border: 1px solid #E5E0D8;
       font-size: 13px;
     }}
     .label {{
       background: #FAF8F5;
       font-weight: bold;
-      width: 30%;
+      width: 32%;
+      color: #4A4640;
+    }}
+    input[type="text"], input[type="date"], select, textarea {{
+      width: 95%;
+      padding: 6px 8px;
+      border: 1px solid #D5CFC5;
+      font-family: inherit;
+      font-size: 13px;
+      background: #FFF;
+      color: #1F2421;
+    }}
+    .signature-container {{
+      margin-top: 50px;
+      display: flex;
+      justify-content: space-between;
     }}
     .signature-box {{
-      margin-top: 40px;
+      width: 45%;
       border-top: 1px solid #1F2421;
       padding-top: 10px;
-      width: 45%;
-      display: inline-block;
       text-align: center;
       font-size: 12px;
+    }}
+    .instructions {{
+      font-size: 12px;
+      color: #736F68;
+      margin-top: 40px;
+      padding: 15px;
+      background: #FAF8F5;
+      border-left: 3px solid #9E7D3B;
+      text-align: center;
     }}
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="title">The Royal Knot</div>
-    <div class="subtitle">Luxury Wedding Planning Agency · Jaipur & Udaipur</div>
-    <p style="font-size: 12px; margin-top: 10px; color: #706E6B;">
-      CONFIDENTIAL CLIENT REGISTRATION DOSSIER — REF: {enquiry.id}
-    </p>
+  <div class="action-bar no-print">
+    <span>The Royal Knot · Client Registration Dossier (Ref: {enquiry.id})</span>
+    <button class="btn-print" onclick="window.print()">Print / Save as PDF</button>
   </div>
 
-  <div class="section-title">1. Couple & Primary Contact Details</div>
-  <table>
-    <tr>
-      <td class="label">Lead Client / Partner 1 Name:</td>
-      <td>{enquiry.client_name}</td>
-    </tr>
-    <tr>
-      <td class="label">Partner 2 Full Name:</td>
-      <td>________________________________________________</td>
-    </tr>
-    <tr>
-      <td class="label">Primary Email:</td>
-      <td>{enquiry.email}</td>
-    </tr>
-    <tr>
-      <td class="label">Telephone / WhatsApp:</td>
-      <td>{enquiry.phone}</td>
-    </tr>
-    <tr>
-      <td class="label">Residential Address:</td>
-      <td>________________________________________________</td>
-    </tr>
-  </table>
-
-  <div class="section-title">2. Destination Wedding Parameters</div>
-  <table>
-    <tr>
-      <td class="label">Target Wedding Date:</td>
-      <td>{enquiry.wedding_date or '____________________'}</td>
-    </tr>
-    <tr>
-      <td class="label">Preferred Destination / Venue:</td>
-      <td>{enquiry.wedding_location or 'Jaipur / Udaipur Heritage Palace'}</td>
-    </tr>
-    <tr>
-      <td class="label">Expected Royal Guests:</td>
-      <td>{enquiry.expected_guest_count or '______'} Guests</td>
-    </tr>
-    <tr>
-      <td class="label">Estimated Wedding Budget:</td>
-      <td>₹ {enquiry.estimated_budget or '__________________'}</td>
-    </tr>
-    <tr>
-      <td class="label">Preferred Design Aesthetic / Theme:</td>
-      <td>________________________________________________</td>
-    </tr>
-  </table>
-
-  <div class="section-title">3. Service Tier Selection</div>
-  <table>
-    <tr>
-      <td class="label">Requested Service Package:</td>
-      <td>[ &nbsp; ] Full-Service &nbsp;&nbsp;&nbsp;&nbsp; [ &nbsp; ] Partial Planning &nbsp;&nbsp;&nbsp;&nbsp; [ &nbsp; ] Day-of Coordination</td>
-    </tr>
-    <tr>
-      <td class="label">Special Culinary & Vendor Requests:</td>
-      <td>{enquiry.requirements or '________________________________________________'}</td>
-    </tr>
-  </table>
-
-  <div style="margin-top: 60px;">
-    <div class="signature-box" style="float: left;">
-      Client Signature (Partner 1)<br>Date: _______________
+  <div class="dossier-card">
+    <div class="header">
+      <div class="title">The Royal Knot</div>
+      <div class="subtitle">Luxury Destination Wedding Agency · Jaipur & Udaipur</div>
+      <p style="font-size: 11px; margin-top: 10px; color: #706E6B; letter-spacing: 1px;">
+        CONFIDENTIAL CLIENT REGISTRATION DOSSIER — REFERENCE: {enquiry.id}
+      </p>
     </div>
-    <div class="signature-box" style="float: right;">
-      Client Signature (Partner 2)<br>Date: _______________
+
+    <form>
+      <div class="section-title">1. Couple & Primary Contact Details</div>
+      <table>
+        <tr>
+          <td class="label">Lead Client / Partner 1 Full Name:</td>
+          <td><input type="text" value="{enquiry.client_name}" /></td>
+        </tr>
+        <tr>
+          <td class="label">Partner 2 Full Name:</td>
+          <td><input type="text" placeholder="Full legal name of fiancé / partner" /></td>
+        </tr>
+        <tr>
+          <td class="label">Primary Email:</td>
+          <td><input type="text" value="{enquiry.email}" /></td>
+        </tr>
+        <tr>
+          <td class="label">Telephone / WhatsApp:</td>
+          <td><input type="text" value="{enquiry.phone}" /></td>
+        </tr>
+        <tr>
+          <td class="label">Residential City & Address:</td>
+          <td><input type="text" placeholder="e.g. Malabar Hill, Mumbai / Vasant Vihar, New Delhi" /></td>
+        </tr>
+      </table>
+
+      <div class="section-title">2. Destination Wedding Parameters</div>
+      <table>
+        <tr>
+          <td class="label">Target Wedding Date:</td>
+          <td><input type="text" value="{date_str}" placeholder="DD/MM/YYYY or season (e.g. November 2027)" /></td>
+        </tr>
+        <tr>
+          <td class="label">Preferred Destination / Venue:</td>
+          <td><input type="text" value="{enquiry.wedding_location or 'Jaipur / Udaipur Heritage Palace'}" /></td>
+        </tr>
+        <tr>
+          <td class="label">Expected Royal Guests:</td>
+          <td><input type="text" value="{guests_str}" placeholder="e.g. 450 guests" /></td>
+        </tr>
+        <tr>
+          <td class="label">Estimated Wedding Budget:</td>
+          <td><input type="text" value="{budget_str}" placeholder="e.g. ₹ 3,00,00,000 (3 Crores)" /></td>
+        </tr>
+        <tr>
+          <td class="label">Design Aesthetic / Theme:</td>
+          <td><input type="text" placeholder="e.g. Royal Marwar Heritage, Twilight Palace Glamour, Ivory & Antique Gold" /></td>
+        </tr>
+      </table>
+
+      <div class="section-title">3. Service Tier Selection & Special Requests</div>
+      <table>
+        <tr>
+          <td class="label">Requested Service Package:</td>
+          <td>
+            <label style="margin-right: 15px;"><input type="radio" name="pkg" checked /> Full-Service Royal Concierge</label>
+            <label style="margin-right: 15px;"><input type="radio" name="pkg" /> Partial Planning</label>
+            <label><input type="radio" name="pkg" /> Day-of Coordination</label>
+          </td>
+        </tr>
+        <tr>
+          <td class="label">Special Culinary & Vendor Requests:</td>
+          <td><textarea rows="3">{enquiry.requirements or ''}</textarea></td>
+        </tr>
+      </table>
+
+      <div class="signature-container">
+        <div class="signature-box">
+          <p>______________________________________</p>
+          Client Signature (Partner 1)<br>Date: _______________
+        </div>
+        <div class="signature-box">
+          <p>______________________________________</p>
+          Client Signature (Partner 2)<br>Date: _______________
+        </div>
+      </div>
+    </form>
+
+    <div class="instructions">
+      <strong>Submission Instructions:</strong> Please complete and sign this registration dossier, then reply to your enquiry email thread or send it to <strong>{agency_email}</strong>. Once received and reviewed by your agency concierge, your private Royal Knot planning portal will be activated.
     </div>
-    <div style="clear: both;"></div>
   </div>
-
-  <p style="font-size: 11px; color: #8C877D; margin-top: 60px; text-align: center;">
-    Please return this completed dossier to <strong>{agency_email}</strong>. Once received, your private client planning portal will be activated.
-  </p>
 </body>
 </html>"""
 

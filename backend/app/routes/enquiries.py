@@ -155,6 +155,7 @@ def add_enquiry_note(
 )
 def get_registration_template(
     enquiry_id: str,
+    download: bool = Query(False, description="Trigger file download instead of inline view"),
     db: Session = Depends(get_db)
 ):
     """
@@ -165,7 +166,10 @@ def get_registration_template(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Enquiry '{enquiry_id}' not found.")
 
     html_content = document_service.generate_blank_registration_form_html(enquiry)
-    return Response(content=html_content, media_type="text/html")
+    headers = {}
+    if download:
+        headers["Content-Disposition"] = f'attachment; filename="The_Royal_Knot_Registration_Dossier_{enquiry.id}.html"'
+    return Response(content=html_content, media_type="text/html", headers=headers)
 
 
 @router.post(
@@ -225,22 +229,25 @@ def list_enquiry_documents(
 
 @router.get(
     "/{enquiry_id}/documents/{document_id}/download",
-    summary="Download an uploaded registration document securely",
+    summary="Download or view an uploaded registration document securely",
     tags=["Registration Documents"]
 )
 def download_document(
     enquiry_id: str,
     document_id: str,
+    inline: bool = Query(False, description="Whether to display inline in browser or trigger download"),
     db: Session = Depends(get_db)
 ):
     """
     Streams the stored file safely without exposing internal server paths.
     """
     file_path, doc = document_service.get_document_path(db=db, enquiry_id=enquiry_id, document_id=document_id)
+    content_disposition = "inline" if inline else "attachment"
     return FileResponse(
         path=str(file_path),
         filename=doc.original_filename,
-        media_type=doc.mime_type
+        media_type=doc.mime_type,
+        content_disposition_type=content_disposition
     )
 
 
@@ -255,7 +262,7 @@ def send_registration_document(
 ):
     """
     Dispatches the registration document via email, logs outgoing EmailMessage,
-    attaches any uploaded document, and updates status to 'Registration Document Sent'.
+    attaches the official registration document, and updates status to 'Registration Document Sent'.
     """
     enquiry = enquiry_service.get_enquiry(db=db, enquiry_id=enquiry_id)
     if not enquiry:
@@ -263,13 +270,16 @@ def send_registration_document(
 
     template_url = f"{settings.BACKEND_BASE_URL}/api/v1/enquiries/{enquiry.id}/registration-template"
 
-    # Check if a custom uploaded registration document exists
-    doc_attachment = None
+    # Check if a registration document already exists; if not, automatically generate and save one
     sent_doc = db.query(RegistrationDocument).filter(
         RegistrationDocument.enquiry_id == enquiry.id,
         RegistrationDocument.document_type == "sent_to_client"
     ).order_by(RegistrationDocument.created_at.desc()).first()
 
+    if not sent_doc:
+        sent_doc = document_service.generate_and_save_registration_document(db=db, enquiry=enquiry)
+
+    doc_attachment = None
     if sent_doc:
         doc_path = Path(settings.UPLOAD_DIR) / sent_doc.stored_filename
         if doc_path.exists():
@@ -278,7 +288,7 @@ def send_registration_document(
                     "filename": sent_doc.original_filename,
                     "stored_filename": sent_doc.stored_filename,
                     "content": f.read(),
-                    "mime_type": sent_doc.mime_type
+                    "mime_type": sent_doc.mime_type or "text/html"
                 }
 
     email_result = EmailService.send_registration_document_email(
