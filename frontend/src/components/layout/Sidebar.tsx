@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Mail,
-  Inbox,
+  Inbox, 
   Users, 
   HeartHandshake, 
   Settings, 
@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Email Inbox', path: '/inbox', icon: Mail },
     { name: 'Enquiries', path: '/enquiries', icon: Inbox },
     { name: 'Clients', path: '/clients', icon: Users },
-    { name: 'Weddings', path: '/weddings', icon: HeartHandshake },
+    { name: 'Projects', path: '/projects', icon: HeartHandshake },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
@@ -126,4 +126,3 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     </>
   );
 };
-

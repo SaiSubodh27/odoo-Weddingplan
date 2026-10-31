@@ -361,3 +361,143 @@ export const registrationApi = {
     return res.json();
   }
 };
+
+
+export const projectApi = {
+  async list(params?: { search?: string; status?: string; page?: number; pageSize?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.status && params.status !== 'All') searchParams.set('status', params.status);
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.pageSize) searchParams.set('page_size', String(params.pageSize));
+
+    const res = await fetch(`${API_BASE}/projects?${searchParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch wedding projects');
+    return res.json();
+  },
+
+  async getEligibleBookings() {
+    const res = await fetch(`${API_BASE}/projects/eligible-bookings`);
+    if (!res.ok) throw new Error('Failed to fetch eligible bookings');
+    return res.json();
+  },
+
+  async get(id: string) {
+    const res = await fetch(`${API_BASE}/projects/${id}`);
+    if (!res.ok) throw new Error(`Failed to fetch project ${id}`);
+    return res.json();
+  },
+
+  async create(data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to create wedding project');
+    }
+    return res.json();
+  },
+
+  async update(id: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/projects/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update wedding project');
+    }
+    return res.json();
+  },
+
+  async updateStatus(id: string, status: string, changedBy: string = 'Agency Staff', notes?: string) {
+    const res = await fetch(`${API_BASE}/projects/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, changedBy, notes }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update project status');
+    }
+    return res.json();
+  },
+
+  async addFunction(projectId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/projects/${projectId}/functions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to add wedding function');
+    }
+    return res.json();
+  },
+
+  async updateFunction(projectId: string, funcId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/projects/${projectId}/functions/${funcId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update wedding function');
+    }
+    return res.json();
+  },
+
+  async deleteFunction(projectId: string, funcId: string) {
+    const res = await fetch(`${API_BASE}/projects/${projectId}/functions/${funcId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to delete wedding function');
+    }
+    return res.json();
+  },
+
+  async addMilestone(projectId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/projects/${projectId}/milestones`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to add project milestone');
+    }
+    return res.json();
+  },
+
+  async updateMilestone(projectId: string, msId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/projects/${projectId}/milestones/${msId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update project milestone');
+    }
+    return res.json();
+  },
+
+  async deleteMilestone(projectId: string, msId: string) {
+    const res = await fetch(`${API_BASE}/projects/${projectId}/milestones/${msId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to delete project milestone');
+    }
+    return res.json();
+  },
+};

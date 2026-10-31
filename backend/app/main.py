@@ -13,6 +13,7 @@ from app.routes.enquiries import router as enquiries_router
 from app.routes.auth import router as auth_router
 from app.routes.emails import router as emails_router
 from app.routes.registrations import router as registrations_router
+from app.routes.projects import router as projects_router
 from app.services.email_sync_service import email_sync_service
 
 logger = logging.getLogger("royal_knot")
@@ -54,9 +55,9 @@ app = FastAPI(
     description=(
         "Production-grade backend service for **The Royal Knot** Luxury Wedding Planning Agency "
         "(Jaipur & Udaipur operations). Manages enquiry workflows, real Gmail incoming/outgoing communication, "
-        "registration document exchange, and client account activation."
+        "registration document exchange, client account activation, and wedding project setup & management."
     ),
-    version="1.2.0",
+    version="1.3.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
@@ -99,6 +100,7 @@ app.include_router(enquiries_router, prefix=f"{settings.API_V1_STR}/enquiries")
 app.include_router(registrations_router, prefix=f"{settings.API_V1_STR}/registrations")
 app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth")
 app.include_router(emails_router, prefix=f"{settings.API_V1_STR}/emails")
+app.include_router(projects_router, prefix=f"{settings.API_V1_STR}/projects")
 
 
 # Top-level /health route
@@ -107,7 +109,7 @@ def root_health():
     return {
         "service": settings.PROJECT_NAME,
         "status": "operational",
-        "version": "1.2.0",
+        "version": "1.3.0",
         "agency_email": settings.AGENCY_EMAIL,
         "imap_configured": email_sync_service.is_imap_configured(),
         "api_v1_docs": "/docs"
@@ -125,7 +127,9 @@ def root():
         "api_v1_endpoints": {
             "health": f"{settings.API_V1_STR}/health",
             "enquiries": f"{settings.API_V1_STR}/enquiries",
+            "registrations": f"{settings.API_V1_STR}/registrations",
             "clients": f"{settings.API_V1_STR}/clients",
+            "projects": f"{settings.API_V1_STR}/projects",
             "emails": f"{settings.API_V1_STR}/emails",
             "auth": f"{settings.API_V1_STR}/auth",
             "documentation": "/docs"
