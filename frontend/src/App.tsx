@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ClientProvider, useClients } from './context/ClientContext';
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -13,6 +13,7 @@ import { ClientsPage } from './pages/ClientsPage';
 import { AddClientPage } from './pages/AddClientPage';
 import { ClientDetailsPage } from './pages/ClientDetailsPage';
 import { WeddingsPage } from './pages/WeddingsPage';
+import { WeddingProjectPage } from './pages/WeddingProjectPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 // Protected Route wrapper
@@ -50,6 +51,7 @@ export const AppContent: React.FC = () => {
         <Route path="clients/new" element={<AddClientPage />} />
         <Route path="clients/:id" element={<ClientDetailsPage />} />
         <Route path="weddings" element={<WeddingsPage />} />
+        <Route path="weddings/:id" element={<WeddingProjectPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 
@@ -70,4 +72,5 @@ export const App: React.FC = () => {
 };
 
 export default App;
+
 

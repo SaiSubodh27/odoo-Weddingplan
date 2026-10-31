@@ -1,3 +1,4 @@
+import { demoEnquiries, isDemoEnquiry } from '../data/demoEnquiries';
 const API_BASE = 'http://localhost:8000/api/v1';
 
 export const enquiryApi = {
@@ -9,12 +10,26 @@ export const enquiryApi = {
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.pageSize) searchParams.set('page_size', String(params.pageSize));
 
-    const res = await fetch(`${API_BASE}/enquiries?${searchParams.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch enquiries');
-    return res.json();
+    let liveItems: any[] = [];
+    try {
+      const res = await fetch(`${API_BASE}/enquiries?${searchParams.toString()}`);
+      if (res.ok) { const data = await res.json(); liveItems = data.items || []; }
+    } catch { /* Demo records are available without a running backend. */ }
+    const demo = demoEnquiries.filter(e =>
+      (!params?.status || params.status === 'All' || e.status === params.status) &&
+      (!params?.source || params.source === 'All' || e.enquirySource === params.source) &&
+      (!params?.search || [e.clientName,e.email,e.phone,e.weddingLocation,e.id].join(' ').toLowerCase().includes(params.search.toLowerCase()))
+    );
+    const items = [...liveItems, ...demo];
+    return {items,total:items.length,page:1,pageSize:items.length};
   },
 
   async get(id: string) {
+    if (isDemoEnquiry(id)) {
+      const demo = demoEnquiries.find(e => e.id === id);
+      if (!demo) throw new Error('Demo enquiry not found');
+      return demo;
+    }
     const res = await fetch(`${API_BASE}/enquiries/${id}`);
     if (!res.ok) throw new Error(`Failed to fetch enquiry ${id}`);
     return res.json();

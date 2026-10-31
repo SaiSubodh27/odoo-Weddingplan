@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
 import { Calendar, MapPin, Users, Eye } from 'lucide-react';
@@ -54,7 +54,7 @@ export const WeddingsPage: React.FC = () => {
         {weddings.map((w) => (
           <div
             key={w.id}
-            onClick={() => navigate(`/clients/${w.id}`)}
+            onClick={() => navigate(`/weddings/${w.id}`)}
             className="bg-[#FFFFFF] border border-[#E5E0D8] p-6 hover:border-[#1F2421] cursor-pointer transition-all flex flex-col justify-between"
           >
             <div>
@@ -66,7 +66,7 @@ export const WeddingsPage: React.FC = () => {
               </div>
 
               <h2 className="font-serif text-xl font-semibold text-[#1F2421] mb-1">
-                {w.partner1Name} & {w.partner2Name}
+                {w.partner1Name} and {w.partner2Name}
               </h2>
 
               <p className="text-[11px] text-[#9E7D3B] font-medium mb-4">
@@ -119,3 +119,4 @@ export const WeddingsPage: React.FC = () => {
     </div>
   );
 };
+

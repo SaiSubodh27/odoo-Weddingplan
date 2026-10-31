@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Client, RegistrationStatus } from '../types/client';
 import { INITIAL_CLIENTS } from '../data/mockClients';
 
@@ -7,6 +7,7 @@ interface ClientContextType {
   addClient: (newClientData: Omit<Client, 'id' | 'createdAt'>) => string;
   getClient: (id: string) => Client | undefined;
   updateClientStatus: (id: string, status: RegistrationStatus) => void;
+  updateClient: (id: string, changes: Partial<Client>) => void;
   isAuthenticated: boolean;
   login: (email: string, details?: { name?: string; role?: string }) => void;
   logout: () => void;
@@ -133,6 +134,9 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return clients.find(c => c.id === id);
   };
 
+  const updateClient = (id: string, changes: Partial<Client>) => {
+    setClients(prev => prev.map(c => c.id === id ? {...c,...changes,id:c.id,createdAt:c.createdAt} : c));
+  };
   const updateClientStatus = (id: string, status: RegistrationStatus) => {
     setClients(prev =>
       prev.map(c => (c.id === id ? { ...c, status } : c))
@@ -153,6 +157,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addClient,
         getClient,
         updateClientStatus,
+        updateClient,
         isAuthenticated,
         login,
         logout,
@@ -172,3 +177,4 @@ export const useClients = () => {
   }
   return context;
 };
+

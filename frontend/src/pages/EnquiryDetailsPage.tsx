@@ -399,7 +399,7 @@ export const EnquiryDetailsPage: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <span className="text-[10px] uppercase tracking-wider text-[#8C877D] block">Expected Guests & Budget</span>
+                <span className="text-[10px] uppercase tracking-wider text-[#8C877D] block">Expected Guests and Budget</span>
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-[#1F2421]">
                   <Users size={14} className="text-[#9E7D3B]" />
                   <span>{enquiry.expectedGuestCount || '—'} Guests</span>
@@ -540,7 +540,7 @@ export const EnquiryDetailsPage: React.FC = () => {
               <div className="text-xs font-semibold text-[#1F2421] uppercase tracking-wider">
                 Upload Document Attachment
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] uppercase text-[#8C877D] mb-1">Document Type</label>
                   <select
@@ -553,18 +553,18 @@ export const EnquiryDetailsPage: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="sm:col-span-2">
+                <div className="min-w-0">
                   <label className="block text-[10px] uppercase text-[#8C877D] mb-1">Choose File (PDF, DOCX, HTML, PNG, JPG)</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-3 min-w-0">
                     <input
                       type="file"
                       onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
-                      className="text-xs file:mr-2 file:py-1 file:px-3 file:border file:border-[#E5E0D8] file:text-xs file:bg-[#FAF8F5]"
+                      className="block w-full min-w-0 max-w-full text-xs file:mr-2 file:py-2 file:px-3 file:border file:border-[#E5E0D8] file:text-xs file:bg-[#FAF8F5]"
                     />
                     <button
                       type="submit"
                       disabled={!selectedFile || isUploading}
-                      className="px-4 py-1.5 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider disabled:opacity-50 flex items-center gap-1 font-semibold"
+                      className="self-start px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider disabled:opacity-50 inline-flex items-center gap-2 font-semibold"
                     >
                       <Upload size={12} />
                       <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
@@ -577,7 +577,7 @@ export const EnquiryDetailsPage: React.FC = () => {
             {/* Uploaded Documents List */}
             <div>
               <div className="text-xs font-semibold text-[#1F2421] uppercase tracking-wider mb-2">
-                Attached Files & Dossiers ({enquiry.documents?.length || 0})
+                Attached Files and Dossiers ({enquiry.documents?.length || 0})
               </div>
               {enquiry.documents && enquiry.documents.length > 0 ? (
                 <div className="space-y-2">
@@ -647,7 +647,7 @@ export const EnquiryDetailsPage: React.FC = () => {
             <div className="flex items-center justify-between pb-4 border-b border-[#E5E0D8]">
               <div className="flex items-center gap-2">
                 <MessageSquare size={16} className="text-[#9E7D3B]" />
-                <h2 className="font-serif text-xl text-[#1F2421]">Email Conversation & Client Replies</h2>
+                <h2 className="font-serif text-xl text-[#1F2421]">Email Conversation and Client Replies</h2>
               </div>
               <span className="text-[10px] uppercase tracking-wider text-[#8C877D] bg-[#FAF8F5] border border-[#E5E0D8] px-2 py-0.5">
                 {messages.length} Message(s)
@@ -779,7 +779,7 @@ export const EnquiryDetailsPage: React.FC = () => {
           <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-6 space-y-4">
             <div className="flex items-center gap-2 pb-4 border-b border-[#E5E0D8]">
               <Clock size={16} className="text-[#9E7D3B]" />
-              <h2 className="font-serif text-xl text-[#1F2421]">Internal Staff Notes & Log</h2>
+              <h2 className="font-serif text-xl text-[#1F2421]">Internal Staff Notes and Log</h2>
             </div>
 
             {/* Note form */}
@@ -861,7 +861,7 @@ export const EnquiryDetailsPage: React.FC = () => {
             </div>
             <div className="flex justify-between py-1 border-b border-[#E5E0D8]/60">
               <span className="text-[#8C877D]">Operating Hubs:</span>
-              <span className="text-[#1F2421]">Jaipur & Udaipur</span>
+              <span className="text-[#1F2421]">Jaipur and Udaipur</span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-[#8C877D]">Created Date:</span>
@@ -901,7 +901,7 @@ export const EnquiryDetailsPage: React.FC = () => {
                   <label className="block text-[10px] uppercase text-[#8C877D] mb-1">
                     Client Account Activation Link (Expires in 72 hours)
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-3 min-w-0">
                     <input
                       type="text"
                       readOnly
@@ -973,7 +973,7 @@ export const EnquiryDetailsPage: React.FC = () => {
                     type="text"
                     value={weddingTheme}
                     onChange={(e) => setWeddingTheme(e.target.value)}
-                    placeholder="e.g. Royal Marwar Heritage & Twilight Candles"
+                    placeholder="e.g. Royal Marwar Heritage and Twilight Candles"
                     className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#E5E0D8] text-[#1F2421]"
                   />
                 </div>

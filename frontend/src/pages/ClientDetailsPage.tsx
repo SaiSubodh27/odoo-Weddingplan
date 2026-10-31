@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
-import { RegistrationStatus } from '../types/client';
+import { Client, RegistrationStatus } from '../types/client';
 import { getStatusBadgeStyle } from '../components/clients/ClientTable';
 import { 
   ArrowLeft, 
@@ -27,13 +27,27 @@ import {
 export const ClientDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getClient, updateClientStatus } = useClients();
+  const { getClient, updateClientStatus, updateClient } = useClients();
 
   const client = getClient(id || '');
   const [selectedStatus, setSelectedStatus] = useState<RegistrationStatus>(
     client?.status || 'Enquiry'
   );
   const [statusUpdateMessage, setStatusUpdateMessage] = useState<string | null>(null);
+  const [editing,setEditing] = useState(false);
+  const [draft,setDraft] = useState<Partial<Client>>({});
+  const [savedMessage,setSavedMessage] = useState('');
+  const editFields: {key:keyof Client;label:string;kind?:string}[] = [
+    {key:'partner1Name',label:'Primary client name'}, {key:'partner2Name',label:'Partner name'},
+    {key:'email',label:'Email address',kind:'email'}, {key:'phone',label:'Phone number'},
+    {key:'weddingDate',label:'Wedding date',kind:'date'}, {key:'weddingLocation',label:'Wedding destination'},
+    {key:'expectedGuestCount',label:'Expected guest count',kind:'number'},
+    {key:'estimatedBudget',label:'Estimated budget'}, {key:'weddingTheme',label:'Wedding theme'},
+    {key:'servicePackage',label:'Service package'}, {key:'additionalRequirements',label:'Special requirements'},
+    {key:'notes',label:'Internal notes'}
+  ];
+  const beginEdit=()=>{if(client){setDraft({...client});setEditing(true);setSavedMessage('');}};
+  const saveEdit=()=>{if(!client)return;const {id: _id,createdAt: _createdAt,...changes}=draft;void _id;void _createdAt;updateClient(client.id,changes);setEditing(false);setSavedMessage('Changes saved in this browser.');};
 
   if (!client) {
     return (
@@ -79,16 +93,17 @@ export const ClientDetailsPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase text-[#9E7D3B] font-medium">
               <span>Client Dossier</span>
-              <span>·</span>
+              <span>Â·</span>
               <span>Ref: {client.id}</span>
             </div>
             <h1 className="font-serif text-3xl text-[#1F2421]">
-              {client.partner1Name} & {client.partner2Name}
+              {client.partner1Name} and {client.partner2Name}
             </h1>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button onClick={beginEdit} className="px-4 py-2 rounded-lg bg-[#2F2C29] text-white text-sm font-semibold hover:bg-[#554536]">Edit Details</button>
           {/* Status badge & selector */}
           <div className="flex items-center gap-2 border border-[#E5E0D8] bg-[#FFFFFF] px-3 py-1.5">
             <span className="text-[10px] uppercase tracking-wider text-[#736F68]">Status:</span>
@@ -121,6 +136,19 @@ export const ClientDetailsPage: React.FC = () => {
         </div>
       )}
 
+      {savedMessage && <div className="bg-[#F4F8EF] border border-[#CBD8BF] p-3 text-sm">{savedMessage}</div>}
+      {editing && <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Edit client dossier">
+        <div className="bg-[#FFFCF8] rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6">
+          <div className="flex items-center justify-between gap-3 mb-5"><div><h2 className="font-serif text-2xl font-semibold">Edit Client Details</h2><p className="text-sm text-[#7B7065] mt-1">Update this record without creating another client dossier.</p></div><button onClick={()=>setEditing(false)} className="text-sm underline">Close</button></div>
+          <form onSubmit={e=>{e.preventDefault();saveEdit();}} className="grid sm:grid-cols-2 gap-4">
+            {editFields.map(field=><label key={field.key} className={'block text-sm font-semibold '+(['additionalRequirements','notes'].includes(field.key)?'sm:col-span-2':'')}>
+              <span className="block mb-1.5">{field.label}</span>
+              {['additionalRequirements','notes'].includes(field.key)?<textarea className="w-full border border-[#DCD1C5] rounded-lg p-3 bg-white font-normal min-h-20" value={String(draft[field.key]??'')} onChange={e=>setDraft(d=>({...d,[field.key]:e.target.value}))}/>:field.key==='servicePackage'?<select className="w-full border border-[#DCD1C5] rounded-lg p-3 bg-white font-normal" value={String(draft.servicePackage??'')} onChange={e=>setDraft(d=>({...d,servicePackage:e.target.value as Client['servicePackage']}))}><option value="Full-Service">Full-Service</option><option value="Partial-Service">Partial-Service</option><option value="Day-of Coordination">Day-of Coordination</option><option value="Full-Service Royal Production">Full-Service Royal Production</option><option value="Concierge Direction">Concierge Direction</option><option value="Venue & Hospitality">Venue & Hospitality</option></select>:<input required={['partner1Name','email','phone'].includes(field.key)} type={field.kind||'text'} min={field.kind==='number'?0:undefined} className="w-full border border-[#DCD1C5] rounded-lg p-3 bg-white font-normal" value={String(draft[field.key]??'')} onChange={e=>setDraft(d=>({...d,[field.key]:field.kind==='number'?Number(e.target.value):e.target.value}))}/>}
+            </label>)}
+            <div className="sm:col-span-2 flex justify-end gap-3 pt-4 border-t border-[#E5DDD4]"><button type="button" onClick={()=>setEditing(false)} className="px-5 py-2.5 border rounded-lg font-semibold">Cancel</button><button type="submit" className="px-5 py-2.5 bg-[#302C28] text-white rounded-lg font-semibold">Save Changes</button></div>
+          </form>
+        </div>
+      </div>}
       {/* Main Info Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -407,4 +435,5 @@ export const ClientDetailsPage: React.FC = () => {
     </div>
   );
 };
+
 

@@ -63,7 +63,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({ clients }) => {
                 {/* Couple Name */}
                 <td className="py-4 px-4">
                   <div className="font-serif text-base font-semibold text-[#1F2421] group-hover:text-[#9E7D3B] transition-colors flex items-center gap-1.5">
-                    <span>{client.partner1Name} & {client.partner2Name}</span>
+                    <span>{client.partner1Name} and {client.partner2Name}</span>
                     <ArrowUpRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-[#9E7D3B]" />
                   </div>
                   <div className="text-[11px] text-[#8C877D] tracking-wide mt-0.5">

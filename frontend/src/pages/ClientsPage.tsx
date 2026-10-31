@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
 import { ClientTable } from '../components/clients/ClientTable';
 import { RegistrationStatus } from '../types/client';
@@ -8,7 +8,13 @@ import { Search, Plus, Filter, RotateCcw } from 'lucide-react';
 export const ClientsPage: React.FC = () => {
   const { clients } = useClients();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter = searchParams.get('status') || 'All';
+  const setStatusFilter = (status: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (status === 'All') next.delete('status'); else next.set('status', status);
+    setSearchParams(next);
+  };
 
   const statusOptions: ('All' | RegistrationStatus)[] = [
     'All',
