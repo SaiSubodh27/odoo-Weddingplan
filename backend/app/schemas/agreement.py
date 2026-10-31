@@ -180,6 +180,8 @@ class SendForSignatureResponse(BaseModel):
     agreement_id: str
     agreement_number: str
     version_number: int
+    provider: str = "Leegality"
+    environment: str = "sandbox"
     leegality_document_id: Optional[str] = None
     signing_url: Optional[str] = None
     status: str
@@ -192,6 +194,8 @@ class SigningStatusResponse(BaseModel):
     version_number: int
     signing_status: str
     agreement_status: str
+    provider: str = "Leegality"
+    environment: str = "sandbox"
     leegality_document_id: Optional[str] = None
     signing_url: Optional[str] = None
     signer_name: Optional[str] = None

@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ExternalLink, CheckCircle, ShieldCheck } from 'lucide-react';
 import { agreementApi } from '../services/api';
-import { ServiceAgreement } from '../types/agreement';
+import { ServiceAgreement, SignatureStatusResponse } from '../types/agreement';
 
 export const ClientSigningPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
   const [agreement, setAgreement] = useState<ServiceAgreement | null>(null);
+  const [sigStatus, setSigStatus] = useState<SignatureStatusResponse | null>(null);
   const [signingUrl, setSigningUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,10 +19,13 @@ export const ClientSigningPage: React.FC = () => {
         const data = await agreementApi.get(id);
         setAgreement(data);
 
-        // Fetch Leegality signing URL
-        const sigStatus = await agreementApi.getSignatureStatus(id);
-        if (sigStatus && sigStatus.signing_url) {
-          setSigningUrl(sigStatus.signing_url);
+        // Fetch Leegality signing details
+        const statusData = await agreementApi.getSignatureStatus(id);
+        if (statusData) {
+          setSigStatus(statusData);
+          if (statusData.signing_url) {
+            setSigningUrl(statusData.signing_url);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -56,7 +60,7 @@ export const ClientSigningPage: React.FC = () => {
       </div>
 
       {/* Summary Card */}
-      <div className="bg-white border border-[#E5E0D8] p-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+      <div className="bg-white border border-[#E5E0D8] p-6 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
         <div>
           <span className="text-[#8C877D] block">Agreement Ref:</span>
           <span className="font-mono font-bold text-[#1F2421] text-sm">{agreement.agreement_number}</span>
@@ -70,6 +74,16 @@ export const ClientSigningPage: React.FC = () => {
         <div>
           <span className="text-[#8C877D] block">eSigning Status:</span>
           <span className="font-semibold text-purple-700 text-sm">{agreement.signing_status}</span>
+        </div>
+        <div>
+          <span className="text-[#8C877D] block">Mode:</span>
+          <span className={`inline-block mt-0.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border ${
+            sigStatus?.environment === 'sandbox' || sigStatus?.environment === 'production'
+              ? 'bg-blue-50 text-blue-800 border-blue-200'
+              : 'bg-amber-50 text-amber-800 border-amber-200'
+          }`}>
+            {sigStatus?.environment === 'sandbox' ? 'Real Sandbox' : sigStatus?.environment === 'production' ? 'Production' : 'Simulation Mock'}
+          </span>
         </div>
       </div>
 

@@ -310,8 +310,15 @@ class AgreementService:
             signer_phone=signer_phone
         )
 
-        doc_id = leegality_res.get("response", {}).get("documentId")
-        invitations = leegality_res.get("response", {}).get("invitations", [])
+        doc_id = (
+            leegality_res.get("data", {}).get("documentId")
+            or leegality_res.get("response", {}).get("documentId")
+            or leegality_res.get("documentId")
+        )
+        invitations = (
+            leegality_res.get("data", {}).get("invitations")
+            or leegality_res.get("response", {}).get("invitations", [])
+        )
         sign_url = invitations[0].get("signUrl") if invitations else None
 
         # Record signature request
@@ -320,9 +327,12 @@ class AgreementService:
             agreement_id=agreement.id,
             version_number=agreement.current_version_number,
             leegality_document_id=doc_id,
-            leegality_request_id=leegality_res.get("response", {}).get("irn"),
+            leegality_request_id=(
+                leegality_res.get("data", {}).get("irn")
+                or leegality_res.get("response", {}).get("irn")
+            ),
             provider="Leegality",
-            environment=leegality_client.env,
+            environment=leegality_client.env if leegality_client.is_live_configured() else "mock",
             signer_name=signer_name,
             signer_email=signer_email,
             signer_phone=signer_phone,
@@ -337,12 +347,21 @@ class AgreementService:
         cls._record_status_history(db, agreement, "SIGNING_PENDING", "System", "Dispatched to Leegality for eSignature.")
         db.commit()
 
+        is_real_sandbox = sig_req.environment in ("sandbox", "production")
+        msg = (
+            f"Service agreement successfully submitted to real Leegality {sig_req.environment.upper()} API! Invitation active."
+            if is_real_sandbox
+            else "Service agreement signing request created in Simulation Mock mode."
+        )
+
         return {
             "success": True,
-            "message": "Service agreement successfully submitted to Leegality for client eSignature.",
+            "message": msg,
             "agreement_id": agreement.id,
             "agreement_number": agreement.agreement_number,
             "version_number": agreement.current_version_number,
+            "provider": sig_req.provider,
+            "environment": sig_req.environment,
             "leegality_document_id": doc_id,
             "signing_url": sign_url,
             "status": "SENT",
@@ -351,7 +370,12 @@ class AgreementService:
 
     @classmethod
     def process_leegality_webhook(cls, db: Session, payload: Dict[str, Any], is_success: bool) -> Dict[str, Any]:
-        doc_id = payload.get("documentId") or payload.get("document_id") or payload.get("response", {}).get("documentId")
+        doc_id = (
+            payload.get("data", {}).get("documentId")
+            or payload.get("documentId")
+            or payload.get("document_id")
+            or payload.get("response", {}).get("documentId")
+        )
         if not doc_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing documentId in webhook payload.")
 
@@ -420,6 +444,13 @@ class AgreementService:
                 event.processing_notes = f"Executed document download deferred: {e}"
 
             cls._record_status_history(db, agreement, "UNDER_VERIFICATION", "Leegality Webhook", "Client electronic signature completed.")
+
+        elif sig_req and not is_success:
+            agreement = sig_req.agreement
+            fail_reason = payload.get("reason") or payload.get("message") or "Signing rejected, expired, or failed"
+            sig_req.status = "FAILED"
+            agreement.signing_status = "FAILED"
+            cls._record_status_history(db, agreement, "NEEDS_CORRECTION", "Leegality Webhook", f"eSignature failed: {fail_reason}")
 
         db.commit()
         return {"status": "ok", "processed": True}

@@ -13,13 +13,14 @@ import {
   DollarSign
 } from 'lucide-react';
 import { agreementApi } from '../services/api';
-import { ServiceAgreement } from '../types/agreement';
+import { ServiceAgreement, SignatureStatusResponse } from '../types/agreement';
 
 export const AgreementDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [agreement, setAgreement] = useState<ServiceAgreement | null>(null);
+  const [sigDetails, setSigDetails] = useState<SignatureStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -35,6 +36,14 @@ export const AgreementDetailsPage: React.FC = () => {
     try {
       const data = await agreementApi.get(id);
       setAgreement(data);
+      if (data.signing_status !== 'NOT_CREATED') {
+        try {
+          const sig = await agreementApi.getSignatureStatus(id);
+          setSigDetails(sig);
+        } catch (_) {}
+      } else {
+        setSigDetails(null);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -67,9 +76,12 @@ export const AgreementDetailsPage: React.FC = () => {
     setActionMsg(null);
     try {
       const res = await agreementApi.sendForSignature(id);
+      const isReal = res.environment === 'sandbox' || res.environment === 'production';
       setActionMsg({ 
         type: 'success', 
-        text: `Successfully dispatched to Leegality! Invitation active for client. Document ID: ${res.leegality_document_id || 'Registered'}` 
+        text: isReal
+          ? `Dispatched to Real Leegality ${res.environment.toUpperCase()} API! Document ID: ${res.leegality_document_id}`
+          : `Dispatched in Simulation Mock mode. Document ID: ${res.leegality_document_id}`
       });
       await fetchAgreement();
     } catch (err: any) {
@@ -287,15 +299,50 @@ export const AgreementDetailsPage: React.FC = () => {
 
           {/* Leegality eSignature Tracking */}
           <div className="bg-white border border-[#E5E0D8] p-5 space-y-3">
-            <div className="flex items-center gap-2 pb-2 border-b border-[#E5E0D8]">
-              <Send size={14} className="text-purple-600" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#1F2421]">Leegality eSigning Status</h3>
+            <div className="flex items-center justify-between pb-2 border-b border-[#E5E0D8]">
+              <div className="flex items-center gap-2">
+                <Send size={14} className="text-purple-600" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[#1F2421]">Leegality eSigning Status</h3>
+              </div>
+              {sigDetails && (
+                <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border ${
+                  sigDetails.environment === 'sandbox' || sigDetails.environment === 'production'
+                    ? 'bg-blue-50 text-blue-800 border-blue-200'
+                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                }`}>
+                  {sigDetails.environment === 'sandbox' ? 'Sandbox API' : sigDetails.environment === 'production' ? 'Production API' : 'Simulation Mock'}
+                </span>
+              )}
             </div>
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
                 <span className="text-[#8C877D]">Provider Status:</span>
                 <span className="font-semibold text-purple-700">{agreement.signing_status}</span>
               </div>
+              {sigDetails?.leegality_document_id && (
+                <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
+                  <span className="text-[#8C877D]">Document ID:</span>
+                  <span className="font-mono text-[11px] font-medium text-[#1F2421]">{sigDetails.leegality_document_id}</span>
+                </div>
+              )}
+              {sigDetails?.signer_name && (
+                <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
+                  <span className="text-[#8C877D]">Signer:</span>
+                  <span className="text-[#1F2421]">{sigDetails.signer_name}</span>
+                </div>
+              )}
+              {sigDetails?.signing_url && agreement.signing_status !== 'COMPLETED' && (
+                <div className="pt-1">
+                  <a
+                    href={sigDetails.signing_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-[#9E7D3B] hover:text-[#86682F] font-medium hover:underline"
+                  >
+                    Open Client Signing Portal <ExternalLink size={12} />
+                  </a>
+                </div>
+              )}
               <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
                 <span className="text-[#8C877D]">Internal Approval:</span>
                 <span className={`font-medium ${agreement.is_internally_approved ? 'text-emerald-700' : 'text-amber-700'}`}>

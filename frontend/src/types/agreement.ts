@@ -96,3 +96,33 @@ export interface AgreementMetrics {
   confirmed_bookings: number;
 }
 
+export interface SignatureStatusResponse {
+  agreement_id: string;
+  agreement_number: string;
+  version_number: number;
+  signing_status: SigningStatus;
+  agreement_status: AgreementStatus;
+  provider: string;
+  environment: 'sandbox' | 'production' | 'mock';
+  leegality_document_id?: string;
+  signing_url?: string;
+  signer_name?: string;
+  signer_email?: string;
+  completed_at?: string;
+  raw_provider_status?: Record<string, any>;
+}
+
+export interface SendForSignatureResponse {
+  success: boolean;
+  message: string;
+  agreement_id: string;
+  agreement_number: string;
+  version_number: number;
+  provider: string;
+  environment: 'sandbox' | 'production' | 'mock';
+  leegality_document_id?: string;
+  signing_url?: string;
+  status: string;
+  sent_at?: string;
+}
+

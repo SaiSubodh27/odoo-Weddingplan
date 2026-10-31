@@ -63,10 +63,9 @@ class LeegalityClient:
         success_url = webhook_success_url or settings.LEEGALITY_WEBHOOK_SUCCESS_URL
         failure_url = webhook_failure_url or settings.LEEGALITY_WEBHOOK_FAILURE_URL
 
-        payload = {
+        payload: Dict[str, Any] = {
             "file": document_base64,
             "filename": document_filename,
-            "profileId": "",  # Optional configured Leegality workflow profile
             "invitees": [
                 {
                     "name": signer_name,
@@ -82,14 +81,14 @@ class LeegalityClient:
             }
         }
 
-        # If live credentials are not yet configured in development, provide safe deterministic mock response
-        if not self.is_live_configured() or self.env == "mock":
-            logger.info("Operating in Leegality Sandbox Mock mode (no live token provided in .env).")
+        # If mock mode is explicitly chosen
+        if self.env == "mock":
+            logger.info("Operating in Leegality Mock Simulation mode (LEEGALITY_ENV=mock).")
             simulated_doc_id = f"mock_leegality_{uuid.uuid4().hex[:12]}"
             simulated_signing_url = f"https://sandbox.leegality.com/sign/{simulated_doc_id}?invitee={signer_email}"
             return {
                 "status": 1,
-                "response": {
+                "data": {
                     "documentId": simulated_doc_id,
                     "irn": f"IRN-{uuid.uuid4().hex[:8].upper()}",
                     "invitations": [
@@ -101,17 +100,31 @@ class LeegalityClient:
                         }
                     ]
                 },
-                "message": "Signing request created successfully (Sandbox Simulation)."
+                "message": "Signing request created successfully (Simulation Mock mode)."
             }
 
+        # If in sandbox or production mode, verify credentials exist
+        if not self.is_live_configured():
+            logger.error(f"Leegality {self.env.upper()} mode active but LEEGALITY_AUTH_TOKEN is missing.")
+            raise RuntimeError(
+                f"Leegality {self.env.upper()} mode is enabled, but LEEGALITY_AUTH_TOKEN is not configured in backend/.env. "
+                "Please obtain an Auth Token from your Leegality Dashboard -> API Settings and set LEEGALITY_AUTH_TOKEN in backend/.env, "
+                "or switch LEEGALITY_ENV=mock for simulation mode."
+            )
+
         endpoint = f"{self.base_url}/sign/request"
-        logger.info(f"Submitting signing request to Leegality: {endpoint}")
+        logger.info(f"Submitting signing request to Leegality {self.env.upper()}: {endpoint}")
         with httpx.Client(timeout=self.timeout) as client:
             resp = client.post(endpoint, json=payload, headers=self._get_headers())
             if resp.status_code not in (200, 201):
                 logger.error(f"Leegality API error ({resp.status_code}): {resp.text}")
                 raise RuntimeError(f"Leegality API request failed with status {resp.status_code}: {resp.text}")
-            return resp.json()
+            data = resp.json()
+            if data.get("status") == 0 or data.get("error"):
+                err_msg = data.get("message") or data.get("error") or "Unknown Leegality error"
+                logger.error(f"Leegality API returned failure status: {err_msg}")
+                raise RuntimeError(f"Leegality API rejected signing request: {err_msg}")
+            return data
 
     def get_signing_status(self, document_id: str) -> Dict[str, Any]:
         """
