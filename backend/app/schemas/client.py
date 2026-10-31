@@ -12,17 +12,9 @@ RegistrationStatusType = Literal[
     "Confirmed"
 ]
 
-ServicePackageType = Literal[
-    "Full-Service",
-    "Partial-Service",
-    "Day-of Coordination"
-]
-
-EnquirySourceType = Literal[
-    "Email",
-    "Phone",
-    "Website"
-]
+ServicePackageType = str
+EnquirySourceType = str
+RegistrationStatusType = str
 
 
 class ClientBase(BaseModel):

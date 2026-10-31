@@ -264,12 +264,8 @@ class EmailService:
         Contains no document attachments and no plain-text credentials.
         """
         google_form_url = registration_url or settings.GOOGLE_FORMS_REGISTRATION_URL
-        if enquiry_id and "?" in google_form_url:
-            form_link = f"{google_form_url}&enquiry_ref={enquiry_id}"
-        elif enquiry_id:
-            form_link = f"{google_form_url}?enquiry_ref={enquiry_id}"
-        else:
-            form_link = google_form_url
+        # Use the form URL as-is — it's a full Google Forms direct link
+        form_link = google_form_url
 
         subject = f"Thank You for Contacting The Royal Knot — Wedding Celebration Enquiry ({enquiry_id})"
 

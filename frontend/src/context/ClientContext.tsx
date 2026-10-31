@@ -16,7 +16,7 @@ interface ClientContextType {
 
 const ClientContext = createContext<ClientContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'the_royal_knot_clients_v1';
+const STORAGE_KEY = 'the_royal_knot_clients_v2';
 const AUTH_KEY = 'the_royal_knot_auth_v1';
 const API_BASE = 'http://localhost:8000/api/v1';
 
@@ -56,7 +56,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const res = await fetch(`${API_BASE}/clients?page=1&page_size=100`);
         if (res.ok) {
           const data = await res.json();
-          if (data && Array.isArray(data.items) && data.items.length > 0) {
+          if (data && Array.isArray(data.items)) {
             setClients(data.items);
           }
           setIsBackendConnected(true);

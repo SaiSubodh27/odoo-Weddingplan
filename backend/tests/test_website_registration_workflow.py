@@ -100,3 +100,4 @@ def test_website_client_registration_and_portal_access():
     dup_res = client.post("/api/v1/auth/register-website", json=register_payload)
     assert dup_res.status_code == 400
     assert "already exists" in dup_res.json()["detail"]
+

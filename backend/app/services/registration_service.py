@@ -300,7 +300,7 @@ class RegistrationService:
 
         # Dispatch email requesting corrections with Google Forms link
         form_url = settings.GOOGLE_FORMS_REGISTRATION_URL
-        registration_url = f"{form_url}?enquiry_ref={enquiry.id}" if "?" not in form_url else f"{form_url}&enquiry_ref={enquiry.id}"
+        registration_url = form_url  # Use the direct URL as configured
         email_res = EmailService.send_corrections_requested_email(
             to_email=reg.email,
             client_name=reg.full_name,

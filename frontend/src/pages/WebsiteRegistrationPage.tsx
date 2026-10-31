@@ -189,8 +189,16 @@ export const WebsiteRegistrationPage: React.FC = () => {
         </div>
 
         {errorMessage && (
-          <div className="p-4 bg-[#FBF1F0] border border-[#E9C3C0] text-[#94352D] text-xs leading-relaxed">
-            {errorMessage}
+          <div className="p-4 bg-[#FBF1F0] border border-[#E9C3C0] text-[#94352D] text-xs leading-relaxed flex items-center justify-between gap-4">
+            <div>{errorMessage}</div>
+            {errorMessage.toLowerCase().includes('already exists') && (
+              <Link
+                to="/login"
+                className="shrink-0 px-3 py-1.5 bg-[#94352D] text-[#FAF8F5] text-[10px] uppercase tracking-wider font-semibold hover:bg-[#722720]"
+              >
+                Log In Now
+              </Link>
+            )}
           </div>
         )}
 

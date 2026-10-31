@@ -345,6 +345,10 @@ export const authApi = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+      if (err.errors && Array.isArray(err.errors) && err.errors.length > 0) {
+        const errorDetails = err.errors.map((e: any) => `${e.field.replace('body -> ', '')}: ${e.message}`).join(' | ');
+        throw new Error(errorDetails);
+      }
       throw new Error(err.detail || 'Website registration failed');
     }
     return res.json();

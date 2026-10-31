@@ -1,4 +1,5 @@
 import uuid
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from sqlalchemy.orm import Session
@@ -19,6 +20,8 @@ from app.schemas.user import (
 )
 from app.services.email_service import EmailService
 from app.core.config import settings
+
+logger = logging.getLogger("royal_knot.auth")
 
 
 class AuthService:
@@ -195,12 +198,17 @@ class AuthService:
         """
         clean_email = req.email.strip().lower()
 
-        # 1. Duplicate account check
+        # 1. Duplicate active account check
         existing_user = db.query(UserAccount).filter(UserAccount.email == clean_email).first()
         if existing_user and existing_user.status == "ACTIVE":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"An account with email '{clean_email}' already exists. Please log in directly."
+            )
+        if existing_user and existing_user.role in ("staff", "admin"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"The email '{clean_email}' is reserved for agency staff. Please use your personal client email."
             )
 
         now = datetime.now(timezone.utc)
@@ -251,12 +259,59 @@ class AuthService:
         )
         db.add(reg_record)
 
+        # 3b. Create or update Client entity in central Clients directory
+        client_record = db.query(Client).filter(func.lower(Client.email) == clean_email).first()
+        if not client_record:
+            client_count = db.query(func.count(Client.id)).scalar() or 0
+            new_client_id = f"TRK-2026-{client_count + 1:03d}"
+            client_record = Client(
+                id=new_client_id,
+                partner1_name=req.full_name.strip(),
+                partner2_name=req.partner_name.strip() if req.partner_name else "",
+                email=clean_email,
+                phone=req.phone.strip(),
+                wedding_date=req.wedding_date,
+                wedding_location=req.wedding_location.strip() if req.wedding_location else "Rajasthan Heritage",
+                expected_guest_count=req.expected_guest_count,
+                estimated_budget=req.estimated_budget,
+                wedding_theme=req.preferred_theme,
+                service_package=req.service_package or "Full-Service",
+                additional_requirements=req.preferences.strip() if req.preferences else None,
+                enquiry_source="Website",
+                status="Registered",
+                created_at=now,
+                updated_at=now
+            )
+            db.add(client_record)
+            db.flush()
+        else:
+            client_record.partner1_name = req.full_name.strip()
+            if req.partner_name:
+                client_record.partner2_name = req.partner_name.strip()
+            client_record.phone = req.phone.strip()
+            if req.wedding_date:
+                client_record.wedding_date = req.wedding_date
+            if req.wedding_location:
+                client_record.wedding_location = req.wedding_location.strip()
+            if req.expected_guest_count:
+                client_record.expected_guest_count = req.expected_guest_count
+            if req.estimated_budget:
+                client_record.estimated_budget = req.estimated_budget
+            if req.preferred_theme:
+                client_record.wedding_theme = req.preferred_theme
+            if req.service_package:
+                client_record.service_package = req.service_package
+            client_record.updated_at = now
+
+        new_enquiry.client_id = client_record.id
+
         # 4. Create or update UserAccount with active status and hashed password
         hashed_pw = hash_password(req.password)
         if existing_user:
             existing_user.hashed_password = hashed_pw
             existing_user.is_active = True
             existing_user.status = "ACTIVE"
+            existing_user.client_id = client_record.id
             user_record = existing_user
         else:
             user_id = f"USR-{uuid.uuid4().hex[:10].upper()}"
@@ -266,7 +321,8 @@ class AuthService:
                 hashed_password=hashed_pw,
                 role="client",
                 status="ACTIVE",
-                is_active=True
+                is_active=True,
+                client_id=client_record.id
             )
             db.add(user_record)
 
@@ -290,23 +346,31 @@ class AuthService:
         db.refresh(user_record)
 
         # 6. Dispatch luxury welcome & confirmation email
+        email_result = None
         try:
             subject = f"Welcome to The Royal Knot — Celebration Registration Confirmed ({new_enq_id})"
             portal_url = f"{settings.FRONTEND_BASE_URL}/login"
+            budget_str = f"₹ {req.estimated_budget:,.2f}" if req.estimated_budget else "Bespoke / In Consultation"
+            date_str = req.wedding_date.strftime("%B %d, %Y") if req.wedding_date else "To be finalized"
+            guests_str = f"{req.expected_guest_count} Esteemed Guests" if req.expected_guest_count else "To be determined"
+            theme_str = req.preferred_theme or "Royal Rajputana Heritage"
+            package_str = req.service_package or "Full-Service Royal Production"
+
             html_content = f"""
             <!DOCTYPE html>
             <html>
             <head>
               <style>
                 body {{ font-family: 'Georgia', serif; color: #1F2421; background-color: #FAF8F5; margin: 0; padding: 20px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background: #FFFFFF; border: 1px solid #E5E0D8; padding: 40px; }}
+                .container {{ max-width: 620px; margin: 0 auto; background: #FFFFFF; border: 1px solid #E5E0D8; padding: 40px; }}
                 .header {{ text-align: center; border-bottom: 1px solid #E5E0D8; padding-bottom: 24px; }}
                 .brand {{ font-size: 26px; font-weight: normal; text-transform: uppercase; letter-spacing: 3px; color: #1F2421; }}
                 .tagline {{ font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: #9E7D3B; margin-top: 6px; }}
                 .content {{ padding: 32px 0; font-size: 14px; line-height: 1.85; color: #4A4640; }}
                 .btn {{ display: inline-block; padding: 14px 32px; background: #1F2421; color: #FAF8F5 !important; text-decoration: none; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin: 24px 0; border: 1px solid #1F2421; }}
-                .highlight-box {{ background: #FAF8F5; border-left: 2px solid #9E7D3B; padding: 18px 22px; margin: 22px 0; font-size: 13px; color: #2C2724; }}
-                .footer {{ border-top: 1px solid #E5E0D8; padding-top: 24px; font-size: 11px; color: #8C877D; text-align: center; }}
+                .highlight-box {{ background: #FAF8F5; border-left: 2px solid #9E7D3B; padding: 20px 24px; margin: 24px 0; font-size: 13px; color: #2C2724; line-height: 1.8; }}
+                .credential-box {{ background: #F5EFEB; border: 1px dashed #9E7D3B; padding: 18px 22px; margin: 20px 0; font-size: 13px; color: #1F2421; line-height: 1.8; }}
+                .footer {{ border-top: 1px solid #E5E0D8; padding-top: 24px; font-size: 11px; color: #8C877D; text-align: center; line-height: 1.6; }}
               </style>
             </head>
             <body>
@@ -317,21 +381,32 @@ class AuthService:
                 </div>
                 <div class="content">
                   <p>Dear {req.full_name},</p>
-                  <p>Welcome to <strong>The Royal Knot</strong>. We have successfully received your wedding registration dossier for your royal destination celebration.</p>
+                  <p>Welcome to <strong>The Royal Knot</strong>. We are delighted to confirm that your wedding celebration registration dossier has been successfully recorded in our central registry.</p>
                   
-                  <div class="highlight-box">
-                    <strong>Your Registered Celebration Dossier:</strong><br>
-                    • Couple: <strong>{couple_name}</strong><br>
-                    • Enquiry Reference: <strong>{new_enq_id}</strong><br>
-                    • Target Date: <strong>{req.wedding_date or 'To be finalized'}</strong><br>
-                    • Preferred Destination: <strong>{req.wedding_location or 'Rajasthan Heritage'}</strong><br>
-                    • Package Tier: <strong>{req.service_package or 'Full-Service Royal Production'}</strong>
+                  <div class="credential-box">
+                    <strong style="text-transform: uppercase; letter-spacing: 1px; font-size: 11px; color: #9E7D3B;">Your Client Portal Credentials:</strong><br>
+                    • Login Portal: <a href="{portal_url}" style="color: #9E7D3B;">{portal_url}</a><br>
+                    • Username (Email): <strong style="font-family: monospace;">{clean_email}</strong><br>
+                    • Password: <em>(The secure password you created during registration)</em><br>
+                    • Enquiry Reference ID: <strong style="font-family: monospace; color: #9E7D3B;">{new_enq_id}</strong>
                   </div>
 
-                  <p>Your client portal account has been provisioned. Our senior wedding directors will review your requirements and begin orchestrating your bespoke celebration blueprint.</p>
+                  <div class="highlight-box">
+                    <strong style="text-transform: uppercase; letter-spacing: 1px; font-size: 11px; color: #9E7D3B;">Registered Celebration Blueprint:</strong><br>
+                    • Couple: <strong>{couple_name}</strong><br>
+                    • Target Date: <strong>{date_str}</strong><br>
+                    • Selected Destination / Venue: <strong>{req.wedding_location or 'Rajasthan Heritage'}</strong><br>
+                    • Expected Guest Count: <strong>{guests_str}</strong><br>
+                    • Estimated Budget: <strong>{budget_str}</strong><br>
+                    • Requested Ceremonies: <strong>{events_str or 'Bespoke Multi-Day Festivities'}</strong><br>
+                    • Aesthetic Theme: <strong>{theme_str}</strong><br>
+                    • Service Package Tier: <strong>{package_str}</strong>
+                  </div>
+
+                  <p>Our senior destination directors in Jaipur and Udaipur are reviewing your celebration parameters and will prepare your confidential wedding proposal. You can log into your private client portal anytime to review progress and milestones.</p>
 
                   <p style="text-align: center;">
-                    <a href="{portal_url}" class="btn">Enter Client Portal</a>
+                    <a href="{portal_url}" class="btn">Access Client Celebration Portal</a>
                   </p>
 
                   <p>With our warmest regards,<br>
@@ -340,7 +415,8 @@ class AuthService:
                 </div>
                 <div class="footer">
                   Enquiry Reference: <strong>{new_enq_id}</strong><br>
-                  Concierge Desk: {settings.AGENCY_EMAIL}
+                  Official Concierge Desk: {settings.AGENCY_EMAIL}<br>
+                  © 2026 The Royal Knot Wedding Planning Management System.
                 </div>
               </div>
             </body>
@@ -349,15 +425,24 @@ class AuthService:
 
             text_content = (
                 f"Dear {req.full_name},\n\n"
-                f"Welcome to The Royal Knot! We have received your wedding registration dossier ({new_enq_id}).\n\n"
+                f"Welcome to The Royal Knot! Your wedding celebration registration has been confirmed.\n\n"
+                f"Enquiry Reference: {new_enq_id}\n"
                 f"Couple: {couple_name}\n"
-                f"Preferred Venue: {req.wedding_location or 'Rajasthan Heritage'}\n"
-                f"Target Date: {req.wedding_date or 'TBD'}\n\n"
-                f"You can log in to your private client portal anytime at:\n{portal_url}\n\n"
-                f"The Royal Knot Concierge Team"
+                f"Target Celebration Date: {date_str}\n"
+                f"Destination / Venue: {req.wedding_location or 'Rajasthan Heritage'}\n"
+                f"Expected Guest Count: {guests_str}\n"
+                f"Estimated Budget: {budget_str}\n"
+                f"Package Tier: {package_str}\n\n"
+                f"Your Client Portal Credentials:\n"
+                f"Portal: {portal_url}\n"
+                f"Login Username: {clean_email}\n"
+                f"Password: (The password you entered during registration)\n\n"
+                f"Warm regards,\n"
+                f"The Royal Knot Concierge Team\n"
+                f"{settings.AGENCY_EMAIL}"
             )
 
-            EmailService.send_email(
+            email_result = EmailService.send_email(
                 to_email=clean_email,
                 subject=subject,
                 html_content=html_content,
@@ -365,9 +450,9 @@ class AuthService:
                 enquiry_id=new_enq_id,
                 db=db
             )
+            logger.info(f"Dispatched website registration confirmation email to {clean_email}: {email_result}")
         except Exception as e:
-            # Continue even if network email failed
-            pass
+            logger.error(f"Error dispatching website registration email to {clean_email}: {e}")
 
         return {
             "success": True,
@@ -378,7 +463,8 @@ class AuthService:
             "client_name": couple_name,
             "enquiry_id": new_enq_id,
             "registration_id": reg_id,
-            "access_token": f"trk_token_{user_record.id}"
+            "access_token": f"trk_token_{user_record.id}",
+            "email_delivery": email_result
         }
 
     @staticmethod

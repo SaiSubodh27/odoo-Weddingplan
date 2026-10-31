@@ -9,7 +9,14 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "development"
     DATABASE_URL: str = "postgresql+psycopg://postgres@localhost:5432/royal_knot_db"
-    CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: Union[str, List[str]] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
     SECRET_KEY: str = "theroyalknot-luxury-wedding-management-secret-key-2026"
 
     # File uploads for registration documents & email attachments
@@ -40,9 +47,9 @@ class Settings(BaseSettings):
     BACKEND_BASE_URL: str = "http://localhost:8000"
 
     # Google Forms & Google Sheets Registration Integration
-    GOOGLE_FORMS_REGISTRATION_URL: str = "https://docs.google.com/forms/d/e/1FAIpQLSe_theroyalknot_registration/viewform"
+    GOOGLE_FORMS_REGISTRATION_URL: str = "https://docs.google.com/forms/d/e/1FAIpQLSd0VzWy2DNa5YvyHwJ7jigckhi4JIA4zVfVj7BMdtT2J-yPWQ/viewform?usp=header"
     GOOGLE_SHEET_ID: Optional[str] = None
-    GOOGLE_SHEET_CSV_URL: Optional[str] = None
+    GOOGLE_SHEET_CSV_URL: Optional[str] = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRxUzT6U5L9nEZfsAyPYa3pTadewAAwfkU4Fw_eBnQENF1IDMHUuw3FYmhmq72WIvQEi4vYGO37xgi5/pub?gid=424781715&single=true&output=csv"
     GOOGLE_SERVICE_ACCOUNT_FILE: Optional[str] = None
     GOOGLE_FORMS_REF_ENTRY_ID: Optional[str] = None  # e.g. "entry.12345678" if prefilling enquiry ref
 
