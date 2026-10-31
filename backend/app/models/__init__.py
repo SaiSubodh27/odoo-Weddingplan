@@ -13,6 +13,12 @@ from app.models.catering import (
     CateringQuotation,
     CateringCommunicationLog
 )
+from app.models.agreement import (
+    ServiceAgreement,
+    AgreementPaymentMilestone,
+    AgreementDocument,
+    AgreementStatusHistory
+)
 
 __all__ = [
     "Base",
@@ -34,4 +40,8 @@ __all__ = [
     "CateringMenuItem",
     "CateringQuotation",
     "CateringCommunicationLog",
+    "ServiceAgreement",
+    "AgreementPaymentMilestone",
+    "AgreementDocument",
+    "AgreementStatusHistory",
 ]

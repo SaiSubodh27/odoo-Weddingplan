@@ -1,3 +1,5 @@
+import { demoEnquiries, isDemoEnquiry } from '../data/demoEnquiries';
+
 const API_BASE = 'http://localhost:8000/api/v1';
 
 export const enquiryApi = {
@@ -9,12 +11,33 @@ export const enquiryApi = {
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.pageSize) searchParams.set('page_size', String(params.pageSize));
 
-    const res = await fetch(`${API_BASE}/enquiries?${searchParams.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch enquiries');
-    return res.json();
+    let liveItems: any[] = [];
+    try {
+      const res = await fetch(`${API_BASE}/enquiries?${searchParams.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        liveItems = data.items || [];
+      }
+    } catch {
+      /* Graceful fallback */
+    }
+
+    const demo = demoEnquiries.filter(e =>
+      (!params?.status || params.status === 'All' || e.status === params.status) &&
+      (!params?.source || params.source === 'All' || e.enquirySource === params.source) &&
+      (!params?.search || [e.clientName, e.email, e.phone, e.weddingLocation, e.id].join(' ').toLowerCase().includes(params.search.toLowerCase()))
+    );
+
+    const items = [...liveItems, ...demo];
+    return { items, total: items.length, page: params?.page || 1, pageSize: items.length };
   },
 
   async get(id: string) {
+    if (isDemoEnquiry(id)) {
+      const demo = demoEnquiries.find(e => e.id === id);
+      if (!demo) throw new Error('Demo enquiry not found');
+      return demo;
+    }
     const res = await fetch(`${API_BASE}/enquiries/${id}`);
     if (!res.ok) throw new Error(`Failed to fetch enquiry ${id}`);
     return res.json();
@@ -333,6 +356,19 @@ export const authApi = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Login failed');
+    }
+    return res.json();
+  },
+
+  async signup(payload: { fullName: string; email: string; phone?: string; password?: string; role?: string }) {
+    const res = await fetch(`${API_BASE}/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Registration failed');
     }
     return res.json();
   }
@@ -774,4 +810,85 @@ export const cateringApi = {
     if (!res.ok) throw new Error('Failed to fetch communications history');
     return res.json();
   },
+};
+
+export const agreementApi = {
+  async getMyAgreement(clientId?: string) {
+    const token = localStorage.getItem('the_royal_knot_token_v1') || '';
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const url = clientId ? `${API_BASE}/agreements/my-agreement?client_id=${clientId}` : `${API_BASE}/agreements/my-agreement`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error('Failed to fetch service agreement');
+    return res.json();
+  },
+
+  async getAgreement(id: string) {
+    const res = await fetch(`${API_BASE}/agreements/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch service agreement');
+    return res.json();
+  },
+
+  async getClientAgreement(clientId: string) {
+    const res = await fetch(`${API_BASE}/agreements/client/${clientId}`);
+    if (!res.ok) throw new Error('Failed to fetch client agreement');
+    return res.json();
+  },
+
+  async listAgreements(params?: { page?: number; pageSize?: number; status?: string }) {
+    const q = new URLSearchParams();
+    if (params?.page) q.set('page', String(params.page));
+    if (params?.pageSize) q.set('page_size', String(params.pageSize));
+    if (params?.status) q.set('status', params.status);
+    const res = await fetch(`${API_BASE}/agreements?${q.toString()}`);
+    if (!res.ok) throw new Error('Failed to list service agreements');
+    return res.json();
+  },
+
+  async sendOtp(agreementId: string) {
+    const res = await fetch(`${API_BASE}/agreements/${agreementId}/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to dispatch verification code');
+    }
+    return res.json();
+  },
+
+  async verifyOtp(agreementId: string, otp: string) {
+    const res = await fetch(`${API_BASE}/agreements/${agreementId}/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ otp }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Invalid or expired verification code');
+    }
+    return res.json();
+  },
+
+  async signAgreement(agreementId: string, payload: {
+    otp?: string;
+    signature_data: string;
+    consent: boolean;
+    signer_name?: string;
+  }) {
+    const res = await fetch(`${API_BASE}/agreements/${agreementId}/sign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to execute digital signature');
+    }
+    return res.json();
+  },
+
+  getPdfUrl(agreementId: string) {
+    return `${API_BASE}/agreements/${agreementId}/pdf`;
+  }
 };

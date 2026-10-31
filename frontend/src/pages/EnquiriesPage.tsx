@@ -236,7 +236,7 @@ export const EnquiriesPage: React.FC = () => {
                 >
                   <td className="py-4 px-4">
                     <div className="font-serif text-base font-semibold text-[#1F2421] group-hover:text-[#9E7D3B] transition-colors">
-                      {enq.clientName}
+                      {enq.clientName} {enq.id.startsWith('DEMO-ENQ-') && <span className="ml-2 align-middle rounded border border-[#D8C6AC] bg-[#FAF2E6] px-2 py-0.5 font-sans text-[10px] font-semibold text-[#85633C]">DEMO</span>}
                     </div>
                     <div className="text-[11px] text-[#8C877D] tracking-wide mt-0.5 font-mono">
                       {enq.id} {enq.clientId ? `· Linked Client: ${enq.clientId}` : ''}

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { agreementApi } from '../services/api';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
-import { RegistrationStatus } from '../types/client';
+import { Client, RegistrationStatus } from '../types/client';
 import { getStatusBadgeStyle } from '../components/clients/ClientTable';
 import { 
   ArrowLeft, 
@@ -21,19 +22,45 @@ import {
   CreditCard,
   Lock,
   Printer,
-  Sparkles
+  Sparkles,
+  Download
 } from 'lucide-react';
 
 export const ClientDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getClient, updateClientStatus } = useClients();
+  const { getClient, updateClientStatus, updateClient } = useClients();
 
   const client = getClient(id || '');
   const [selectedStatus, setSelectedStatus] = useState<RegistrationStatus>(
     client?.status || 'Enquiry'
   );
   const [statusUpdateMessage, setStatusUpdateMessage] = useState<string | null>(null);
+  const [editing,setEditing] = useState(false);
+  const [draft,setDraft] = useState<Partial<Client>>({});
+  const [savedMessage,setSavedMessage] = useState('');
+  const [agreement, setAgreement] = useState<any>(null);
+  const [loadingAgreement, setLoadingAgreement] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (client?.id) {
+      agreementApi.getClientAgreement(client.id)
+        .then(data => setAgreement(data))
+        .catch(() => {})
+        .finally(() => setLoadingAgreement(false));
+    }
+  }, [client?.id]);
+  const editFields: {key:keyof Client;label:string;kind?:string}[] = [
+    {key:'partner1Name',label:'Primary client name'}, {key:'partner2Name',label:'Partner name'},
+    {key:'email',label:'Email address',kind:'email'}, {key:'phone',label:'Phone number'},
+    {key:'weddingDate',label:'Wedding date',kind:'date'}, {key:'weddingLocation',label:'Wedding destination'},
+    {key:'expectedGuestCount',label:'Expected guest count',kind:'number'},
+    {key:'estimatedBudget',label:'Estimated budget'}, {key:'weddingTheme',label:'Wedding theme'},
+    {key:'servicePackage',label:'Service package'}, {key:'additionalRequirements',label:'Special requirements'},
+    {key:'notes',label:'Internal notes'}
+  ];
+  const beginEdit=()=>{if(client){setDraft({...client});setEditing(true);setSavedMessage('');}};
+  const saveEdit=()=>{if(!client)return;const {id: _id,createdAt: _createdAt,...changes}=draft;void _id;void _createdAt;updateClient(client.id,changes);setEditing(false);setSavedMessage('Changes saved in this browser.');};
 
   if (!client) {
     return (
@@ -79,16 +106,17 @@ export const ClientDetailsPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase text-[#9E7D3B] font-medium">
               <span>Client Dossier</span>
-              <span>·</span>
+              <span>Â·</span>
               <span>Ref: {client.id}</span>
             </div>
             <h1 className="font-serif text-3xl text-[#1F2421]">
-              {client.partner1Name} & {client.partner2Name}
+              {client.partner1Name} and {client.partner2Name}
             </h1>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button onClick={beginEdit} className="px-4 py-2 rounded-lg bg-[#2F2C29] text-white text-sm font-semibold hover:bg-[#554536]">Edit Details</button>
           {/* Status badge & selector */}
           <div className="flex items-center gap-2 border border-[#E5E0D8] bg-[#FFFFFF] px-3 py-1.5">
             <span className="text-[10px] uppercase tracking-wider text-[#736F68]">Status:</span>
@@ -121,6 +149,19 @@ export const ClientDetailsPage: React.FC = () => {
         </div>
       )}
 
+      {savedMessage && <div className="bg-[#F4F8EF] border border-[#CBD8BF] p-3 text-sm">{savedMessage}</div>}
+      {editing && <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Edit client dossier">
+        <div className="bg-[#FFFCF8] rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6">
+          <div className="flex items-center justify-between gap-3 mb-5"><div><h2 className="font-serif text-2xl font-semibold">Edit Client Details</h2><p className="text-sm text-[#7B7065] mt-1">Update this record without creating another client dossier.</p></div><button onClick={()=>setEditing(false)} className="text-sm underline">Close</button></div>
+          <form onSubmit={e=>{e.preventDefault();saveEdit();}} className="grid sm:grid-cols-2 gap-4">
+            {editFields.map(field=><label key={field.key} className={'block text-sm font-semibold '+(['additionalRequirements','notes'].includes(field.key)?'sm:col-span-2':'')}>
+              <span className="block mb-1.5">{field.label}</span>
+              {['additionalRequirements','notes'].includes(field.key)?<textarea className="w-full border border-[#DCD1C5] rounded-lg p-3 bg-white font-normal min-h-20" value={String(draft[field.key]??'')} onChange={e=>setDraft(d=>({...d,[field.key]:e.target.value}))}/>:field.key==='servicePackage'?<select className="w-full border border-[#DCD1C5] rounded-lg p-3 bg-white font-normal" value={String(draft.servicePackage??'')} onChange={e=>setDraft(d=>({...d,servicePackage:e.target.value as Client['servicePackage']}))}><option value="Full-Service">Full-Service</option><option value="Partial-Service">Partial-Service</option><option value="Day-of Coordination">Day-of Coordination</option><option value="Full-Service Royal Production">Full-Service Royal Production</option><option value="Concierge Direction">Concierge Direction</option><option value="Venue & Hospitality">Venue & Hospitality</option></select>:<input required={['partner1Name','email','phone'].includes(field.key)} type={field.kind||'text'} min={field.kind==='number'?0:undefined} className="w-full border border-[#DCD1C5] rounded-lg p-3 bg-white font-normal" value={String(draft[field.key]??'')} onChange={e=>setDraft(d=>({...d,[field.key]:field.kind==='number'?Number(e.target.value):e.target.value}))}/>}
+            </label>)}
+            <div className="sm:col-span-2 flex justify-end gap-3 pt-4 border-t border-[#E5DDD4]"><button type="button" onClick={()=>setEditing(false)} className="px-5 py-2.5 border rounded-lg font-semibold">Cancel</button><button type="submit" className="px-5 py-2.5 bg-[#302C28] text-white rounded-lg font-semibold">Save Changes</button></div>
+          </form>
+        </div>
+      </div>}
       {/* Main Info Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -137,7 +178,7 @@ export const ClientDetailsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
               <div className="space-y-1">
                 <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-medium block">
-                  Chosen Venue & Destination
+                  Chosen Venue and Destination
                 </span>
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-[#1F2421]">
                   <MapPin size={14} className="text-[#9E7D3B]" />
@@ -184,7 +225,7 @@ export const ClientDetailsPage: React.FC = () => {
 
               <div className="sm:col-span-2 space-y-1 pt-2 border-t border-[#E5E0D8]/60">
                 <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-medium block">
-                  Design Aesthetic & Theme
+                  Design Aesthetic and Theme
                 </span>
                 <p className="text-xs text-[#1F2421] font-medium bg-[#FAF8F5] p-3 border border-[#E5E0D8]">
                   "{client.weddingTheme}"
@@ -197,7 +238,7 @@ export const ClientDetailsPage: React.FC = () => {
           <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-6">
             <div className="flex items-center gap-2 pb-4 border-b border-[#E5E0D8] mb-6">
               <Building2 size={16} className="text-[#9E7D3B]" />
-              <h2 className="font-serif text-xl text-[#1F2421]">Service Package & Scope</h2>
+              <h2 className="font-serif text-xl text-[#1F2421]">Service Package and Scope</h2>
             </div>
 
             <div className="space-y-4 text-xs">
@@ -212,13 +253,78 @@ export const ClientDetailsPage: React.FC = () => {
 
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-medium block mb-1">
-                  Bespoke Requirements & Special Additions
+                  Bespoke Requirements and Special Additions
                 </span>
                 <div className="p-4 bg-[#FAF8F5] border border-[#E5E0D8] text-[#5C5850] leading-relaxed">
                   {client.additionalRequirements || 'No specific additions noted during initial consultation.'}
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Service Agreement & Legal Dossier */}
+          <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-6">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E5E0D8] mb-4">
+              <div className="flex items-center gap-2">
+                <FileCheck size={16} className="text-[#9E7D3B]" />
+                <h2 className="font-serif text-xl text-[#1F2421]">Service Agreement & Legal Dossier</h2>
+              </div>
+              {agreement && (
+                <span className={`px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider border ${
+                  agreement.status === 'SIGNED'
+                    ? 'bg-[#EBF3ED] text-[#2D5A3C] border-[#C3D9C9]'
+                    : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49E]'
+                }`}>
+                  {agreement.status === 'SIGNED' ? '✓ Digitally Signed' : 'Pending Signature'}
+                </span>
+              )}
+            </div>
+
+            {loadingAgreement ? (
+              <p className="text-xs text-[#736F68]">Loading agreement records…</p>
+            ) : agreement ? (
+              <div className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-[#FAF8F5] border border-[#E5E0D8]">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-semibold block">Agreement Reference</span>
+                    <span className="font-mono font-bold text-sm text-[#1F2421]">{agreement.agreement_number}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-semibold block">Contract Total Value</span>
+                    <span className="font-bold text-sm text-[#1F2421]">₹{Number(agreement.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {agreement.status === 'SIGNED' ? (
+                    <>
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-semibold block">Signed By</span>
+                        <span className="font-medium text-[#1F2421]">{agreement.signed_by_name || client.partner1Name}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-semibold block">Execution Timestamp</span>
+                        <span className="font-medium text-[#1F2421]">{agreement.signed_at ? new Date(agreement.signed_at).toLocaleString() : 'Executed'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="sm:col-span-2 text-[#8C6D1F]">
+                      <span>Client execution pending. Agreement was generated and dispatched to client portal.</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <a
+                    href={`http://localhost:8000/api/v1/agreements/${agreement.id}/pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs font-semibold hover:bg-[#333333] transition-colors"
+                  >
+                    <Download size={13} /> {agreement.status === 'SIGNED' ? 'View Signed Contract PDF' : 'Download Draft Agreement PDF'}
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-[#736F68]">No service agreement created for this client yet.</p>
+            )}
           </div>
 
           {/* Internal Notes */}
@@ -395,7 +501,7 @@ export const ClientDetailsPage: React.FC = () => {
               </span>
             </div>
             <h3 className="font-serif text-base font-semibold text-[#1F2421] mb-1">
-              Payments & Settlements
+              Payments and Settlements
             </h3>
             <p className="text-[11px] text-[#736F68] leading-relaxed">
               Milestone payment schedules, advance deposits, escrow disbursements, and GST invoicing.
@@ -407,4 +513,5 @@ export const ClientDetailsPage: React.FC = () => {
     </div>
   );
 };
+
 

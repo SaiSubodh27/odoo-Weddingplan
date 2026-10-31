@@ -18,11 +18,7 @@ ServicePackageType = Literal[
     "Day-of Coordination"
 ]
 
-EnquirySourceType = Literal[
-    "Email",
-    "Phone",
-    "Website"
-]
+EnquirySourceType = str
 
 
 class ClientBase(BaseModel):

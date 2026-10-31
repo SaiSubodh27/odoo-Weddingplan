@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Menu, Plus, Bell, Calendar } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useClients } from '../../context/ClientContext';
@@ -10,17 +10,38 @@ interface TopbarProps {
 export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
   const { currentUser } = useClients();
   const location = useLocation();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setNotificationsOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
 
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path.startsWith('/inbox')) return 'Gmail Inbox & Review Queue';
+    if (path.startsWith('/inbox')) return 'Gmail Inbox and Review Queue';
     if (path.startsWith('/enquiries/new')) return 'Record Inbound Enquiry';
-    if (path.startsWith('/enquiries/') && path !== '/enquiries') return 'Enquiry Dossier & Registration';
-    if (path.startsWith('/enquiries')) return 'Enquiries & Lead Management';
+    if (path.startsWith('/enquiries/') && path !== '/enquiries') return 'Enquiry Dossier and Registration';
+    if (path.startsWith('/enquiries')) return 'Enquiries and Lead Management';
     if (path.startsWith('/clients/new')) return 'New Client Registration';
     if (path.startsWith('/clients/') && path !== '/clients') return 'Client Dossier';
     if (path.startsWith('/clients')) return 'Client Directory';
-    if (path.startsWith('/weddings')) return 'Wedding Schedule & Venues';
+    if (path.startsWith('/vendors')) return 'Vendor Directory';
+    if (path.startsWith('/quotations')) return 'Wedding Quotations';
+    if (path.startsWith('/weddings')) return 'Wedding Schedule and Venues';
     if (path.startsWith('/settings')) return 'Agency Settings';
     return 'Executive Overview';
   };
@@ -71,10 +92,28 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
           <span className="sm:hidden">Add</span>
         </Link>
 
-        {/* Notifications mock icon */}
-        <div className="relative border border-[#E5E0D8] p-2 text-[#5C5850] bg-[#FAF8F5] cursor-pointer hover:bg-[#F2EFE8]">
-          <Bell size={16} />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#9E7D3B]" />
+        {/* Notifications empty state until a notification feed is connected */}
+        <div ref={notificationsRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setNotificationsOpen(open => !open)}
+            aria-label="Notifications"
+            aria-expanded={notificationsOpen}
+            aria-controls="rk-notifications-panel"
+            className="border border-[#E5E0D8] p-2 text-[#5C5850] bg-[#FAF8F5] hover:bg-[#F2EFE8]"
+          >
+            <Bell size={16} />
+          </button>
+          {notificationsOpen && (
+            <div id="rk-notifications-panel" role="region" aria-label="Notifications" className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white border border-[#E5E0D8] shadow-lg z-50">
+              <div className="px-4 py-3 border-b border-[#E5E0D8] text-sm font-semibold text-[#1F2421]">Notifications</div>
+              <div className="px-5 py-8 text-center">
+                <Bell size={22} className="mx-auto mb-3 text-[#B6A48C]" />
+                <p className="text-sm font-medium text-[#1F2421]">No new notifications</p>
+                <p className="mt-1 text-xs text-[#736F68]">You're all caught up.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* User profile */}
