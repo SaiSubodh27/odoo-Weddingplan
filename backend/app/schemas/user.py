@@ -1,5 +1,6 @@
-from typing import Optional
-from datetime import datetime
+from typing import Optional, List
+from datetime import datetime, date
+from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 import re
 
@@ -51,3 +52,30 @@ class UserLoginResponse(BaseModel):
     client_id: Optional[str] = Field(None, alias="clientId")
     client_name: Optional[str] = Field(None, alias="clientName")
     access_token: Optional[str] = Field(None, alias="accessToken")
+
+
+class WebsiteClientRegisterRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    full_name: str = Field(..., min_length=2, max_length=150, alias="fullName")
+    partner_name: Optional[str] = Field(None, max_length=150, alias="partnerName")
+    email: str = Field(..., min_length=5, max_length=255)
+    password: str = Field(..., min_length=8)
+    phone: str = Field(..., min_length=7, max_length=50)
+
+    # Wedding Parameters
+    wedding_date: Optional[date] = Field(None, alias="weddingDate")
+    wedding_location: Optional[str] = Field(None, max_length=255, alias="weddingLocation")
+    expected_guest_count: Optional[int] = Field(None, ge=1, alias="expectedGuestCount")
+    estimated_budget: Optional[Decimal] = Field(None, ge=0, alias="estimatedBudget")
+    wedding_events: Optional[List[str]] = Field(default_factory=list, alias="weddingEvents")
+    preferred_theme: Optional[str] = Field(None, max_length=255, alias="preferredTheme")
+    service_package: Optional[str] = Field("Full-Service", alias="servicePackage")
+    preferences: Optional[str] = Field(None, max_length=3000)
+
+    @field_validator("email")
+    def validate_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", clean):
+            raise ValueError("Invalid email format.")
+        return clean

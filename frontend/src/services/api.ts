@@ -335,6 +335,28 @@ export const authApi = {
       throw new Error(err.detail || 'Login failed');
     }
     return res.json();
+  },
+
+  async registerWebsite(payload: any) {
+    const res = await fetch(`${API_BASE}/auth/register-website`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Website registration failed');
+    }
+    return res.json();
+  },
+
+  async getClientDossier(email: string) {
+    const res = await fetch(`${API_BASE}/auth/client-dossier?email=${encodeURIComponent(email)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch client dossier');
+    }
+    return res.json();
   }
 };
 

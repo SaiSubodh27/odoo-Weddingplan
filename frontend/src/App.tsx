@@ -5,6 +5,8 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
 import { ClientActivationPage } from './pages/ClientActivationPage';
 import { ClientRegistrationPage } from './pages/ClientRegistrationPage';
+import { WebsiteRegistrationPage } from './pages/WebsiteRegistrationPage';
+import { ClientPortalPage } from './pages/ClientPortalPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EmailInboxPage } from './pages/EmailInboxPage';
 import { EnquiriesPage } from './pages/EnquiriesPage';
@@ -16,8 +18,21 @@ import { ClientDetailsPage } from './pages/ClientDetailsPage';
 import { WeddingsPage } from './pages/WeddingsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
-// Protected Route wrapper
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Protected Route for Agency Employees
+const StaffRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, currentUser } = useClients();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  // If a client logs in, route them to their Client Portal
+  if (currentUser.role === 'Client') {
+    return <Navigate to="/portal" replace />;
+  }
+  return <>{children}</>;
+};
+
+// Protected Route for Clients
+const ClientRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useClients();
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -26,23 +41,44 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 export const AppContent: React.FC = () => {
+  const { currentUser } = useClients();
+
   return (
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/activate" element={<ClientActivationPage />} />
       <Route path="/register" element={<ClientRegistrationPage />} />
+      <Route path="/client-register" element={<WebsiteRegistrationPage />} />
 
-      {/* Protected Routes inside Dashboard Layout */}
+      {/* Dedicated Client Portal (Client Side) */}
+      <Route
+        path="/portal"
+        element={
+          <ClientRoute>
+            <ClientPortalPage />
+          </ClientRoute>
+        }
+      />
+
+      {/* Protected Routes for Agency Employees (Employee Side) */}
       <Route
         path="/"
         element={
-          <ProtectedRoute>
+          <StaffRoute>
             <DashboardLayout />
-          </ProtectedRoute>
+          </StaffRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route
+          index
+          element={
+            <Navigate
+              to={currentUser.role === 'Client' ? '/portal' : '/dashboard'}
+              replace
+            />
+          }
+        />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="inbox" element={<EmailInboxPage />} />
         <Route path="enquiries" element={<EnquiriesPage />} />
@@ -56,7 +92,15 @@ export const AppContent: React.FC = () => {
       </Route>
 
       {/* Catch-all fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="*"
+        element={
+          <Navigate
+            to={currentUser.role === 'Client' ? '/portal' : '/dashboard'}
+            replace
+          />
+        }
+      />
     </Routes>
   );
 };
@@ -72,4 +116,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-

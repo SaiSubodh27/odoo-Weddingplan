@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 from app.database.session import get_db
@@ -6,7 +7,8 @@ from app.schemas.user import (
     AccountActivateRequest,
     AccountActivateResponse,
     UserLoginRequest,
-    UserLoginResponse
+    UserLoginResponse,
+    WebsiteClientRegisterRequest,
 )
 from app.services.auth_service import auth_service
 
@@ -62,3 +64,36 @@ def login_user(
     Rejects pending or inactive accounts with clear status messages.
     """
     return auth_service.login_user(db=db, req=req)
+
+
+@router.post(
+    "/register-website",
+    status_code=status.HTTP_201_CREATED,
+    summary="Public client website registration & account creation",
+    tags=["Website Registration"]
+)
+def register_website_client(
+    req: WebsiteClientRegisterRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Client-side public registration:
+    Creates an Enquiry (source='Website'), ClientRegistration dossier, and active UserAccount,
+    then automatically dispatches a luxury confirmation email to the client.
+    """
+    return auth_service.website_register_client(db=db, req=req)
+
+
+@router.get(
+    "/client-dossier",
+    summary="Get authenticated client's registered celebration dossier",
+    tags=["Client Portal"]
+)
+def get_client_dossier(
+    email: str = Query(..., description="Client email address"),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the client's celebration dossier, wedding parameters, events, and review status.
+    """
+    return auth_service.get_client_dossier(db=db, email=email)
