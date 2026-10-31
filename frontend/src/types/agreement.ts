@@ -95,3 +95,4 @@ export interface AgreementMetrics {
   verified_agreements: number;
   confirmed_bookings: number;
 }
+

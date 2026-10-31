@@ -251,3 +251,4 @@ def downgrade() -> None:
     op.drop_table('agreement_payment_milestones')
     op.drop_table('service_agreement_versions')
     op.drop_table('service_agreements')
+

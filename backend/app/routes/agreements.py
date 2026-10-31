@@ -323,3 +323,4 @@ def confirm_booking(
         confirmed_at=bk.confirmed_at,
         phase3_handoff_ready=bk.phase3_handoff_ready
     )
+

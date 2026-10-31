@@ -209,3 +209,4 @@ class LeegalityClient:
 
 
 leegality_client = LeegalityClient()
+

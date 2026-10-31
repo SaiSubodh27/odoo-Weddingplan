@@ -224,3 +224,4 @@ class BookingConfirmResponse(BaseModel):
     confirmed_by: str
     confirmed_at: datetime
     phase3_handoff_ready: bool
+

@@ -58,3 +58,4 @@ async def leegality_webhook_failure(
     logger.warning(f"Received Leegality failure webhook: {payload}")
     result = agreement_service.process_leegality_webhook(db=db, payload=payload, is_success=False)
     return result
+

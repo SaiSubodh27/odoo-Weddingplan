@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 from pathlib import Path
 from logging.config import fileConfig
 
@@ -21,7 +21,7 @@ import app.models  # load all models into Base.metadata
 config = context.config
 
 # Set sqlalchemy.url from our application settings dynamically
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -68,3 +68,4 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+

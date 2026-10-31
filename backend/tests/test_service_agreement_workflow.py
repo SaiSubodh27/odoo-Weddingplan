@@ -242,3 +242,4 @@ def test_07_wedding_booking_confirmation(db_session):
     with pytest.raises(Exception) as excinfo:
         agreement_service.confirm_booking(db=db_session, agreement_id=agreement.id, req=req)
     assert "already confirmed" in str(excinfo.value.detail)
+

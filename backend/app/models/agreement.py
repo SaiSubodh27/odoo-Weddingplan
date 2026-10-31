@@ -283,3 +283,4 @@ class WeddingBooking(Base):
 
     def __repr__(self):
         return f"<WeddingBooking {self.booking_reference}: {self.couple_title} ({self.status})>"
+
