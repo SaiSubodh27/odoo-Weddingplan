@@ -269,3 +269,4 @@ class EligibleBookingResponse(BaseModel):
     service_package: str = Field(..., alias="servicePackage")
     status: str
     created_at: datetime = Field(..., alias="createdAt")
+

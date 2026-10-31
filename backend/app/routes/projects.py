@@ -347,3 +347,4 @@ def delete_project_milestone(
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Milestone '{ms_id}' not found.")
     return {"success": True, "message": f"Milestone '{ms_id}' deleted."}
+

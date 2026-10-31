@@ -41,6 +41,12 @@ async def periodic_email_sync():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure database schema is initialized
+    from app.database.base import Base
+    import app.models  # noqa: F401
+    from app.database.session import engine
+    Base.metadata.create_all(bind=engine)
+
     sync_task = asyncio.create_task(periodic_email_sync())
     yield
     sync_task.cancel()

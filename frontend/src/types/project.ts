@@ -120,3 +120,4 @@ export interface EligibleBooking {
   status: string;
   createdAt: string;
 }
+

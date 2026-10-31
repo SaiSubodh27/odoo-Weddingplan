@@ -250,3 +250,4 @@ def test_phase3_full_wedding_project_lifecycle():
 
     res_final = client.get(f"/api/v1/projects/{project_id}")
     assert len(res_final.json()["functions"]) == 1
+
