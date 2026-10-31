@@ -104,6 +104,8 @@ export interface SignatureStatusResponse {
   agreement_status: AgreementStatus;
   provider: string;
   environment: 'sandbox' | 'production' | 'mock';
+  provider_request_id?: string;
+  provider_document_id?: string;
   leegality_document_id?: string;
   signing_url?: string;
   signer_name?: string;
@@ -120,6 +122,8 @@ export interface SendForSignatureResponse {
   version_number: number;
   provider: string;
   environment: 'sandbox' | 'production' | 'mock';
+  provider_request_id?: string;
+  provider_document_id?: string;
   leegality_document_id?: string;
   signing_url?: string;
   status: string;

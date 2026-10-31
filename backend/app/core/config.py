@@ -42,7 +42,21 @@ class Settings(BaseSettings):
     # Token Lifespans (in minutes: 72 hours = 4320 mins)
     ACTIVATION_TOKEN_EXPIRY_MINUTES: int = 4320
 
-    # Leegality Configuration
+    # Electronic Signature Provider Selection ('zoho_sign' | 'mock' | 'leegality')
+    ESIGN_PROVIDER: str = "zoho_sign"
+
+    # Zoho Sign API Configuration (OAuth 2.0 & Multi-Region DC Support)
+    ZOHO_SIGN_ENV: str = "mock"  # 'sandbox' | 'production' | 'mock'
+    ZOHO_SIGN_CLIENT_ID: Optional[str] = None
+    ZOHO_SIGN_CLIENT_SECRET: Optional[str] = None
+    ZOHO_SIGN_REFRESH_TOKEN: Optional[str] = None
+    ZOHO_SIGN_ACCOUNTS_BASE_URL: str = "https://accounts.zoho.in"  # or https://accounts.zoho.com, .eu, etc.
+    ZOHO_SIGN_API_BASE_URL: str = "https://sign.zoho.in/api/v1"      # or https://sign.zoho.com/api/v1
+    ZOHO_SIGN_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/zoho/callback"
+    ZOHO_SIGN_WEBHOOK_SECRET: Optional[str] = None
+    ZOHO_SIGN_TIMEOUT_SECONDS: int = 30
+
+    # Leegality Configuration (Historical / Fallback Provider)
     LEEGALITY_ENV: str = "sandbox"  # 'sandbox' | 'production' | 'mock'
     LEEGALITY_BASE_URL: str = "https://sandbox.leegality.com/api/v2.1"
     LEEGALITY_AUTH_TOKEN: Optional[str] = None

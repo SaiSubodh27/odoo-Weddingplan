@@ -78,7 +78,7 @@ export const AgreementsPage: React.FC = () => {
           </div>
           <h1 className="font-serif text-3xl text-[#1F2421]">Service Agreements & Booking Dossiers</h1>
           <p className="text-xs text-[#736F68] mt-1">
-            Bespoke client contracts, ReportLab PDF generation, Leegality eSign invitations, and authorized booking confirmations.
+            Bespoke client contracts, ReportLab PDF generation, Zoho Sign invitations, and authorized booking confirmations.
           </p>
         </div>
 
@@ -151,7 +151,7 @@ export const AgreementsPage: React.FC = () => {
             <option value="All">All Statuses</option>
             <option value="DRAFT">Draft</option>
             <option value="APPROVED_TO_SEND">Approved to Send</option>
-            <option value="SIGNING_PENDING">Signing Pending (Leegality)</option>
+            <option value="SIGNING_PENDING">Signing Pending (Zoho Sign)</option>
             <option value="UNDER_VERIFICATION">Under Verification</option>
             <option value="VERIFIED">Verified</option>
             <option value="BOOKING_CONFIRMED">Booking Confirmed</option>

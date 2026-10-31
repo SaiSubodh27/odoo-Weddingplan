@@ -32,6 +32,7 @@ from app.schemas.agreement import (
     PaymentMilestoneInput,
     AgreementApproveRequest,
     AgreementReviewRequest,
+    SendForSignatureRequest,
     BookingConfirmRequest,
 )
 
@@ -153,7 +154,11 @@ def test_03_internal_approval(db_session):
 def test_04_send_for_leegality_signature(db_session):
     """Test Leegality electronic signing invitation submission and URL capture."""
     agreement = db_session.query(ServiceAgreement).first()
-    res = agreement_service.send_for_signature(db=db_session, agreement_id=agreement.id)
+    res = agreement_service.send_for_signature(
+        db=db_session,
+        agreement_id=agreement.id,
+        req_body=SendForSignatureRequest(provider="leegality")
+    )
 
     assert res["success"] is True
     assert res["status"] == "SENT"

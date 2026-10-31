@@ -155,13 +155,18 @@ class AgreementSignatureRequest(Base):
     agreement_id = Column(String(50), ForeignKey("service_agreements.id", ondelete="CASCADE"), nullable=False, index=True)
     version_number = Column(Integer, nullable=False, default=1)
 
-    # Leegality official transaction references
+    # Provider & Environment ('Zoho Sign' | 'Mock' | 'Leegality')
+    provider = Column(String(50), nullable=False, default="Zoho Sign")
+    environment = Column(String(50), nullable=False, default="sandbox")  # sandbox | production | mock
+
+    # Zoho Sign & Generic Provider transaction references
+    provider_request_id = Column(String(100), nullable=True, index=True)
+    provider_document_id = Column(String(100), nullable=True, index=True)
+    provider_action_id = Column(String(100), nullable=True)
+
+    # Leegality official transaction references (preserved for audit & backward compatibility)
     leegality_document_id = Column(String(100), nullable=True, unique=True, index=True)
     leegality_request_id = Column(String(100), nullable=True, index=True)
-
-    # Provider & Environment
-    provider = Column(String(50), nullable=False, default="Leegality")
-    environment = Column(String(50), nullable=False, default="sandbox")  # sandbox | production | mock
 
     # Signer Details
     signer_name = Column(String(150), nullable=False)
@@ -195,6 +200,7 @@ class AgreementWebhookEvent(Base):
     id = Column(String(50), primary_key=True, index=True)
     signature_request_id = Column(String(50), ForeignKey("agreement_signature_requests.id", ondelete="CASCADE"), nullable=True, index=True)
     document_id = Column(String(100), nullable=False, index=True)
+    provider_request_id = Column(String(100), nullable=True, index=True)
 
     event_type = Column(String(100), nullable=False)  # success | failure | status_update
     mac_received = Column(String(150), nullable=True)

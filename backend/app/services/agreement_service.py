@@ -30,6 +30,7 @@ from app.schemas.agreement import (
     BookingConfirmRequest,
 )
 from app.services.pdf_service import pdf_service
+from app.services.zoho_sign_service import zoho_sign_client
 from app.services.leegality_service import leegality_client
 
 
@@ -299,59 +300,87 @@ class AgreementService:
 
         with open(doc.file_path, "rb") as f:
             pdf_bytes = f.read()
-        pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
 
-        # Submit request to Leegality
-        leegality_res = leegality_client.create_signing_request(
-            document_base64=pdf_base64,
-            document_filename=doc.original_filename,
-            signer_name=signer_name,
-            signer_email=signer_email,
-            signer_phone=signer_phone
-        )
+        # Select provider based on override or configuration (default: Zoho Sign)
+        selected_provider = None
+        if req_body and hasattr(req_body, "provider") and req_body.provider:
+            selected_provider = req_body.provider.lower()
+        elif isinstance(req_body, dict) and req_body.get("provider"):
+            selected_provider = str(req_body["provider"]).lower()
+        else:
+            selected_provider = (settings.ESIGN_PROVIDER or "zoho_sign").lower()
 
-        doc_id = (
-            leegality_res.get("data", {}).get("documentId")
-            or leegality_res.get("response", {}).get("documentId")
-            or leegality_res.get("documentId")
-        )
-        invitations = (
-            leegality_res.get("data", {}).get("invitations")
-            or leegality_res.get("response", {}).get("invitations", [])
-        )
-        sign_url = invitations[0].get("signUrl") if invitations else None
+        if selected_provider in ("zoho", "zoho_sign"):
+            sign_res = zoho_sign_client.create_signing_request(
+                document_bytes=pdf_bytes,
+                document_filename=doc.original_filename,
+                signer_name=signer_name,
+                signer_email=signer_email,
+                signer_phone=signer_phone
+            )
+            provider_name = "Zoho Sign"
+            env_name = zoho_sign_client.env
+            provider_req_id = sign_res.get("provider_request_id")
+            provider_doc_id = sign_res.get("provider_document_id")
+            provider_act_id = sign_res.get("provider_action_id")
+            sign_url = sign_res.get("signing_url")
+            raw_resp = sign_res.get("raw_response")
+        else:
+            # Fallback to Leegality
+            pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+            leegality_res = leegality_client.create_signing_request(
+                document_base64=pdf_base64,
+                document_filename=doc.original_filename,
+                signer_name=signer_name,
+                signer_email=signer_email,
+                signer_phone=signer_phone
+            )
+            provider_name = "Leegality"
+            env_name = leegality_client.env if leegality_client.is_live_configured() else "mock"
+            provider_req_id = (
+                leegality_res.get("data", {}).get("documentId")
+                or leegality_res.get("response", {}).get("documentId")
+                or leegality_res.get("documentId")
+            )
+            provider_doc_id = provider_req_id
+            provider_act_id = None
+            invitations = (
+                leegality_res.get("data", {}).get("invitations")
+                or leegality_res.get("response", {}).get("invitations", [])
+            )
+            sign_url = invitations[0].get("signUrl") if invitations else None
+            raw_resp = leegality_res
 
         # Record signature request
         sig_req = AgreementSignatureRequest(
             id=f"SIG-{uuid.uuid4().hex[:10].upper()}",
             agreement_id=agreement.id,
             version_number=agreement.current_version_number,
-            leegality_document_id=doc_id,
-            leegality_request_id=(
-                leegality_res.get("data", {}).get("irn")
-                or leegality_res.get("response", {}).get("irn")
-            ),
-            provider="Leegality",
-            environment=leegality_client.env if leegality_client.is_live_configured() else "mock",
+            provider=provider_name,
+            environment=env_name,
+            provider_request_id=provider_req_id,
+            provider_document_id=provider_doc_id,
+            provider_action_id=provider_act_id,
+            leegality_document_id=provider_req_id,  # preserved for compatibility
             signer_name=signer_name,
             signer_email=signer_email,
             signer_phone=signer_phone,
             signing_url=sign_url,
             status="SENT",
-            raw_response=leegality_res,
+            raw_response=raw_resp,
             sent_at=datetime.now(timezone.utc)
         )
         db.add(sig_req)
 
         agreement.signing_status = "SENT"
-        cls._record_status_history(db, agreement, "SIGNING_PENDING", "System", "Dispatched to Leegality for eSignature.")
+        cls._record_status_history(db, agreement, "SIGNING_PENDING", "System", f"Dispatched to {provider_name} for eSignature.")
         db.commit()
 
         is_real_sandbox = sig_req.environment in ("sandbox", "production")
         msg = (
-            f"Service agreement successfully submitted to real Leegality {sig_req.environment.upper()} API! Invitation active."
+            f"Service agreement successfully submitted to real {provider_name} {sig_req.environment.upper()} API! Invitation active."
             if is_real_sandbox
-            else "Service agreement signing request created in Simulation Mock mode."
+            else f"Service agreement signing request created in {provider_name} Simulation Mock mode."
         )
 
         return {
@@ -362,11 +391,169 @@ class AgreementService:
             "version_number": agreement.current_version_number,
             "provider": sig_req.provider,
             "environment": sig_req.environment,
-            "leegality_document_id": doc_id,
+            "provider_request_id": provider_req_id,
+            "provider_document_id": provider_doc_id,
+            "leegality_document_id": provider_req_id,
             "signing_url": sign_url,
             "status": "SENT",
             "sent_at": sig_req.sent_at
         }
+
+    @classmethod
+    def process_zoho_webhook(
+        cls,
+        db: Session,
+        payload: Dict[str, Any],
+        headers: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Receives and processes official Zoho Sign webhook callbacks.
+        Handles: RequestCompleted, RequestSent, RequestViewed, RequestDeclined, RequestExpired.
+        Verifies authenticity, enforces event idempotency, downloads signed PDF & audit certificate.
+        """
+        headers = headers or {}
+
+        # Zoho Sign notifications may be inside 'notifications' object or top-level
+        notifications = payload.get("notifications")
+        if isinstance(notifications, str):
+            try:
+                import json
+                notifications = json.loads(notifications)
+            except Exception:
+                notifications = {}
+        notifications = notifications or {}
+
+        req_id = (
+            str(notifications.get("request_id") or "")
+            or str(payload.get("request_id") or "")
+            or str(payload.get("requests", {}).get("request_id") or "")
+        )
+        if not req_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing request_id in Zoho Sign webhook payload."
+            )
+
+        status_str = str(
+            notifications.get("request_status")
+            or payload.get("request_status")
+            or payload.get("status")
+            or notifications.get("operation_type")
+            or "COMPLETED"
+        ).upper()
+
+        # Find matching signature request
+        sig_req = db.query(AgreementSignatureRequest).filter(
+            (AgreementSignatureRequest.provider_request_id == req_id) |
+            (AgreementSignatureRequest.leegality_document_id == req_id)
+        ).first()
+
+        # Idempotency check: hash payload + request_id
+        canon_payload = str(sorted(payload.items()))
+        fingerprint = hashlib.sha256(f"zoho_{req_id}_{canon_payload}".encode("utf-8")).hexdigest()
+
+        existing_event = db.query(AgreementWebhookEvent).filter(
+            AgreementWebhookEvent.event_fingerprint == fingerprint
+        ).first()
+        if existing_event:
+            return {"status": "ok", "message": "Duplicate Zoho Sign webhook notification safely ignored (Idempotent)."}
+
+        # Webhook authenticity verification
+        is_verified = zoho_sign_client.verify_webhook(payload, headers)
+
+        event = AgreementWebhookEvent(
+            id=f"EVT-{uuid.uuid4().hex[:10].upper()}",
+            signature_request_id=sig_req.id if sig_req else None,
+            document_id=req_id,
+            provider_request_id=req_id,
+            event_type=f"zoho_{status_str.lower()}",
+            mac_received=headers.get("x-zoho-webhook-secret") or headers.get("token"),
+            mac_verified=is_verified,
+            event_fingerprint=fingerprint,
+            raw_payload=payload,
+            is_processed=True,
+            processing_notes=f"Zoho Sign webhook processed with status: {status_str}"
+        )
+        db.add(event)
+
+        is_completed = status_str in ("COMPLETED", "SIGNED", "REQUESTCOMPLETED", "REQUESTSIGNINGSUCCESS")
+        is_declined = status_str in ("DECLINED", "REJECTED", "REQUESTREJECTED")
+        is_expired = status_str in ("EXPIRED", "REQUESTEXPIRED")
+
+        if sig_req and is_completed:
+            agreement = sig_req.agreement
+            sig_req.status = "SIGNED"
+            sig_req.completed_at = datetime.now(timezone.utc)
+            agreement.signing_status = "COMPLETED"
+
+            # Retrieve and persist executed PDF from Zoho Sign
+            try:
+                signed_bytes = zoho_sign_client.retrieve_signed_document(req_id)
+                signed_filename = f"{agreement.agreement_number}_v{sig_req.version_number}_ZOHO_SIGNED.pdf"
+                signed_path = os.path.join(settings.UPLOAD_DIR, "agreements", signed_filename)
+                with open(signed_path, "wb") as f:
+                    f.write(signed_bytes)
+
+                doc_record = AgreementDocument(
+                    id=f"DOC-{uuid.uuid4().hex[:10].upper()}",
+                    agreement_id=agreement.id,
+                    version_number=sig_req.version_number,
+                    document_type="signed_agreement_pdf",
+                    original_filename=signed_filename,
+                    stored_filename=signed_filename,
+                    file_path=signed_path,
+                    file_size=len(signed_bytes),
+                    file_hash_sha256=hashlib.sha256(signed_bytes).hexdigest(),
+                    mime_type="application/pdf",
+                    source="Zoho Sign Webhook"
+                )
+                db.add(doc_record)
+            except Exception as e:
+                event.processing_notes = f"Executed document download deferred: {e}"
+
+            # Also retrieve completion certificate / audit trail
+            try:
+                cert_bytes = zoho_sign_client.retrieve_audit_trail(req_id)
+                if cert_bytes:
+                    cert_filename = f"{agreement.agreement_number}_v{sig_req.version_number}_ZOHO_AUDIT_TRAIL.pdf"
+                    cert_path = os.path.join(settings.UPLOAD_DIR, "agreements", cert_filename)
+                    with open(cert_path, "wb") as f:
+                        f.write(cert_bytes)
+
+                    cert_doc = AgreementDocument(
+                        id=f"DOC-{uuid.uuid4().hex[:10].upper()}",
+                        agreement_id=agreement.id,
+                        version_number=sig_req.version_number,
+                        document_type="signature_audit_trail",
+                        original_filename=cert_filename,
+                        stored_filename=cert_filename,
+                        file_path=cert_path,
+                        file_size=len(cert_bytes),
+                        file_hash_sha256=hashlib.sha256(cert_bytes).hexdigest(),
+                        mime_type="application/pdf",
+                        source="Zoho Sign Audit Trail"
+                    )
+                    db.add(cert_doc)
+            except Exception as e:
+                logger.warning(f"Completion certificate retrieval deferred: {e}")
+
+            cls._record_status_history(
+                db, agreement, "UNDER_VERIFICATION", "Zoho Sign Webhook",
+                "Client electronic signature completed via Zoho Sign."
+            )
+
+        elif sig_req and (is_declined or is_expired):
+            agreement = sig_req.agreement
+            fail_state = "DECLINED" if is_declined else "EXPIRED"
+            sig_req.status = fail_state
+            agreement.signing_status = fail_state
+            cls._record_status_history(
+                db, agreement, "NEEDS_CORRECTION", "Zoho Sign Webhook",
+                f"Signature {fail_state.lower()} by client."
+            )
+
+        db.commit()
+        return {"status": "success", "processed": True, "request_id": req_id, "signing_status": status_str}
 
     @classmethod
     def process_leegality_webhook(cls, db: Session, payload: Dict[str, Any], is_success: bool) -> Dict[str, Any]:

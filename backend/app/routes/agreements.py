@@ -236,8 +236,8 @@ def approve_agreement(
 @router.post(
     "/{id}/send-for-signature",
     response_model=SendForSignatureResponse,
-    summary="Dispatch approved agreement to Leegality eSigning API",
-    tags=["Leegality eSignature"]
+    summary="Dispatch approved agreement to electronic signature provider (Zoho Sign)",
+    tags=["Electronic Signature"]
 )
 def send_for_signature(
     id: str,
@@ -251,8 +251,8 @@ def send_for_signature(
 @router.get(
     "/{id}/signature-status",
     response_model=SigningStatusResponse,
-    summary="Retrieve current electronic signature status from backend and Leegality",
-    tags=["Leegality eSignature"]
+    summary="Retrieve current electronic signature status from backend and provider",
+    tags=["Electronic Signature"]
 )
 def get_signature_status(id: str, db: Session = Depends(get_db)):
     agreement = db.query(ServiceAgreement).filter(ServiceAgreement.id == id).first()
@@ -269,8 +269,10 @@ def get_signature_status(id: str, db: Session = Depends(get_db)):
         version_number=agreement.current_version_number,
         signing_status=agreement.signing_status,
         agreement_status=agreement.status,
-        provider=sig_req.provider if sig_req else "Leegality",
+        provider=sig_req.provider if sig_req else "Zoho Sign",
         environment=sig_req.environment if sig_req else "sandbox",
+        provider_request_id=sig_req.provider_request_id if sig_req else None,
+        provider_document_id=sig_req.provider_document_id if sig_req else None,
         leegality_document_id=sig_req.leegality_document_id if sig_req else None,
         signing_url=sig_req.signing_url if sig_req else None,
         signer_name=sig_req.signer_name if sig_req else None,

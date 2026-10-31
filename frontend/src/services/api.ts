@@ -356,7 +356,7 @@ export const agreementApi = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Failed to submit signing request to Leegality');
+      throw new Error(err.detail || 'Failed to submit electronic signing request');
     }
     return res.json();
   },

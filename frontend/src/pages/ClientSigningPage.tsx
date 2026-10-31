@@ -19,7 +19,7 @@ export const ClientSigningPage: React.FC = () => {
         const data = await agreementApi.get(id);
         setAgreement(data);
 
-        // Fetch Leegality signing details
+        // Fetch electronic signing details
         const statusData = await agreementApi.getSignatureStatus(id);
         if (statusData) {
           setSigStatus(statusData);
@@ -45,6 +45,7 @@ export const ClientSigningPage: React.FC = () => {
   }
 
   const pdfUrl = agreementApi.getPdfUrl(agreement.id, true);
+  const providerName = sigStatus?.provider || 'Zoho Sign';
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -55,7 +56,7 @@ export const ClientSigningPage: React.FC = () => {
         </div>
         <h1 className="font-serif text-3xl text-[#1F2421]">Review & Execute Your Service Agreement</h1>
         <p className="text-xs text-[#736F68] mt-1 max-w-lg mx-auto">
-          Please review your bespoke royal wedding planning contract below. Once approved, proceed to Leegality's secure hosted signing portal.
+          Please review your bespoke royal wedding planning contract below. Once approved, proceed to {providerName}'s secure hosted signing portal.
         </p>
       </div>
 
@@ -76,13 +77,13 @@ export const ClientSigningPage: React.FC = () => {
           <span className="font-semibold text-purple-700 text-sm">{agreement.signing_status}</span>
         </div>
         <div>
-          <span className="text-[#8C877D] block">Mode:</span>
+          <span className="text-[#8C877D] block">Provider & Mode:</span>
           <span className={`inline-block mt-0.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border ${
             sigStatus?.environment === 'sandbox' || sigStatus?.environment === 'production'
               ? 'bg-blue-50 text-blue-800 border-blue-200'
               : 'bg-amber-50 text-amber-800 border-amber-200'
           }`}>
-            {sigStatus?.environment === 'sandbox' ? 'Real Sandbox' : sigStatus?.environment === 'production' ? 'Production' : 'Simulation Mock'}
+            {sigStatus?.environment === 'sandbox' ? `Real ${providerName} Sandbox` : sigStatus?.environment === 'production' ? `Real ${providerName} Production` : 'Simulation Mock'}
           </span>
         </div>
       </div>
@@ -93,7 +94,7 @@ export const ClientSigningPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <ShieldCheck size={16} className="text-[#9E7D3B]" />
             <h3 className="font-serif text-base font-semibold text-[#1F2421]">
-              Secure Electronic Signature via Leegality
+              Secure Electronic Signature via {providerName}
             </h3>
           </div>
           <p className="text-xs text-[#736F68]">

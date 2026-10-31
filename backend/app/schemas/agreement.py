@@ -168,6 +168,7 @@ class AgreementReviewRequest(BaseModel):
 # --- Leegality Integration Schemas ---
 
 class SendForSignatureRequest(BaseModel):
+    provider: Optional[str] = Field(None, description="Electronic signature provider override ('zoho_sign' or 'leegality')")
     signer_name: Optional[str] = None
     signer_email: Optional[str] = None
     signer_phone: Optional[str] = None
@@ -180,8 +181,10 @@ class SendForSignatureResponse(BaseModel):
     agreement_id: str
     agreement_number: str
     version_number: int
-    provider: str = "Leegality"
+    provider: str = "Zoho Sign"
     environment: str = "sandbox"
+    provider_request_id: Optional[str] = None
+    provider_document_id: Optional[str] = None
     leegality_document_id: Optional[str] = None
     signing_url: Optional[str] = None
     status: str
@@ -194,8 +197,10 @@ class SigningStatusResponse(BaseModel):
     version_number: int
     signing_status: str
     agreement_status: str
-    provider: str = "Leegality"
+    provider: str = "Zoho Sign"
     environment: str = "sandbox"
+    provider_request_id: Optional[str] = None
+    provider_document_id: Optional[str] = None
     leegality_document_id: Optional[str] = None
     signing_url: Optional[str] = None
     signer_name: Optional[str] = None

@@ -28,7 +28,7 @@ export const AgreementDetailsPage: React.FC = () => {
   // Verification modal state
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [verifyDecision, setVerifyDecision] = useState<'VERIFIED' | 'REJECTED' | 'NEEDS_CORRECTION'>('VERIFIED');
-  const [verifyRemarks, setVerifyRemarks] = useState('All contractual terms, Leegality eSign metadata, and staged payment schedules validated by agency executive.');
+  const [verifyRemarks, setVerifyRemarks] = useState('All contractual terms, electronic signature metadata, and staged payment schedules validated by agency executive.');
 
   const fetchAgreement = async () => {
     if (!id) return;
@@ -61,7 +61,7 @@ export const AgreementDetailsPage: React.FC = () => {
     setActionMsg(null);
     try {
       await agreementApi.approve(id, 'Maharani Gayatri Singh', 'Internal compliance check completed.');
-      setActionMsg({ type: 'success', text: 'Service Agreement internally approved! Eligible for Leegality dispatch.' });
+      setActionMsg({ type: 'success', text: 'Service Agreement internally approved! Eligible for electronic signature dispatch.' });
       await fetchAgreement();
     } catch (err: any) {
       setActionMsg({ type: 'error', text: err.message || 'Approval failed.' });
@@ -77,15 +77,17 @@ export const AgreementDetailsPage: React.FC = () => {
     try {
       const res = await agreementApi.sendForSignature(id);
       const isReal = res.environment === 'sandbox' || res.environment === 'production';
+      const provider = res.provider || 'Zoho Sign';
+      const reqId = res.provider_request_id || res.provider_document_id || res.leegality_document_id || '';
       setActionMsg({ 
         type: 'success', 
         text: isReal
-          ? `Dispatched to Real Leegality ${res.environment.toUpperCase()} API! Document ID: ${res.leegality_document_id}`
-          : `Dispatched in Simulation Mock mode. Document ID: ${res.leegality_document_id}`
+          ? `Dispatched to Real ${provider} ${res.environment.toUpperCase()} API! Request ID: ${reqId}`
+          : `Dispatched in Simulation Mock mode (${provider}). Request ID: ${reqId}`
       });
       await fetchAgreement();
     } catch (err: any) {
-      setActionMsg({ type: 'error', text: err.message || 'Leegality dispatch failed.' });
+      setActionMsg({ type: 'error', text: err.message || 'Electronic signature dispatch failed.' });
     } finally {
       setActionLoading(false);
     }
@@ -176,7 +178,7 @@ export const AgreementDetailsPage: React.FC = () => {
               disabled={actionLoading}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs uppercase tracking-widest font-medium"
             >
-              <Send size={13} /> Send for eSign (Leegality)
+              <Send size={13} /> Send for eSign (Zoho Sign)
             </button>
           )}
 
@@ -297,12 +299,14 @@ export const AgreementDetailsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Leegality eSignature Tracking */}
+          {/* Electronic Signature Tracking */}
           <div className="bg-white border border-[#E5E0D8] p-5 space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-[#E5E0D8]">
               <div className="flex items-center gap-2">
                 <Send size={14} className="text-purple-600" />
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-[#1F2421]">Leegality eSigning Status</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[#1F2421]">
+                  {sigDetails?.provider || 'Zoho Sign'} eSigning Status
+                </h3>
               </div>
               {sigDetails && (
                 <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border ${
@@ -316,13 +320,21 @@ export const AgreementDetailsPage: React.FC = () => {
             </div>
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
+                <span className="text-[#8C877D]">Provider:</span>
+                <span className="font-semibold text-[#1F2421]">{sigDetails?.provider || 'Zoho Sign'}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
                 <span className="text-[#8C877D]">Provider Status:</span>
                 <span className="font-semibold text-purple-700">{agreement.signing_status}</span>
               </div>
-              {sigDetails?.leegality_document_id && (
+              {(sigDetails?.provider_request_id || sigDetails?.provider_document_id || sigDetails?.leegality_document_id) && (
                 <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
-                  <span className="text-[#8C877D]">Document ID:</span>
-                  <span className="font-mono text-[11px] font-medium text-[#1F2421]">{sigDetails.leegality_document_id}</span>
+                  <span className="text-[#8C877D]">
+                    {sigDetails?.provider === 'Zoho Sign' ? 'Zoho Request ID:' : 'Document ID:'}
+                  </span>
+                  <span className="font-mono text-[11px] font-medium text-[#1F2421]">
+                    {sigDetails?.provider_request_id || sigDetails?.provider_document_id || sigDetails?.leegality_document_id}
+                  </span>
                 </div>
               )}
               {sigDetails?.signer_name && (
