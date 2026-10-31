@@ -17,11 +17,17 @@ from app.schemas.enquiry import (
 )
 from app.schemas.document import DocumentResponse, DocumentListResponse
 from app.schemas.email_message import EmailMessageResponse, EmailReplyRequest
+from app.schemas.registration import (
+    ClientRegistrationResponse,
+    RegistrationReviewRequest,
+    RegistrationCorrectionRequest,
+)
 from app.models.email_message import EmailMessage
 from app.models.document import RegistrationDocument
 from app.services.enquiry_service import enquiry_service
 from app.services.document_service import document_service
 from app.services.email_service import EmailService
+from app.services.registration_service import registration_service
 from app.core.config import settings
 
 router = APIRouter()
@@ -300,6 +306,12 @@ def send_registration_document(
         db=db
     )
 
+    if not email_result.get("success", False):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to dispatch registration document email: {email_result.get('message', 'SMTP transmission failed')}"
+        )
+
     enquiry_service.mark_document_sent(db=db, enquiry_id=enquiry_id)
 
     # Note
@@ -307,7 +319,7 @@ def send_registration_document(
         db=db,
         enquiry_id=enquiry_id,
         author="Agency Staff",
-        content=f"Dispatched formal Client Registration Document to {enquiry.email}."
+        content=f"Dispatched formal Client Registration Document with attachment to {enquiry.email}."
     )
 
     return {
@@ -553,3 +565,102 @@ def register_client(
         register_data=register_data
     )
     return result
+
+
+# --- Online Registration & Employee Review Routes ---
+
+@router.post(
+    "/{enquiry_id}/send-registration-link",
+    summary="Send online registration invitation email to client",
+    tags=["Client Registration"]
+)
+def send_online_registration_link(
+    enquiry_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Staff action: Sends or re-sends the luxury thank-you email containing the online registration link.
+    """
+    return enquiry_service.send_registration_link(db=db, enquiry_id=enquiry_id)
+
+
+@router.get(
+    "/{enquiry_id}/registration",
+    response_model=Optional[ClientRegistrationResponse],
+    summary="Get online registration dossier submitted by client",
+    tags=["Client Registration"]
+)
+def get_submitted_registration(
+    enquiry_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the submitted online registration dossier for staff review.
+    """
+    return registration_service.get_registration(db=db, enquiry_id=enquiry_id)
+
+
+@router.post(
+    "/{enquiry_id}/registration/review",
+    response_model=ClientRegistrationResponse,
+    summary="Mark registration dossier as under review by staff",
+    tags=["Client Registration"]
+)
+def review_submitted_registration(
+    enquiry_id: str,
+    review_req: RegistrationReviewRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Staff review action: Marks the registration dossier as 'UNDER_REVIEW' and logs review notes.
+    """
+    return registration_service.review_registration(
+        db=db,
+        enquiry_id=enquiry_id,
+        reviewed_by=review_req.reviewed_by,
+        notes=review_req.notes
+    )
+
+
+@router.post(
+    "/{enquiry_id}/registration/request-corrections",
+    summary="Request corrections on submitted registration from client",
+    tags=["Client Registration"]
+)
+def request_registration_corrections(
+    enquiry_id: str,
+    req: RegistrationCorrectionRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Staff action: Requests corrections on registration data, sends email to client with feedback,
+    and updates status to 'Corrections Requested'.
+    """
+    return registration_service.request_corrections(
+        db=db,
+        enquiry_id=enquiry_id,
+        correction_notes=req.correction_notes,
+        staff_name=req.staff_name
+    )
+
+
+@router.post(
+    "/{enquiry_id}/registration/approve",
+    summary="Approve client registration, create client record, and send activation email",
+    tags=["Client Registration"]
+)
+def approve_client_registration(
+    enquiry_id: str,
+    reviewed_by: str = Query("Agency Staff", description="Staff member approving the registration"),
+    db: Session = Depends(get_db)
+):
+    """
+    Staff action: Approves the submitted registration form, creates the official client dossier,
+    provisions a pending user account, and dispatches the secure account activation link to client.
+    """
+    return registration_service.approve_and_activate(
+        db=db,
+        enquiry_id=enquiry_id,
+        reviewed_by=reviewed_by
+    )
+

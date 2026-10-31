@@ -1,4 +1,5 @@
 import uuid
+import secrets
 from typing import Optional, Tuple, List
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
@@ -28,9 +29,14 @@ class EnquiryService:
 
         internal_notes = enquiry_data.pop("internal_notes", None)
 
+        raw_token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=14)
+
         db_enquiry = Enquiry(
             id=enquiry_id,
             internal_notes=internal_notes,
+            registration_token=raw_token,
+            registration_token_expires_at=expires_at,
             **enquiry_data
         )
 
@@ -48,6 +54,53 @@ class EnquiryService:
         db.commit()
         db.refresh(db_enquiry)
         return db_enquiry
+
+    @classmethod
+    def send_registration_link(cls, db: Session, enquiry_id: str) -> dict:
+        """
+        Sends (or re-sends) the luxury online registration link to the client via email.
+        """
+        enquiry = cls.get_enquiry(db=db, enquiry_id=enquiry_id)
+        if not enquiry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Enquiry '{enquiry_id}' not found."
+            )
+
+        now = datetime.now(timezone.utc)
+        if not enquiry.registration_token or (enquiry.registration_token_expires_at and enquiry.registration_token_expires_at < now):
+            enquiry.registration_token = secrets.token_urlsafe(32)
+            enquiry.registration_token_expires_at = now + timedelta(days=14)
+            db.commit()
+            db.refresh(enquiry)
+
+        form_url = settings.GOOGLE_FORMS_REGISTRATION_URL
+        email_res = EmailService.send_enquiry_thank_you_email(
+            to_email=enquiry.email,
+            client_name=enquiry.client_name,
+            enquiry_id=enquiry.id,
+            registration_url=form_url,
+            db=db
+        )
+
+        enquiry.status = "Registration Link Sent"
+        enquiry.registration_sent_at = now
+        cls.add_note(
+            db=db,
+            enquiry_id=enquiry.id,
+            author="Agency Staff",
+            content=f"Dispatched Google Forms registration invitation link ({form_url}) to {enquiry.email}."
+        )
+        db.commit()
+        db.refresh(enquiry)
+
+        return {
+            "success": email_res.get("success", False),
+            "message": f"Google Forms registration link dispatched to {enquiry.email}.",
+            "registration_url": form_url,
+            "delivery": email_res,
+            "enquiry_status": enquiry.status
+        }
 
     @staticmethod
     def get_enquiry(db: Session, enquiry_id: str) -> Optional[Enquiry]:

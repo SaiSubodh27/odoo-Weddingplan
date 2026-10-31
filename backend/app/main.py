@@ -12,6 +12,7 @@ from app.routes.clients import router as clients_router
 from app.routes.enquiries import router as enquiries_router
 from app.routes.auth import router as auth_router
 from app.routes.emails import router as emails_router
+from app.routes.registrations import router as registrations_router
 from app.routes.agreements import router as agreements_router
 from app.routes.webhooks import router as webhooks_router
 from app.services.email_sync_service import email_sync_service
@@ -104,6 +105,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Mount API v1 routers
 app.include_router(clients_router, prefix=settings.API_V1_STR)
 app.include_router(enquiries_router, prefix=f"{settings.API_V1_STR}/enquiries")
+app.include_router(registrations_router, prefix=f"{settings.API_V1_STR}/registrations")
 app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth")
 app.include_router(emails_router, prefix=f"{settings.API_V1_STR}/emails")
 app.include_router(agreements_router, prefix=f"{settings.API_V1_STR}/service-agreements")

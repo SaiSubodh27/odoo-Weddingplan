@@ -129,6 +129,64 @@ export const enquiryApi = {
     return res.json();
   },
 
+  async sendRegistrationLink(id: string) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/send-registration-link`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to dispatch online registration link');
+    }
+    return res.json();
+  },
+
+  async getRegistration(id: string) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/registration`);
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch registration dossier');
+    }
+    return res.json();
+  },
+
+  async reviewRegistration(id: string, payload: { reviewedBy?: string; notes?: string }) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/registration/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to mark registration under review');
+    }
+    return res.json();
+  },
+
+  async requestCorrections(id: string, payload: { staffName?: string; correctionNotes: string }) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/registration/request-corrections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to request registration corrections');
+    }
+    return res.json();
+  },
+
+  async approveRegistration(id: string, reviewedBy: string = 'Agency Staff') {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/registration/approve?reviewed_by=${encodeURIComponent(reviewedBy)}`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to approve registration and dispatch activation email');
+    }
+    return res.json();
+  },
+
   async registerClient(id: string, data?: { partner1Name?: string; partner2Name?: string; servicePackage?: string; additionalRequirements?: string; weddingTheme?: string }) {
     const res = await fetch(`${API_BASE}/enquiries/${id}/register`, {
       method: 'POST',
@@ -275,6 +333,121 @@ export const authApi = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Login failed');
+    }
+    return res.json();
+  },
+
+  async registerWebsite(payload: any) {
+    const res = await fetch(`${API_BASE}/auth/register-website`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (err.errors && Array.isArray(err.errors) && err.errors.length > 0) {
+        const errorDetails = err.errors.map((e: any) => `${e.field.replace('body -> ', '')}: ${e.message}`).join(' | ');
+        throw new Error(errorDetails);
+      }
+      throw new Error(err.detail || 'Website registration failed');
+    }
+    return res.json();
+  },
+
+  async getClientDossier(email: string) {
+    const res = await fetch(`${API_BASE}/auth/client-dossier?email=${encodeURIComponent(email)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch client dossier');
+    }
+    return res.json();
+  }
+};
+
+export const registrationApi = {
+  async getConfig() {
+    const res = await fetch(`${API_BASE}/registrations/config`);
+    if (!res.ok) throw new Error('Failed to fetch Google Forms configuration');
+    return res.json();
+  },
+
+  async updateConfig(payload: { googleFormsRegistrationUrl?: string; googleSheetId?: string; googleSheetCsvUrl?: string }) {
+    const res = await fetch(`${API_BASE}/registrations/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update Google Forms configuration');
+    }
+    return res.json();
+  },
+
+  async syncGoogleSheet(sheetId?: string) {
+    const url = new URL(`${API_BASE}/registrations/sync-google-sheet`);
+    if (sheetId) url.searchParams.set('sheet_id', sheetId);
+    const res = await fetch(url.toString(), { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to sync Google Sheet');
+    }
+    return res.json();
+  },
+
+  async importCsv(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/registrations/import-csv`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to import CSV');
+    }
+    return res.json();
+  },
+
+  async listRegistrations(status?: string) {
+    const url = new URL(`${API_BASE}/registrations`);
+    if (status && status !== 'ALL') url.searchParams.set('status', status);
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error('Failed to fetch registrations');
+    return res.json();
+  },
+
+  async associateRegistration(registrationId: string, enquiryId: string, staffName: string = 'Agency Staff') {
+    const res = await fetch(`${API_BASE}/registrations/${registrationId}/associate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enquiryId, staffName }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to associate registration');
+    }
+    return res.json();
+  },
+
+  async verifyToken(token: string) {
+    const res = await fetch(`${API_BASE}/registrations/verify?token=${encodeURIComponent(token)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to verify registration token');
+    }
+    return res.json();
+  },
+
+  async submitRegistration(payload: any) {
+    const res = await fetch(`${API_BASE}/registrations/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to submit registration form');
     }
     return res.json();
   }

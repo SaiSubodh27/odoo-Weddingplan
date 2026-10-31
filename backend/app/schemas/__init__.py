@@ -36,6 +36,14 @@ from app.schemas.user import (
     UserLoginResponse,
 )
 
+from app.schemas.registration import (
+    ClientRegistrationSubmitRequest,
+    RegistrationVerifyResponse,
+    ClientRegistrationResponse,
+    RegistrationReviewRequest,
+    RegistrationCorrectionRequest,
+)
+
 from app.schemas.email_message import (
     EmailAttachmentResponse,
     EmailMessageResponse,
