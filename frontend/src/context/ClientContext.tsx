@@ -11,12 +11,14 @@ interface ClientContextType {
   login: (email: string) => void;
   logout: () => void;
   currentUser: { name: string; role: string; email: string };
+  isBackendConnected: boolean;
 }
 
 const ClientContext = createContext<ClientContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'the_royal_knot_clients_v1';
 const AUTH_KEY = 'the_royal_knot_auth_v1';
+const API_BASE = 'http://localhost:8000/api/v1';
 
 export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [clients, setClients] = useState<Client[]>(() => {
@@ -31,6 +33,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return INITIAL_CLIENTS;
   });
 
+  const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
       return localStorage.getItem(AUTH_KEY) === 'true';
@@ -44,6 +48,27 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     role: 'Principal Wedding Planner',
     email: 'gayatri@theroyalknot.in'
   });
+
+  // Check and fetch from PostgreSQL backend
+  useEffect(() => {
+    const syncBackend = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/clients?page=1&page_size=100`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.items) && data.items.length > 0) {
+            setClients(data.items);
+          }
+          setIsBackendConnected(true);
+        } else {
+          setIsBackendConnected(false);
+        }
+      } catch {
+        setIsBackendConnected(false);
+      }
+    };
+    syncBackend();
+  }, []);
 
   useEffect(() => {
     try {
@@ -79,7 +104,27 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       createdAt: today
     };
 
+    // Optimistic state update
     setClients(prev => [fullClient, ...prev]);
+
+    // Asynchronously persist to PostgreSQL backend
+    fetch(`${API_BASE}/clients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newClientData)
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const created = await res.json();
+          if (created && created.id) {
+            setClients(prev => prev.map(c => c.id === newId ? { ...c, id: created.id } : c));
+          }
+        }
+      })
+      .catch(() => {
+        // Graceful fallback to client state
+      });
+
     return newId;
   };
 
@@ -91,6 +136,13 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setClients(prev =>
       prev.map(c => (c.id === id ? { ...c, status } : c))
     );
+
+    // Sync status change to backend
+    fetch(`${API_BASE}/clients/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    }).catch(() => {});
   };
 
   return (
@@ -103,7 +155,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isAuthenticated,
         login,
         logout,
-        currentUser
+        currentUser,
+        isBackendConnected
       }}
     >
       {children}
@@ -118,4 +171,3 @@ export const useClients = () => {
   }
   return context;
 };
-

@@ -1,45 +1,40 @@
-# The Royal Knot — Backend API Service
+# The Royal Knot — FastAPI Backend Service
 
-API backend service for **The Royal Knot** Luxury Wedding Planning Management System (Jaipur & Udaipur operations).
-
----
-
-## 🚀 Quick Start
-
-Run the backend server directly:
-```bash
-npm run dev
-```
-By default, the server starts on `http://localhost:5000`.
+Backend service for **The Royal Knot** Wedding Planning Management System.
 
 ---
 
-## 📡 Available API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/health` | Health check & operating hubs status |
-| `GET` | `/api/clients` | List all client dossiers (supports `?search=` and `?status=`) |
-| `GET` | `/api/clients/:id` | Fetch specific client dossier by ID |
-| `POST` | `/api/clients` | Create and register a new client dossier |
-| `PATCH`| `/api/clients/:id/status` | Update client registration status |
-| `GET` | `/api/weddings` | List palace wedding schedules and timelines |
-| `GET` | `/api/agreements` | *Phase 2 preview* |
-| `GET` | `/api/catering` | *Phase 2 preview* |
-| `GET` | `/api/vendors` | *Phase 2 preview* |
-| `GET` | `/api/payments` | *Phase 2 preview* |
-
----
-
-## 📁 Structure
+## 🗂️ Structure
 
 ```
 backend/
-├── src/
-│   ├── data/
-│   │   └── mockClients.json   # Persistent mock database store
-│   └── server.js              # Standalone REST API with CORS & JSON routing
-├── .env.example
-├── package.json
-└── README.md
+├── .venv/                     # Python virtual environment
+├── app/
+│   ├── __init__.py
+│   ├── main.py                # FastAPI app entrypoint, CORS & startup seed data
+│   ├── database.py            # SQLAlchemy database engine & session dependency
+│   ├── models/                # SQLAlchemy ORM database models
+│   │   └── __init__.py
+│   ├── schemas/               # Pydantic validation schemas
+│   │   └── __init__.py
+│   └── routes/                # API route controllers (/api/clients, /api/health, etc.)
+│       └── __init__.py
+├── .env                       # Environment configuration
+└── requirements.txt           # Python dependencies
 ```
+
+---
+
+## 🚀 Running the Backend
+
+Activate the virtual environment and start Uvicorn:
+
+### On Windows PowerShell:
+```powershell
+backend\.venv\Scripts\uvicorn.exe app.main:app --reload --port 8000
+```
+
+### Interactive API Documentation
+Once running, open:
+- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)

@@ -6,10 +6,9 @@
   "scripts": {
     "dev": "npm --prefix frontend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
-    "dev:backend": "npm --prefix backend run dev",
+    "dev:backend": "backend\\.venv\\Scripts\\uvicorn.exe app.main:app --app-dir backend --reload --port 8000",
     "build": "npm --prefix frontend run build",
-    "build:frontend": "npm --prefix frontend run build",
-    "start:backend": "npm --prefix backend run start"
+    "build:frontend": "npm --prefix frontend run build"
   },
   "keywords": [
     "wedding-planning",
