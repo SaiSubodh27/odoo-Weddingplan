@@ -249,6 +249,173 @@ class EmailService:
             }
 
     @classmethod
+    def send_enquiry_thank_you_email(
+        cls,
+        to_email: str,
+        client_name: str,
+        enquiry_id: str,
+        registration_url: str,
+        wedding_location: Optional[str] = None,
+        db: Optional[Session] = None
+    ) -> dict:
+        """
+        Sends an automated luxury thank-you email immediately upon enquiry receipt,
+        welcoming the couple and directing them to complete their private online registration form.
+        Contains no document attachments and no plain-text credentials.
+        """
+        subject = f"Thank You for Contacting The Royal Knot — Wedding Celebration Enquiry ({enquiry_id})"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body {{ font-family: 'Georgia', serif; color: #1F2421; background-color: #FAF8F5; margin: 0; padding: 20px; }}
+            .container {{ max-width: 600px; margin: 0 auto; background: #FFFFFF; border: 1px solid #E5E0D8; padding: 40px; }}
+            .header {{ text-align: center; border-bottom: 1px solid #E5E0D8; padding-bottom: 24px; }}
+            .brand {{ font-size: 26px; font-weight: normal; text-transform: uppercase; letter-spacing: 3px; color: #1F2421; }}
+            .tagline {{ font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: #9E7D3B; margin-top: 6px; }}
+            .content {{ padding: 32px 0; font-size: 14px; line-height: 1.85; color: #4A4640; }}
+            .btn {{ display: inline-block; padding: 14px 32px; background: #1F2421; color: #FAF8F5 !important; text-decoration: none; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin: 24px 0; border: 1px solid #1F2421; }}
+            .highlight-box {{ background: #FAF8F5; border-left: 2px solid #9E7D3B; padding: 16px 20px; margin: 20px 0; font-size: 13px; color: #2C2724; }}
+            .footer {{ border-top: 1px solid #E5E0D8; padding-top: 24px; font-size: 11px; color: #8C877D; text-align: center; line-height: 1.6; }}
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="brand">The Royal Knot</div>
+              <div class="tagline">Bespoke Destination Weddings · Jaipur & Udaipur</div>
+            </div>
+            <div class="content">
+              <p>Dear {client_name},</p>
+              <p>Thank you for reaching out to <strong>The Royal Knot</strong>. It is our distinct honor to welcome you as you begin envisioning your destination wedding celebration.</p>
+              <p>At The Royal Knot, we orchestrate extraordinary celebrations across the regal heritage palaces of Rajasthan. From intimate gatherings on Lake Pichola to grand royal pageantry in Jaipur, every chapter is thoughtfully designed around your singular love story.</p>
+              
+              <div class="highlight-box">
+                <strong>Next Step: Your Private Client Registration</strong><br>
+                To enable our lead wedding directors to prepare a personalized celebration blueprint tailored to your guest count, preferred dates, and celebration aesthetic, please complete your confidential online registration form:
+              </div>
+
+              <p style="text-align: center;">
+                <a href="{registration_url}" class="btn">Complete Online Registration Form</a>
+              </p>
+
+              <p>Once you submit your details online, our senior concierges will review your celebration parameters and issue your confidential client portal activation link so you can begin private planning consultations.</p>
+
+              <p>With our warmest regards,<br>
+              <strong>The Royal Knot Lead Concierge</strong><br>
+              <em>Jaipur: Rambagh Enclave · Udaipur: Lake Pichola Promenade</em></p>
+            </div>
+            <div class="footer">
+              Enquiry Reference: <strong>{enquiry_id}</strong><br>
+              Official Concierge Desk: {settings.AGENCY_EMAIL}<br>
+              Direct Link: <a href="{registration_url}" style="color: #9E7D3B;">{registration_url}</a>
+            </div>
+          </div>
+        </body>
+        </html>
+        """
+
+        text_content = (
+            f"Dear {client_name},\n\n"
+            f"Thank you for reaching out to The Royal Knot regarding your destination wedding celebration.\n\n"
+            f"To enable our senior wedding directors to prepare your celebration blueprint, please complete your private client registration form online:\n"
+            f"{registration_url}\n\n"
+            f"Enquiry Reference: {enquiry_id}\n\n"
+            f"Warm regards,\n"
+            f"The Royal Knot Concierge Team\n"
+            f"{settings.AGENCY_EMAIL}"
+        )
+
+        return cls.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            enquiry_id=enquiry_id,
+            db=db
+        )
+
+    @classmethod
+    def send_corrections_requested_email(
+        cls,
+        to_email: str,
+        client_name: str,
+        enquiry_id: str,
+        registration_url: str,
+        correction_notes: str,
+        db: Optional[Session] = None
+    ) -> dict:
+        """Sends feedback and request for registration corrections to the client."""
+        subject = f"The Royal Knot — Action Requested on Your Wedding Registration ({enquiry_id})"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body {{ font-family: 'Georgia', serif; color: #1F2421; background-color: #FAF8F5; margin: 0; padding: 20px; }}
+            .container {{ max-width: 600px; margin: 0 auto; background: #FFFFFF; border: 1px solid #E5E0D8; padding: 40px; }}
+            .header {{ text-align: center; border-bottom: 1px solid #E5E0D8; padding-bottom: 24px; }}
+            .brand {{ font-size: 24px; font-weight: normal; text-transform: uppercase; letter-spacing: 3px; color: #1F2421; }}
+            .tagline {{ font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: #9E7D3B; margin-top: 6px; }}
+            .content {{ padding: 30px 0; font-size: 14px; line-height: 1.85; color: #4A4640; }}
+            .note-box {{ background: #FAF8F5; border-left: 2px solid #9E7D3B; padding: 16px 20px; margin: 20px 0; font-size: 13px; color: #2C2724; white-space: pre-wrap; }}
+            .btn {{ display: inline-block; padding: 14px 30px; background: #1F2421; color: #FAF8F5 !important; text-decoration: none; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin: 24px 0; border: 1px solid #1F2421; }}
+            .footer {{ border-top: 1px solid #E5E0D8; padding-top: 24px; font-size: 11px; color: #8C877D; text-align: center; }}
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="brand">The Royal Knot</div>
+              <div class="tagline">Bespoke Destination Weddings · Jaipur & Udaipur</div>
+            </div>
+            <div class="content">
+              <p>Dear {client_name},</p>
+              <p>Our senior wedding directors have reviewed your submitted client registration for enquiry <strong>#{enquiry_id}</strong>.</p>
+              <p>To finalize your dossier and activate your client portal, please review the following notes and update your registration details:</p>
+              
+              <div class="note-box">
+                <strong>Director Notes:</strong><br>
+                {correction_notes}
+              </div>
+
+              <p style="text-align: center;">
+                <a href="{registration_url}" class="btn">Update Registration Dossier</a>
+              </p>
+
+              <p>Warmest regards,<br>
+              <strong>The Royal Knot Concierge Team</strong></p>
+            </div>
+            <div class="footer">
+              Enquiry Reference: {enquiry_id}<br>
+              Agency Email: {settings.AGENCY_EMAIL}
+            </div>
+          </div>
+        </body>
+        </html>
+        """
+
+        text_content = (
+            f"Dear {client_name},\n\n"
+            f"Please update your registration details for #{enquiry_id}:\n\n"
+            f"Notes:\n{correction_notes}\n\n"
+            f"Update link: {registration_url}\n\n"
+            f"The Royal Knot Concierge Team"
+        )
+
+        return cls.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            enquiry_id=enquiry_id,
+            db=db
+        )
+
+    @classmethod
     def send_registration_document_email(
         cls,
         to_email: str,

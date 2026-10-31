@@ -3,11 +3,41 @@ export type EnquirySource = 'Email' | 'Phone' | 'Website';
 export type EnquiryStatus =
   | 'New'
   | 'Contacted'
+  | 'Registration Link Sent'
+  | 'Registration Submitted'
   | 'Registration Document Sent'
   | 'Registration Received'
   | 'Under Review'
+  | 'Approved'
+  | 'Corrections Requested'
   | 'Registered'
   | 'Closed';
+
+export interface ClientRegistration {
+  id: string;
+  enquiryId: string;
+  fullName: string;
+  partnerName?: string;
+  email: string;
+  phone: string;
+  address?: string;
+  weddingDate?: string;
+  weddingLocation?: string;
+  expectedGuestCount?: number;
+  estimatedBudget?: number;
+  weddingEvents?: string;
+  preferredTheme?: string;
+  servicePackage: string;
+  preferences?: string;
+  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'CORRECTIONS_REQUESTED';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  correctionNotes?: string;
+  submittedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface EnquiryNote {
   id: number;
@@ -85,12 +115,15 @@ export interface Enquiry {
   assignedStaff?: string;
   status: EnquiryStatus;
   internalNotes?: string;
+  registrationToken?: string;
+  registrationTokenExpiresAt?: string;
   registrationSentAt?: string;
   registrationReceivedAt?: string;
   registrationReviewedAt?: string;
   clientId?: string;
   createdAt: string;
   updatedAt: string;
+  registration?: ClientRegistration;
   notesHistory?: EnquiryNote[];
   documents?: DocumentSummary[];
   messages?: EmailMessage[];

@@ -18,13 +18,19 @@ import {
 export const getEnquiryStatusBadge = (status: EnquiryStatus) => {
   switch (status) {
     case 'Registered':
-      return 'bg-[#EBF3ED] text-[#2D5A3C] border-[#C3D9C9]';
+    case 'Approved':
+      return 'bg-[#EBF3ED] text-[#2D5A3C] border-[#C3D9C9] font-semibold';
     case 'Under Review':
       return 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49E] font-semibold';
-    case 'Registration Received':
-      return 'bg-[#EBF2F7] text-[#295570] border-[#BCD4E6]';
+    case 'Registration Submitted':
+      return 'bg-[#F0F4FA] text-[#1D4E89] border-[#B5CEEB] font-semibold';
+    case 'Corrections Requested':
+      return 'bg-[#FFF3E8] text-[#B85D1B] border-[#FAD3B4] font-semibold';
+    case 'Registration Link Sent':
     case 'Registration Document Sent':
       return 'bg-[#F7F2E7] text-[#826127] border-[#DFD0B1]';
+    case 'Registration Received':
+      return 'bg-[#EBF2F7] text-[#295570] border-[#BCD4E6]';
     case 'Contacted':
       return 'bg-[#FAF0E6] text-[#8F592B] border-[#E8CEB5]';
     case 'Closed':

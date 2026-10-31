@@ -4,6 +4,7 @@ import { ClientProvider, useClients } from './context/ClientContext';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
 import { ClientActivationPage } from './pages/ClientActivationPage';
+import { ClientRegistrationPage } from './pages/ClientRegistrationPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EmailInboxPage } from './pages/EmailInboxPage';
 import { EnquiriesPage } from './pages/EnquiriesPage';
@@ -30,6 +31,7 @@ export const AppContent: React.FC = () => {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/activate" element={<ClientActivationPage />} />
+      <Route path="/register" element={<ClientRegistrationPage />} />
 
       {/* Protected Routes inside Dashboard Layout */}
       <Route

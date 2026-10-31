@@ -28,6 +28,10 @@ class Enquiry(Base):
 
     internal_notes = Column(Text, nullable=True)
 
+    # Online Registration Token & Expiry
+    registration_token = Column(String(100), unique=True, index=True, nullable=True)
+    registration_token_expires_at = Column(DateTime(timezone=True), nullable=True)
+
     # Document Timestamps
     registration_sent_at = Column(DateTime(timezone=True), nullable=True)
     registration_received_at = Column(DateTime(timezone=True), nullable=True)
@@ -43,6 +47,7 @@ class Enquiry(Base):
 
     # Relationships
     client = relationship("Client", backref="enquiries")
+    registration = relationship("ClientRegistration", back_populates="enquiry", uselist=False, cascade="all, delete-orphan")
     documents = relationship("RegistrationDocument", back_populates="enquiry", cascade="all, delete-orphan")
     messages = relationship("EmailMessage", back_populates="enquiry", cascade="all, delete-orphan", order_by="EmailMessage.created_at")
     notes_history = relationship("EnquiryNote", back_populates="enquiry", cascade="all, delete-orphan", order_by="desc(EnquiryNote.created_at)")

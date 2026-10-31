@@ -4,14 +4,20 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 import re
 
+from app.schemas.registration import ClientRegistrationResponse
+
 EnquirySourceType = Literal["Email", "Phone", "Website"]
 
 EnquiryStatusType = Literal[
     "New",
     "Contacted",
+    "Registration Link Sent",
+    "Registration Submitted",
     "Registration Document Sent",
     "Registration Received",
     "Under Review",
+    "Approved",
+    "Corrections Requested",
     "Registered",
     "Closed",
 ]
@@ -127,12 +133,15 @@ class EnquiryRegisterRequest(BaseModel):
 
 class EnquiryResponse(EnquiryBase):
     id: str
+    registration_token: Optional[str] = Field(None, alias="registrationToken")
+    registration_token_expires_at: Optional[datetime] = Field(None, alias="registrationTokenExpiresAt")
     registration_sent_at: Optional[datetime] = Field(None, alias="registrationSentAt")
     registration_received_at: Optional[datetime] = Field(None, alias="registrationReceivedAt")
     registration_reviewed_at: Optional[datetime] = Field(None, alias="registrationReviewedAt")
     client_id: Optional[str] = Field(None, alias="clientId")
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
+    registration: Optional[ClientRegistrationResponse] = None
     notes_history: List[EnquiryNoteResponse] = Field(default_factory=list, alias="notesHistory")
     documents: List[DocumentSummary] = Field(default_factory=list)
 

@@ -5,7 +5,8 @@ from email.utils import parseaddr, parsedate_to_datetime
 import os
 import re
 import uuid
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any, Tuple
 import logging
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from app.models.email_message import EmailMessage, EmailAttachment
 from app.models.enquiry import Enquiry, EnquiryNote
 from app.models.document import RegistrationDocument
 from app.services.enquiry_service import enquiry_service
+from app.services.email_service import EmailService
 
 logger = logging.getLogger("royal_knot.email_sync")
 
@@ -340,6 +342,10 @@ class EmailSyncService:
                 new_enq_id = f"TRK-ENQ-2026-0{next_count}"
                 client_display_name = sender_name or sender_email.split("@")[0].replace(".", " ").title()
 
+                # Generate secure registration token (14-day validity)
+                raw_token = secrets.token_urlsafe(32)
+                expires_at = datetime.now(timezone.utc) + timedelta(days=14)
+
                 new_enquiry = Enquiry(
                     id=new_enq_id,
                     client_name=client_display_name,
@@ -347,7 +353,9 @@ class EmailSyncService:
                     phone="+91 (Awaiting Phone Verification)",
                     enquiry_source="Email",
                     requirements=body_text[:1000] if body_text else subject,
-                    status="New"
+                    status="New",
+                    registration_token=raw_token,
+                    registration_token_expires_at=expires_at
                 )
                 db.add(new_enquiry)
                 db.flush()
@@ -398,6 +406,32 @@ class EmailSyncService:
             db.add(att_rec)
 
         db.commit()
+
+        # If a new enquiry was created, automatically dispatch luxury thank-you email with registration link
+        if enquiry_created and enquiry_id:
+            enq_to_notify = db.query(Enquiry).filter(Enquiry.id == enquiry_id).first()
+            if enq_to_notify and enq_to_notify.registration_token:
+                registration_url = f"{settings.FRONTEND_BASE_URL}/register?token={enq_to_notify.registration_token}"
+                try:
+                    thank_you_res = EmailService.send_enquiry_thank_you_email(
+                        to_email=sender_email,
+                        client_name=client_display_name,
+                        enquiry_id=enquiry_id,
+                        registration_url=registration_url,
+                        db=db
+                    )
+                    enq_to_notify.status = "Registration Link Sent"
+                    enq_to_notify.registration_sent_at = datetime.now(timezone.utc)
+
+                    auto_reply_note = EnquiryNote(
+                        enquiry_id=enquiry_id,
+                        author="System (Auto-Response)",
+                        content=f"Dispatched automated thank-you email with online registration link ({registration_url}) to {sender_email}."
+                    )
+                    db.add(auto_reply_note)
+                    db.commit()
+                except Exception as send_err:
+                    logger.error(f"Failed to auto-send thank-you email to {sender_email}: {str(send_err)}")
 
         return {
             "processed": True,

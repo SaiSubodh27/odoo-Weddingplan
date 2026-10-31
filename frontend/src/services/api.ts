@@ -129,6 +129,64 @@ export const enquiryApi = {
     return res.json();
   },
 
+  async sendRegistrationLink(id: string) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/send-registration-link`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to dispatch online registration link');
+    }
+    return res.json();
+  },
+
+  async getRegistration(id: string) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/registration`);
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch registration dossier');
+    }
+    return res.json();
+  },
+
+  async reviewRegistration(id: string, payload: { reviewedBy?: string; notes?: string }) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/registration/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to mark registration under review');
+    }
+    return res.json();
+  },
+
+  async requestCorrections(id: string, payload: { staffName?: string; correctionNotes: string }) {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/registration/request-corrections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to request registration corrections');
+    }
+    return res.json();
+  },
+
+  async approveRegistration(id: string, reviewedBy: string = 'Agency Staff') {
+    const res = await fetch(`${API_BASE}/enquiries/${id}/registration/approve?reviewed_by=${encodeURIComponent(reviewedBy)}`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to approve registration and dispatch activation email');
+    }
+    return res.json();
+  },
+
   async registerClient(id: string, data?: { partner1Name?: string; partner2Name?: string; servicePackage?: string; additionalRequirements?: string; weddingTheme?: string }) {
     const res = await fetch(`${API_BASE}/enquiries/${id}/register`, {
       method: 'POST',
@@ -275,6 +333,30 @@ export const authApi = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Login failed');
+    }
+    return res.json();
+  }
+};
+
+export const registrationApi = {
+  async verifyToken(token: string) {
+    const res = await fetch(`${API_BASE}/registrations/verify?token=${encodeURIComponent(token)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to verify registration token');
+    }
+    return res.json();
+  },
+
+  async submitRegistration(payload: any) {
+    const res = await fetch(`${API_BASE}/registrations/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to submit registration form');
     }
     return res.json();
   }
