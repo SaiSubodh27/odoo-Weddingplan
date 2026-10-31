@@ -13,6 +13,9 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
 
   const getPageTitle = () => {
     const path = location.pathname;
+    if (path.startsWith('/enquiries/new')) return 'Record Inbound Enquiry';
+    if (path.startsWith('/enquiries/') && path !== '/enquiries') return 'Enquiry Dossier & Registration';
+    if (path.startsWith('/enquiries')) return 'Enquiries & Lead Management';
     if (path.startsWith('/clients/new')) return 'New Client Registration';
     if (path.startsWith('/clients/') && path !== '/clients') return 'Client Dossier';
     if (path.startsWith('/clients')) return 'Client Directory';

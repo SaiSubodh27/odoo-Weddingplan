@@ -8,7 +8,7 @@ interface ClientContextType {
   getClient: (id: string) => Client | undefined;
   updateClientStatus: (id: string, status: RegistrationStatus) => void;
   isAuthenticated: boolean;
-  login: (email: string) => void;
+  login: (email: string, details?: { name?: string; role?: string }) => void;
   logout: () => void;
   currentUser: { name: string; role: string; email: string };
   isBackendConnected: boolean;
@@ -78,13 +78,14 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [clients]);
 
-  const login = (email: string) => {
+  const login = (email: string, details?: { name?: string; role?: string }) => {
     setIsAuthenticated(true);
     localStorage.setItem(AUTH_KEY, 'true');
     setCurrentUser(prev => ({
       ...prev,
       email: email || 'planner@theroyalknot.in',
-      name: email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()) || 'Agency Staff'
+      name: details?.name || email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()) || 'Agency Staff',
+      role: details?.role || (email.includes('theroyalknot.in') ? 'Principal Wedding Planner' : 'Client')
     }));
   };
 

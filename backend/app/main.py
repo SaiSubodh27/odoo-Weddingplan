@@ -4,15 +4,17 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from app.core.config import settings
 from app.routes.clients import router as clients_router
+from app.routes.enquiries import router as enquiries_router
+from app.routes.auth import router as auth_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description=(
         "Production-grade backend service for **The Royal Knot** Luxury Wedding Planning Agency "
-        "(Jaipur & Udaipur operations). Manages client registration dossiers, destination parameters, "
-        "and agency workflows."
+        "(Jaipur & Udaipur operations). Manages enquiry workflows, client registration dossiers, "
+        "registration document exchange, and client account activation."
     ),
-    version="1.0.0",
+    version="1.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json"
@@ -27,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Custom validation error handler for clean, client-friendly error messages
+# Custom validation error handler for client-friendly error messages
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = []
@@ -46,8 +48,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         }
     )
 
-# Mount API v1 router
+# Mount API v1 routers
 app.include_router(clients_router, prefix=settings.API_V1_STR)
+app.include_router(enquiries_router, prefix=f"{settings.API_V1_STR}/enquiries")
+app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth")
 
 # Top-level /health route
 @app.get("/health", tags=["System Health"])
@@ -55,7 +59,7 @@ def root_health():
     return {
         "service": settings.PROJECT_NAME,
         "status": "operational",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "api_v1_docs": "/docs"
     }
 
@@ -68,7 +72,9 @@ def root():
         "operating_hubs": ["Jaipur", "Udaipur"],
         "api_v1_endpoints": {
             "health": f"{settings.API_V1_STR}/health",
+            "enquiries": f"{settings.API_V1_STR}/enquiries",
             "clients": f"{settings.API_V1_STR}/clients",
+            "auth": f"{settings.API_V1_STR}/auth",
             "documentation": "/docs"
         }
     }

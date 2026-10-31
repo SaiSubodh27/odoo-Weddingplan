@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
+import { authApi } from '../services/api';
 import { Lock, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -13,20 +14,35 @@ export const LoginPage: React.FC = () => {
   const { login } = useClients();
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      setError('Please provide your staff email and password.');
+      setError('Please provide your registered email and password.');
       return;
     }
 
     setIsLoading(true);
     setError('');
 
-    setTimeout(() => {
-      login(email);
+    try {
+      // Authenticate via backend API (supports staff and activated clients)
+      const res = await authApi.login({ email, password });
+      login(res.email, {
+        name: res.clientName || res.client_name,
+        role: res.role === 'client' ? 'Client Workspace' : 'Principal Wedding Planner'
+      });
       navigate('/dashboard');
-    }, 400);
+    } catch (err: any) {
+      // Fallback for offline demo if using default staff demo credentials
+      if (email.includes('theroyalknot.in') && (!err.message || err.message.includes('fetch'))) {
+        login(email);
+        navigate('/dashboard');
+      } else {
+        setError(err.message || 'Authentication failed. Please verify your credentials.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -34,7 +50,7 @@ export const LoginPage: React.FC = () => {
       {/* Decorative top badge */}
       <div className="mb-6 flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-[#9E7D3B] font-medium">
         <span>✦</span>
-        <span>Agency Staff Portal</span>
+        <span>Agency & Client Portal</span>
         <span>✦</span>
       </div>
 
@@ -58,7 +74,7 @@ export const LoginPage: React.FC = () => {
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-xs uppercase tracking-wider text-[#736F68] font-medium mb-1.5">
-              Staff Email Address
+              Email Address
             </label>
             <div className="relative">
               <input
@@ -124,7 +140,7 @@ export const LoginPage: React.FC = () => {
         <div className="mt-8 pt-6 border-t border-[#E5E0D8] text-center">
           <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#8C877D]">
             <ShieldCheck size={13} className="text-[#9E7D3B]" />
-            <span>Authorized access for Royal Knot Concierge staff only</span>
+            <span>Authorized access for Royal Knot Concierge staff & registered clients</span>
           </div>
         </div>
       </div>

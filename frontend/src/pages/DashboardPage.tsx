@@ -58,17 +58,23 @@ export const DashboardPage: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            to="/clients/new"
+            to="/enquiries/new"
             className="flex items-center gap-2 px-4 py-2.5 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider font-semibold hover:bg-[#343733] border border-[#1F2421] transition-colors"
           >
             <Plus size={14} className="text-[#D9C496]" />
-            <span>New Client Enquiry</span>
+            <span>Record Enquiry</span>
+          </Link>
+          <Link
+            to="/enquiries"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#FAF8F5] text-[#1F2421] text-xs uppercase tracking-wider font-medium hover:bg-[#F2EFE8] border border-[#E5E0D8] transition-colors"
+          >
+            <span>Enquiry Intake</span>
           </Link>
           <Link
             to="/clients"
             className="flex items-center gap-2 px-4 py-2.5 bg-[#FAF8F5] text-[#1F2421] text-xs uppercase tracking-wider font-medium hover:bg-[#F2EFE8] border border-[#E5E0D8] transition-colors"
           >
-            <span>Browse Directory</span>
+            <span>Client Directory</span>
           </Link>
         </div>
       </div>

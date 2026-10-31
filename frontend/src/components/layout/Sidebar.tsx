@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
+  Inbox,
   Users, 
   HeartHandshake, 
   Settings, 
@@ -27,6 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Enquiries', path: '/enquiries', icon: Inbox },
     { name: 'Clients', path: '/clients', icon: Users },
     { name: 'Weddings', path: '/weddings', icon: HeartHandshake },
     { name: 'Settings', path: '/settings', icon: Settings },

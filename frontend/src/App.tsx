@@ -3,7 +3,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ClientProvider, useClients } from './context/ClientContext';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
+import { ClientActivationPage } from './pages/ClientActivationPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { EnquiriesPage } from './pages/EnquiriesPage';
+import { AddEnquiryPage } from './pages/AddEnquiryPage';
+import { EnquiryDetailsPage } from './pages/EnquiryDetailsPage';
 import { ClientsPage } from './pages/ClientsPage';
 import { AddClientPage } from './pages/AddClientPage';
 import { ClientDetailsPage } from './pages/ClientDetailsPage';
@@ -22,8 +26,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 export const AppContent: React.FC = () => {
   return (
     <Routes>
-      {/* Public Route */}
+      {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/activate" element={<ClientActivationPage />} />
 
       {/* Protected Routes inside Dashboard Layout */}
       <Route
@@ -36,6 +41,9 @@ export const AppContent: React.FC = () => {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="enquiries" element={<EnquiriesPage />} />
+        <Route path="enquiries/new" element={<AddEnquiryPage />} />
+        <Route path="enquiries/:id" element={<EnquiryDetailsPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="clients/new" element={<AddClientPage />} />
         <Route path="clients/:id" element={<ClientDetailsPage />} />
