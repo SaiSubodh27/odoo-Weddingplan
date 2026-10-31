@@ -367,6 +367,18 @@ export const agreementApi = {
     return res.json();
   },
 
+  async refreshSignatureStatus(id: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/refresh-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to poll and synchronize signature status from Zoho Sign');
+    }
+    return res.json();
+  },
+
   async verify(id: string, reviewerName: string, decision: 'VERIFIED' | 'REJECTED' | 'NEEDS_CORRECTION', remarks: string) {
     const res = await fetch(`${API_BASE}/service-agreements/${id}/verify`, {
       method: 'POST',

@@ -15,6 +15,7 @@ from app.routes.emails import router as emails_router
 from app.routes.agreements import router as agreements_router
 from app.routes.webhooks import router as webhooks_router
 from app.services.email_sync_service import email_sync_service
+from app.services.zoho_polling_service import zoho_polling_service
 
 logger = logging.getLogger("royal_knot")
 
@@ -42,10 +43,16 @@ async def periodic_email_sync():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     sync_task = asyncio.create_task(periodic_email_sync())
+    polling_task = asyncio.create_task(zoho_polling_service.run_polling_background_loop())
     yield
     sync_task.cancel()
+    polling_task.cancel()
     try:
         await sync_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await polling_task
     except asyncio.CancelledError:
         pass
 

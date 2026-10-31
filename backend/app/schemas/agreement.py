@@ -121,6 +121,7 @@ class ServiceAgreementResponse(BaseModel):
     created_by: str
     created_at: datetime
     updated_at: datetime
+    last_status_checked_at: Optional[datetime] = None
 
     milestones: List[PaymentMilestoneResponse] = []
     
@@ -206,6 +207,12 @@ class SigningStatusResponse(BaseModel):
     signer_name: Optional[str] = None
     signer_email: Optional[str] = None
     completed_at: Optional[datetime] = None
+    last_status_checked_at: Optional[datetime] = None
+    next_status_check_at: Optional[datetime] = None
+    polling_attempt_count: int = 0
+    last_polling_error: Optional[str] = None
+    has_signed_pdf: bool = False
+    has_audit_certificate: bool = False
     raw_provider_status: Optional[Dict[str, Any]] = None
 
 

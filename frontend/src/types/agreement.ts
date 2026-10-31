@@ -76,6 +76,7 @@ export interface ServiceAgreement {
   created_by: string;
   created_at: string;
   updated_at: string;
+  last_status_checked_at?: string;
 
   milestones: PaymentMilestone[];
 
@@ -111,6 +112,12 @@ export interface SignatureStatusResponse {
   signer_name?: string;
   signer_email?: string;
   completed_at?: string;
+  last_status_checked_at?: string;
+  next_status_check_at?: string;
+  polling_attempt_count?: number;
+  last_polling_error?: string;
+  has_signed_pdf?: boolean;
+  has_audit_certificate?: boolean;
   raw_provider_status?: Record<string, any>;
 }
 

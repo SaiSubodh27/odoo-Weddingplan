@@ -28,6 +28,7 @@ from app.schemas.agreement import (
     BookingConfirmResponse,
 )
 from app.services.agreement_service import agreement_service
+from app.services.zoho_polling_service import zoho_polling_service
 
 router = APIRouter()
 
@@ -67,6 +68,7 @@ def _format_agreement_response(a: ServiceAgreement) -> ServiceAgreementResponse:
         created_by=a.created_by,
         created_at=a.created_at,
         updated_at=a.updated_at,
+        last_status_checked_at=a.last_status_checked_at,
         milestones=a.milestones,
         client_partner1_name=client.partner1_name if client else None,
         client_partner2_name=client.partner2_name if client else None,
@@ -263,6 +265,16 @@ def get_signature_status(id: str, db: Session = Depends(get_db)):
         AgreementSignatureRequest.agreement_id == agreement.id
     ).order_by(AgreementSignatureRequest.created_at.desc()).first()
 
+    has_signed_pdf = db.query(AgreementDocument).filter(
+        AgreementDocument.agreement_id == agreement.id,
+        AgreementDocument.document_type == "signed_agreement_pdf"
+    ).first() is not None
+
+    has_audit_cert = db.query(AgreementDocument).filter(
+        AgreementDocument.agreement_id == agreement.id,
+        AgreementDocument.document_type == "signature_audit_trail"
+    ).first() is not None
+
     return SigningStatusResponse(
         agreement_id=agreement.id,
         agreement_number=agreement.agreement_number,
@@ -278,8 +290,29 @@ def get_signature_status(id: str, db: Session = Depends(get_db)):
         signer_name=sig_req.signer_name if sig_req else None,
         signer_email=sig_req.signer_email if sig_req else None,
         completed_at=sig_req.completed_at if sig_req else None,
+        last_status_checked_at=sig_req.last_status_checked_at if sig_req else agreement.last_status_checked_at,
+        next_status_check_at=sig_req.next_status_check_at if sig_req else None,
+        polling_attempt_count=sig_req.polling_attempt_count if sig_req else 0,
+        last_polling_error=sig_req.last_polling_error if sig_req else None,
+        has_signed_pdf=has_signed_pdf,
+        has_audit_certificate=has_audit_cert,
         raw_provider_status=sig_req.raw_response if sig_req else None
     )
+
+
+@router.post(
+    "/{id}/refresh-status",
+    response_model=SigningStatusResponse,
+    summary="Poll and synchronize signature status directly from Zoho Sign API",
+    tags=["Electronic Signature"]
+)
+def refresh_signature_status(id: str, db: Session = Depends(get_db)):
+    """
+    Manually triggers a verified status check against Zoho Sign.
+    If complete, downloads the executed PDF & audit trail certificate, and advances the agreement.
+    """
+    zoho_polling_service.poll_agreement_status(db=db, agreement_id=id, is_manual=True)
+    return get_signature_status(id=id, db=db)
 
 
 @router.post(

@@ -17,6 +17,7 @@ class ServiceAgreement(Base):
 
     # Signing Provider Status: NOT_CREATED, SENT, PARTIALLY_SIGNED, COMPLETED, DECLINED, EXPIRED, CANCELLED, FAILED
     signing_status = Column(String(50), nullable=False, default="NOT_CREATED", index=True)
+    last_status_checked_at = Column(DateTime(timezone=True), nullable=True)
 
     # Core Wedding Details Snapshot
     wedding_date = Column(Date, nullable=False)
@@ -179,6 +180,13 @@ class AgreementSignatureRequest(Base):
 
     # State: NOT_SENT, SENT, SIGNED, EXPIRED, REJECTED, CANCELLED, FAILED
     status = Column(String(50), nullable=False, default="NOT_SENT", index=True)
+
+    # Polling & Audit check telemetry
+    last_status_checked_at = Column(DateTime(timezone=True), nullable=True)
+    next_status_check_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    polling_attempt_count = Column(Integer, nullable=False, default=0, server_default='0')
+    last_polling_error = Column(Text, nullable=True)
+    provider_completed_at = Column(DateTime(timezone=True), nullable=True)
 
     # Raw metadata returned from Leegality API
     raw_response = Column(JSON, nullable=True)

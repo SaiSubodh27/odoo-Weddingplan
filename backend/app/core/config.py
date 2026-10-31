@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     ZOHO_SIGN_WEBHOOK_SECRET: Optional[str] = None
     ZOHO_SIGN_TIMEOUT_SECONDS: int = 30
 
+    # Zoho Sign Polling Configuration (for local dev and background sync without ngrok)
+    ZOHO_SIGN_POLLING_ENABLED: bool = True
+    ZOHO_SIGN_POLLING_INTERVAL_SECONDS: int = 60
+    ZOHO_SIGN_POLLING_MAX_RETRIES: int = 5
+    ZOHO_SIGN_POLLING_TIMEOUT_SECONDS: int = 30
+
     # Leegality Configuration (Historical / Fallback Provider)
     LEEGALITY_ENV: str = "sandbox"  # 'sandbox' | 'production' | 'mock'
     LEEGALITY_BASE_URL: str = "https://sandbox.leegality.com/api/v2.1"

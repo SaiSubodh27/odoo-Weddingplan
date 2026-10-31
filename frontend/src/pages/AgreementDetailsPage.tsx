@@ -10,7 +10,8 @@ import {
   ShieldCheck,
   Sparkles,
   Calendar,
-  DollarSign
+  DollarSign,
+  RefreshCw
 } from 'lucide-react';
 import { agreementApi } from '../services/api';
 import { ServiceAgreement, SignatureStatusResponse } from '../types/agreement';
@@ -23,6 +24,7 @@ export const AgreementDetailsPage: React.FC = () => {
   const [sigDetails, setSigDetails] = useState<SignatureStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [refreshingSig, setRefreshingSig] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Verification modal state
@@ -90,6 +92,25 @@ export const AgreementDetailsPage: React.FC = () => {
       setActionMsg({ type: 'error', text: err.message || 'Electronic signature dispatch failed.' });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    if (!id) return;
+    setRefreshingSig(true);
+    setActionMsg(null);
+    try {
+      const sig = await agreementApi.refreshSignatureStatus(id);
+      setSigDetails(sig);
+      await fetchAgreement();
+      setActionMsg({ 
+        type: 'success', 
+        text: `Zoho Sign status refreshed! Current Provider Status: ${sig.signing_status}.` 
+      });
+    } catch (err: any) {
+      setActionMsg({ type: 'error', text: err.message || 'Failed to refresh Zoho Sign status.' });
+    } finally {
+      setRefreshingSig(false);
     }
   };
 
@@ -308,15 +329,28 @@ export const AgreementDetailsPage: React.FC = () => {
                   {sigDetails?.provider || 'Zoho Sign'} eSigning Status
                 </h3>
               </div>
-              {sigDetails && (
-                <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border ${
-                  sigDetails.environment === 'sandbox' || sigDetails.environment === 'production'
-                    ? 'bg-blue-50 text-blue-800 border-blue-200'
-                    : 'bg-amber-50 text-amber-800 border-amber-200'
-                }`}>
-                  {sigDetails.environment === 'sandbox' ? 'Sandbox API' : sigDetails.environment === 'production' ? 'Production API' : 'Simulation Mock'}
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {sigDetails && sigDetails.provider === 'Zoho Sign' && (
+                  <button
+                    onClick={handleRefreshStatus}
+                    disabled={refreshingSig || actionLoading}
+                    title="Poll latest signature status directly from Zoho Sign API"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#9E7D3B] hover:text-[#86682F] hover:bg-[#FAF8F5] border border-[#E5E0D8] transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw size={10} className={refreshingSig ? "animate-spin" : ""} />
+                    {refreshingSig ? "Polling..." : "Refresh"}
+                  </button>
+                )}
+                {sigDetails && (
+                  <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border ${
+                    sigDetails.environment === 'sandbox' || sigDetails.environment === 'production'
+                      ? 'bg-blue-50 text-blue-800 border-blue-200'
+                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                  }`}>
+                    {sigDetails.environment === 'sandbox' ? 'Sandbox API' : sigDetails.environment === 'production' ? 'Production API' : 'Simulation Mock'}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
@@ -356,6 +390,40 @@ export const AgreementDetailsPage: React.FC = () => {
                 </div>
               )}
               <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
+                <span className="text-[#8C877D]">Last Status Poll:</span>
+                <span className="font-mono text-[11px] text-[#1F2421]">
+                  {sigDetails?.last_status_checked_at 
+                    ? new Date(sigDetails.last_status_checked_at).toLocaleTimeString() 
+                    : 'Awaiting initial check'}
+                </span>
+              </div>
+              {sigDetails?.next_status_check_at && agreement.signing_status !== 'COMPLETED' && (
+                <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
+                  <span className="text-[#8C877D]">Next Auto-Poll:</span>
+                  <span className="font-mono text-[11px] text-[#9E7D3B]">
+                    {new Date(sigDetails.next_status_check_at).toLocaleTimeString()}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
+                <span className="text-[#8C877D]">Signed PDF:</span>
+                <span className={`font-medium ${sigDetails?.has_signed_pdf ? 'text-emerald-700' : 'text-[#8C877D]'}`}>
+                  {sigDetails?.has_signed_pdf ? '✓ Stored & Verified' : 'Awaiting Signer'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
+                <span className="text-[#8C877D]">Audit Certificate:</span>
+                <span className={`font-medium ${sigDetails?.has_audit_certificate ? 'text-emerald-700' : 'text-[#8C877D]'}`}>
+                  {sigDetails?.has_audit_certificate ? '✓ Retained in Vault' : 'Awaiting Completion'}
+                </span>
+              </div>
+              {sigDetails?.last_polling_error && (
+                <div className="p-2 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] rounded">
+                  <span className="font-semibold block">Polling Notice:</span>
+                  {sigDetails.last_polling_error}
+                </div>
+              )}
+              <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
                 <span className="text-[#8C877D]">Internal Approval:</span>
                 <span className={`font-medium ${agreement.is_internally_approved ? 'text-emerald-700' : 'text-amber-700'}`}>
                   {agreement.is_internally_approved ? `Approved by ${agreement.approved_by}` : 'Pending Internal Approval'}
@@ -365,6 +433,12 @@ export const AgreementDetailsPage: React.FC = () => {
                 <span className="text-[#8C877D]">Employee Verification:</span>
                 <span className={`font-medium ${agreement.is_verified ? 'text-emerald-700' : 'text-[#8C877D]'}`}>
                   {agreement.is_verified ? `Verified (${agreement.verified_by})` : 'Awaiting Post-Sign Verification'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-[#FAF8F5]">
+                <span className="text-[#8C877D]">Booking Confirmation:</span>
+                <span className={`font-medium ${agreement.status === 'BOOKING_CONFIRMED' ? 'text-emerald-700' : 'text-[#8C877D]'}`}>
+                  {agreement.status === 'BOOKING_CONFIRMED' ? 'Confirmed & Phase 3 Ready' : 'Pending Verification'}
                 </span>
               </div>
             </div>

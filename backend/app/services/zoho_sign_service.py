@@ -13,6 +13,28 @@ from app.services.signature_provider import BaseSignatureProvider
 logger = logging.getLogger("royal_knot.zoho_sign")
 
 
+class ZohoSignError(Exception):
+    """Base exception for Zoho Sign API errors."""
+    pass
+
+
+class ZohoRateLimitError(ZohoSignError):
+    """Raised when Zoho Sign returns HTTP 429 Too Many Requests."""
+    def __init__(self, message: str, retry_after: int = 60):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+class ZohoNotFoundError(ZohoSignError):
+    """Raised when a request ID is invalid or not found on Zoho Sign."""
+    pass
+
+
+class ZohoAuthenticationError(ZohoSignError):
+    """Raised when Zoho OAuth authentication or token refresh fails."""
+    pass
+
+
 class ZohoSignClient(BaseSignatureProvider):
     """
     Official Zoho Sign API Client implementing OAuth 2.0 and API v1.
@@ -51,6 +73,23 @@ class ZohoSignClient(BaseSignatureProvider):
         # Token caching
         self._access_token: Optional[str] = None
         self._token_expires_at: float = 0.0
+
+        # State storage for simulation mock mode testing
+        self._mock_request_states: Dict[str, Dict[str, Any]] = {}
+
+    def set_mock_request_state(
+        self,
+        request_id: str,
+        status: str,
+        actions: Optional[List[Dict[str, Any]]] = None,
+        completed_at: Optional[str] = None
+    ) -> None:
+        """Sets custom simulated state for a request ID in mock mode."""
+        self._mock_request_states[request_id] = {
+            "status": status.upper(),
+            "actions": actions or [],
+            "completed_at": completed_at
+        }
 
     @property
     def provider_name(self) -> str:
@@ -259,48 +298,99 @@ class ZohoSignClient(BaseSignatureProvider):
         """
         Retrieves current signing status from Zoho Sign API v1.
         GET /requests/{request_id}
+        Maps provider statuses: inprogress -> SENT or VIEWED, completed -> COMPLETED,
+        declined -> DECLINED, expired -> EXPIRED, recalled -> CANCELLED.
         """
+        if not provider_request_id or not provider_request_id.strip():
+            raise ZohoNotFoundError("Invalid empty provider_request_id.")
+
         if self.env == "mock" or provider_request_id.startswith("zs_mock_"):
+            mock_info = self._mock_request_states.get(provider_request_id, {})
+            app_status = mock_info.get("status", "COMPLETED").upper()
+            is_comp = app_status == "COMPLETED"
+            comp_time = mock_info.get("completed_at", "2026-10-31T20:00:00Z" if is_comp else None)
+            signers = mock_info.get("actions", [{
+                "recipient_name": "The Royal Knot Client",
+                "action_status": "SIGNED" if is_comp else app_status,
+                "action_type": "SIGN"
+            }])
             return {
-                "status": "COMPLETED",
-                "is_completed": True,
-                "completed_at": "2026-10-31T20:00:00Z",
-                "signers": [{
-                    "name": "The Royal Knot Client",
-                    "status": "SIGNED",
-                    "action_type": "SIGN"
-                }],
-                "raw_response": {"mock": True, "request_id": provider_request_id}
+                "status": app_status,
+                "is_completed": is_comp,
+                "completed_at": comp_time,
+                "signers": signers,
+                "raw_response": {
+                    "mock": True,
+                    "requests": {
+                        "request_id": provider_request_id,
+                        "request_status": "completed" if is_comp else app_status.lower(),
+                        "actions": signers
+                    }
+                }
             }
 
         endpoint = f"{self.api_base_url}/requests/{provider_request_id}"
-        with httpx.Client(timeout=self.timeout) as client:
-            resp = client.get(endpoint, headers=self._get_auth_headers())
-            if resp.status_code != 200:
-                raise RuntimeError(f"Failed to fetch Zoho Sign request {provider_request_id}: {resp.text}")
+        
+        # Try request, with 1 retry on 401 Unauthorized (expired token)
+        for attempt in range(2):
+            try:
+                headers = self._get_auth_headers()
+                with httpx.Client(timeout=self.timeout) as client:
+                    resp = client.get(endpoint, headers=headers)
 
-            data = resp.json()
-            req_obj = data.get("requests", {})
-            zs_status = str(req_obj.get("request_status", "")).lower()
+                if resp.status_code == 401 and attempt == 0:
+                    logger.warning("Zoho Sign returned 401 Unauthorized. Clearing cached token and retrying...")
+                    self._access_token = None
+                    self._token_expires_at = 0.0
+                    continue
 
-            # Map Zoho status to application standard
-            status_map = {
-                "completed": "COMPLETED",
-                "inprogress": "SENT",
-                "recalled": "CANCELLED",
-                "declined": "DECLINED",
-                "expired": "EXPIRED",
-                "draft": "DRAFT"
-            }
-            app_status = status_map.get(zs_status, "SENT")
+                if resp.status_code == 429:
+                    retry_after = int(resp.headers.get("Retry-After", 60))
+                    logger.warning(f"Zoho Sign rate limit exceeded (HTTP 429). Retry after {retry_after}s.")
+                    raise ZohoRateLimitError(f"Zoho Sign rate limit exceeded. Retry after {retry_after}s.", retry_after=retry_after)
 
-            return {
-                "status": app_status,
-                "is_completed": app_status == "COMPLETED",
-                "completed_at": req_obj.get("completed_time"),
-                "signers": req_obj.get("actions", []),
-                "raw_response": data
-            }
+                if resp.status_code == 404:
+                    raise ZohoNotFoundError(f"Zoho Sign request ID '{provider_request_id}' not found (HTTP 404).")
+
+                if resp.status_code != 200:
+                    raise RuntimeError(f"Failed to fetch Zoho Sign request {provider_request_id} ({resp.status_code}): {resp.text}")
+
+                data = resp.json()
+                req_obj = data.get("requests", {})
+                zs_status = str(req_obj.get("request_status", "")).lower()
+
+                # Status mapping
+                if zs_status == "completed":
+                    app_status = "COMPLETED"
+                elif zs_status == "declined":
+                    app_status = "DECLINED"
+                elif zs_status == "expired":
+                    app_status = "EXPIRED"
+                elif zs_status == "recalled":
+                    app_status = "CANCELLED"
+                elif zs_status == "inprogress":
+                    actions = req_obj.get("actions", [])
+                    has_viewed = any(str(a.get("action_status", "")).upper() in ("VIEWED", "OPENED") for a in actions)
+                    app_status = "VIEWED" if has_viewed else "SENT"
+                elif zs_status == "draft":
+                    app_status = "DRAFT"
+                else:
+                    app_status = zs_status.upper() or "SENT"
+
+                is_completed = app_status == "COMPLETED"
+
+                return {
+                    "status": app_status,
+                    "is_completed": is_completed,
+                    "completed_at": req_obj.get("completed_time"),
+                    "signers": req_obj.get("actions", []),
+                    "document_ids": req_obj.get("document_ids", []),
+                    "raw_response": data
+                }
+
+            except (httpx.TimeoutException, httpx.ConnectTimeout) as e:
+                logger.error(f"Zoho Sign API timeout while fetching status for {provider_request_id}: {e}")
+                raise RuntimeError(f"Zoho Sign API connection timeout: {e}")
 
     def retrieve_signed_document(self, provider_request_id: str) -> bytes:
         """
@@ -311,10 +401,19 @@ class ZohoSignClient(BaseSignatureProvider):
             return b"%PDF-1.4\n%-- Simulated Official Zoho Sign Executed Agreement --\n%%EOF"
 
         endpoint = f"{self.api_base_url}/requests/{provider_request_id}/pdf"
-        with httpx.Client(timeout=self.timeout) as client:
-            resp = client.get(endpoint, headers=self._get_auth_headers())
+        for attempt in range(2):
+            headers = self._get_auth_headers()
+            with httpx.Client(timeout=self.timeout) as client:
+                resp = client.get(endpoint, headers=headers)
+            if resp.status_code == 401 and attempt == 0:
+                self._access_token = None
+                self._token_expires_at = 0.0
+                continue
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get("Retry-After", 60))
+                raise ZohoRateLimitError("Rate limit exceeded while downloading signed PDF.", retry_after=retry_after)
             if resp.status_code != 200:
-                raise RuntimeError(f"Failed to download executed PDF from Zoho Sign: {resp.text}")
+                raise RuntimeError(f"Failed to download executed PDF from Zoho Sign ({resp.status_code}): {resp.text}")
             return resp.content
 
     def retrieve_audit_trail(self, provider_request_id: str) -> Optional[bytes]:
@@ -327,8 +426,14 @@ class ZohoSignClient(BaseSignatureProvider):
 
         endpoint = f"{self.api_base_url}/requests/{provider_request_id}/completioncertificate"
         try:
-            with httpx.Client(timeout=self.timeout) as client:
-                resp = client.get(endpoint, headers=self._get_auth_headers())
+            for attempt in range(2):
+                headers = self._get_auth_headers()
+                with httpx.Client(timeout=self.timeout) as client:
+                    resp = client.get(endpoint, headers=headers)
+                if resp.status_code == 401 and attempt == 0:
+                    self._access_token = None
+                    self._token_expires_at = 0.0
+                    continue
                 if resp.status_code == 200:
                     return resp.content
         except Exception as e:
