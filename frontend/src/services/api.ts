@@ -279,3 +279,117 @@ export const authApi = {
     return res.json();
   }
 };
+
+
+export const agreementApi = {
+  async getMetrics() {
+    const res = await fetch(`${API_BASE}/service-agreements/metrics`);
+    if (!res.ok) throw new Error('Failed to fetch agreement metrics');
+    return res.json();
+  },
+
+  async list(params?: { search?: string; status?: string; client_id?: string; page?: number; pageSize?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.status && params.status !== 'All') searchParams.set('status', params.status);
+    if (params?.client_id) searchParams.set('client_id', params.client_id);
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.pageSize) searchParams.set('page_size', String(params.pageSize));
+
+    const res = await fetch(`${API_BASE}/service-agreements?${searchParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch service agreements');
+    return res.json();
+  },
+
+  async get(id: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}`);
+    if (!res.ok) throw new Error(`Failed to fetch agreement ${id}`);
+    return res.json();
+  },
+
+  async create(data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/service-agreements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to create service agreement');
+    }
+    return res.json();
+  },
+
+  async generatePdf(id: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/generate-pdf`, {
+      method: 'POST'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to generate PDF');
+    }
+    return res.json();
+  },
+
+  getPdfUrl(id: string, inline: boolean = true) {
+    return `${API_BASE}/service-agreements/${id}/download-pdf?inline=${inline}`;
+  },
+
+  async approve(id: string, approvedBy: string = 'Maharani Gayatri Singh', notes?: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approved_by: approvedBy, notes }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to approve agreement');
+    }
+    return res.json();
+  },
+
+  async sendForSignature(id: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/send-for-signature`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to submit signing request to Leegality');
+    }
+    return res.json();
+  },
+
+  async getSignatureStatus(id: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/signature-status`);
+    if (!res.ok) throw new Error('Failed to fetch electronic signature status');
+    return res.json();
+  },
+
+  async verify(id: string, reviewerName: string, decision: 'VERIFIED' | 'REJECTED' | 'NEEDS_CORRECTION', remarks: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewer_name: reviewerName, decision, remarks }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to record verification decision');
+    }
+    return res.json();
+  },
+
+  async confirmBooking(id: string, confirmedBy: string = 'Maharani Gayatri Singh', confirmationNotes?: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/confirm-booking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmed_by: confirmedBy, confirmation_notes: confirmationNotes }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to confirm wedding booking');
+    }
+    return res.json();
+  }
+};

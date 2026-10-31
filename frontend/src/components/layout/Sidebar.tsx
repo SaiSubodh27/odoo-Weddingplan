@@ -5,6 +5,7 @@ import {
   Mail,
   Inbox,
   Users, 
+  FileText,
   HeartHandshake, 
   Settings, 
   LogOut,
@@ -32,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Email Inbox', path: '/inbox', icon: Mail },
     { name: 'Enquiries', path: '/enquiries', icon: Inbox },
     { name: 'Clients', path: '/clients', icon: Users },
+    { name: 'Service Agreements', path: '/agreements', icon: FileText },
     { name: 'Weddings', path: '/weddings', icon: HeartHandshake },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
@@ -108,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <span>Winter Season '26</span>
           </div>
           <p className="text-[11px] text-[#736F68] leading-relaxed">
-            High destination wedding intake active across Rajasthan heritage properties.
+            Phase 2: Service Agreements & Leegality eSign active for luxury bookings.
           </p>
         </div>
 
@@ -126,4 +128,3 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     </>
   );
 };
-
