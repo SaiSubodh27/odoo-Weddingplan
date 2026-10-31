@@ -220,6 +220,13 @@ def update_project(
     summary="Update wedding project status & record history audit log",
     tags=["Wedding Projects"]
 )
+@router.post(
+    "/{project_id}/status",
+    response_model=WeddingProjectResponse,
+    summary="Update wedding project status & record history audit log (POST alias)",
+    tags=["Wedding Projects"],
+    include_in_schema=False
+)
 def update_project_status(
     project_id: str,
     status_in: ProjectStatusUpdate,
@@ -263,6 +270,13 @@ def add_wedding_function(
     response_model=WeddingFunctionResponse,
     summary="Update a wedding function",
     tags=["Wedding Functions"]
+)
+@router.patch(
+    "/{project_id}/functions/{func_id}",
+    response_model=WeddingFunctionResponse,
+    summary="Update a wedding function (partial)",
+    tags=["Wedding Functions"],
+    include_in_schema=False
 )
 def update_wedding_function(
     project_id: str,
@@ -320,6 +334,13 @@ def add_project_milestone(
     response_model=ProjectMilestoneResponse,
     summary="Update a project milestone status or details",
     tags=["Project Milestones"]
+)
+@router.patch(
+    "/{project_id}/milestones/{ms_id}",
+    response_model=ProjectMilestoneResponse,
+    summary="Update a project milestone status or details (partial)",
+    tags=["Project Milestones"],
+    include_in_schema=False
 )
 def update_project_milestone(
     project_id: str,
