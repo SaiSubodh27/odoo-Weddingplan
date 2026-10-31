@@ -16,6 +16,7 @@ import { ClientDetailsPage } from './pages/ClientDetailsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailsPage } from './pages/ProjectDetailsPage';
 import { WeddingsPage } from './pages/WeddingsPage';
+import { WeddingPlanningPage } from './pages/WeddingPlanningPage';
 import { VendorsPage } from './pages/VendorsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -56,6 +57,7 @@ export const AppContent: React.FC = () => {
         <Route path="clients/:id" element={<ClientDetailsPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="projects/:id" element={<ProjectDetailsPage />} />
+        <Route path="projects/:id/planning" element={<WeddingPlanningPage />} />
         <Route path="weddings" element={<ProjectsPage />} />
         <Route path="weddings-calendar" element={<WeddingsPage />} />
         <Route path="vendors" element={<VendorsPage />} />

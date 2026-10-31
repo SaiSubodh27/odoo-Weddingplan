@@ -348,7 +348,9 @@ class ProjectService:
             venue=func_in.venue or project.location,
             description=func_in.description,
             status=func_in.status,
-            estimated_cost=cost
+            estimated_cost=cost,
+            guest_count_override=func_in.guest_count_override,
+            event_notes=func_in.event_notes
         )
 
         db.add(db_func)
@@ -384,7 +386,8 @@ class ProjectService:
         func_in: WeddingFunctionUpdate
     ) -> Optional[WeddingFunction]:
         func_item = db.query(WeddingFunction).filter(
-            WeddingFunction.id == func_id
+            WeddingFunction.id == func_id,
+            WeddingFunction.project_id == project_id
         ).first()
 
         if not func_item:
@@ -392,7 +395,7 @@ class ProjectService:
 
         update_dict = func_in.model_dump(exclude_unset=True)
         for field, value in update_dict.items():
-            if value is not None:
+            if value is not None or field in ("guest_count_override", "event_notes"):
                 setattr(func_item, field, value)
 
         db.commit()
@@ -402,7 +405,8 @@ class ProjectService:
     @staticmethod
     def delete_function(db: Session, project_id: str, func_id: str) -> bool:
         func_item = db.query(WeddingFunction).filter(
-            WeddingFunction.id == func_id
+            WeddingFunction.id == func_id,
+            WeddingFunction.project_id == project_id
         ).first()
 
         if not func_item:
@@ -436,7 +440,10 @@ class ProjectService:
             description=ms_in.description,
             due_date=ms_in.due_date,
             status=ms_in.status,
-            completed_at=completed_at
+            completed_at=completed_at,
+            assigned_to=ms_in.assigned_to,
+            function_id=ms_in.function_id,
+            category=ms_in.category
         )
 
         db.add(db_ms)
@@ -452,7 +459,8 @@ class ProjectService:
         ms_in: ProjectMilestoneUpdate
     ) -> Optional[ProjectMilestone]:
         ms = db.query(ProjectMilestone).filter(
-            ProjectMilestone.id == ms_id
+            ProjectMilestone.id == ms_id,
+            ProjectMilestone.project_id == project_id
         ).first()
 
         if not ms:
@@ -478,7 +486,8 @@ class ProjectService:
     @staticmethod
     def delete_milestone(db: Session, project_id: str, ms_id: str) -> bool:
         ms = db.query(ProjectMilestone).filter(
-            ProjectMilestone.id == ms_id
+            ProjectMilestone.id == ms_id,
+            ProjectMilestone.project_id == project_id
         ).first()
 
         if not ms:

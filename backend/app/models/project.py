@@ -58,6 +58,8 @@ class WeddingFunction(Base):
     description = Column(Text, nullable=True)
     status = Column(String(50), nullable=False, default="Scheduled")  # Scheduled, In Progress, Completed, Cancelled
     estimated_cost = Column(Numeric(15, 2), nullable=False, default=0.00)
+    guest_count_override = Column(Integer, nullable=True)
+    event_notes = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -75,6 +77,9 @@ class ProjectMilestone(Base):
     project_id = Column(String(50), ForeignKey("wedding_projects.id", ondelete="CASCADE"), nullable=False, index=True)
 
     milestone_name = Column(String(255), nullable=False)
+    assigned_to = Column(String(50), ForeignKey("user_accounts.id"), nullable=True)
+    function_id = Column(String(50), ForeignKey("wedding_functions.id"), nullable=True)
+    category = Column(String(80), nullable=False, default="General")
     description = Column(Text, nullable=True)
     due_date = Column(Date, nullable=False)
     status = Column(String(50), nullable=False, default="Pending")  # Pending, In Progress, Completed

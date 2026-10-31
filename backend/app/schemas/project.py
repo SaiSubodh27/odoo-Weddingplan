@@ -38,6 +38,8 @@ class WeddingFunctionBase(BaseModel):
     end_time: Optional[str] = Field(None, alias="endTime", max_length=20)
     venue: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
+    guest_count_override: Optional[int] = Field(None, alias="guestCountOverride", ge=1)
+    event_notes: Optional[str] = Field(None, alias="eventNotes")
     status: FunctionStatusType = Field("Scheduled")
     estimated_cost: Optional[Decimal] = Field(None, alias="estimatedCost", ge=0)
 
@@ -66,6 +68,8 @@ class WeddingFunctionUpdate(BaseModel):
     end_time: Optional[str] = Field(None, alias="endTime", max_length=20)
     venue: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
+    guest_count_override: Optional[int] = Field(None, alias="guestCountOverride", ge=1)
+    event_notes: Optional[str] = Field(None, alias="eventNotes")
     status: Optional[FunctionStatusType] = None
     estimated_cost: Optional[Decimal] = Field(None, alias="estimatedCost", ge=0)
 
@@ -97,6 +101,9 @@ class ProjectMilestoneBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
     milestone_name: str = Field(..., alias="milestoneName", min_length=2, max_length=255)
+    assigned_to: Optional[str] = Field(None, alias="assignedTo")
+    function_id: Optional[str] = Field(None, alias="functionId")
+    category: str = "General"
     description: Optional[str] = None
     due_date: date = Field(..., alias="dueDate")
     status: MilestoneStatusType = Field("Pending")
@@ -110,6 +117,9 @@ class ProjectMilestoneUpdate(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
     milestone_name: Optional[str] = Field(None, alias="milestoneName", min_length=2, max_length=255)
+    assigned_to: Optional[str] = Field(None, alias="assignedTo")
+    function_id: Optional[str] = Field(None, alias="functionId")
+    category: Optional[str] = None
     description: Optional[str] = None
     due_date: Optional[date] = Field(None, alias="dueDate")
     status: Optional[MilestoneStatusType] = None

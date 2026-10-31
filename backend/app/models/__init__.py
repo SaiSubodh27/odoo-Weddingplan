@@ -35,3 +35,7 @@ __all__ = [
     "CateringQuotation",
     "CateringCommunicationLog",
 ]
+
+from app.models.wedding_plan import WeddingPlan, WeddingPlanTask
+from app.models.planning_resources import WeddingBudgetAllocation, WeddingExpense, WeddingVendorAssignment, WeddingAccommodation, WeddingLogistics
+from app.models.planning_resources import WeddingPlanningAudit

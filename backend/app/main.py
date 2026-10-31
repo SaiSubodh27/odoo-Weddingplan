@@ -16,6 +16,8 @@ from app.routes.registrations import router as registrations_router
 from app.routes.projects import router as projects_router
 from app.routes.vendors import router as vendors_router
 from app.routes.catering import router as catering_router
+from app.routes.wedding_plan import router as wedding_plan_router
+from app.routes.planning_resources import router as planning_resources_router
 from app.services.email_sync_service import email_sync_service
 
 logger = logging.getLogger("royal_knot")
@@ -130,6 +132,8 @@ app.include_router(registrations_router, prefix=f"{settings.API_V1_STR}/registra
 app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth")
 app.include_router(emails_router, prefix=f"{settings.API_V1_STR}/emails")
 app.include_router(projects_router, prefix=f"{settings.API_V1_STR}/projects")
+app.include_router(wedding_plan_router, prefix=f"{settings.API_V1_STR}/projects")
+app.include_router(planning_resources_router, prefix=f"{settings.API_V1_STR}/projects")
 app.include_router(vendors_router, prefix=f"{settings.API_V1_STR}/vendors")
 app.include_router(catering_router, prefix=settings.API_V1_STR)
 

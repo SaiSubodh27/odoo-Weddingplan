@@ -27,6 +27,8 @@ export interface WeddingFunction {
   description?: string;
   status: FunctionStatus;
   estimatedCost: number | string;
+  guestCountOverride?: number | null;
+  eventNotes?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +37,9 @@ export interface ProjectMilestone {
   id: string;
   projectId: string;
   milestoneName: string;
+  assignedTo?: string | null;
+  functionId?: string | null;
+  category?: string;
   description?: string;
   dueDate: string;
   status: MilestoneStatus;

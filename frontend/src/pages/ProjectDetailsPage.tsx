@@ -189,6 +189,7 @@ export const ProjectDetailsPage: React.FC = () => {
             {project.status}
           </span>
 
+          <Link to={`/projects/${id}/planning`} className="px-4 py-2 bg-[#6F4E24] text-white text-xs font-semibold">Open Planning Command Center</Link>
           {/* Status Badge & Transition Selector */}
           <div className="flex items-center gap-2 border border-[#E5E0D8] bg-[#FFFFFF] px-3 py-1.5">
             <span className="text-[10px] uppercase tracking-wider text-[#736F68] font-semibold">Status:</span>
@@ -857,6 +858,8 @@ const FunctionModal: React.FC<{
   const [venue, setVenue] = useState(existing?.venue || '');
   const [description, setDescription] = useState(existing?.description || '');
   const [status, setStatus] = useState<FunctionStatus>(existing?.status || 'Scheduled');
+  const [guestCountOverride, setGuestCountOverride] = useState(existing?.guestCountOverride?.toString() || '');
+  const [eventNotes, setEventNotes] = useState(existing?.eventNotes || '');
   const [estimatedCost, setEstimatedCost] = useState(
     existing?.estimatedCost !== undefined && existing?.estimatedCost !== null
       ? String(existing.estimatedCost)
@@ -876,7 +879,9 @@ const FunctionModal: React.FC<{
         venue: venue || undefined,
         description: description || undefined,
         status,
-        estimatedCost: estimatedCost ? Number(estimatedCost) : undefined
+        estimatedCost: estimatedCost ? Number(estimatedCost) : undefined,
+        guestCountOverride: guestCountOverride ? Number(guestCountOverride) : null,
+        eventNotes: eventNotes || null
       };
 
       if (existing) {
@@ -1001,6 +1006,7 @@ const FunctionModal: React.FC<{
             </p>
           </div>
 
+          <div><label className="text-xs block">Event guest count override<input type="number" min="1" value={guestCountOverride} onChange={e => setGuestCountOverride(e.target.value)} className="block w-full border p-2" placeholder="Use project guest count" /></label><label className="text-xs block mt-2">Event notes<textarea value={eventNotes} onChange={e => setEventNotes(e.target.value)} className="block w-full border p-2" /></label></div>
           <div>
             <label className="text-[10px] uppercase tracking-wider text-[#8C877D] font-semibold block mb-1">Ceremony Directives</label>
             <textarea
@@ -1031,6 +1037,9 @@ const MilestoneModal: React.FC<{
   onSaved: () => void;
 }> = ({ projectId, weddingDate, onClose, onSaved }) => {
   const [milestoneName, setMilestoneName] = useState('');
+  const [milestoneCategory, setMilestoneCategory] = useState('General');
+  const [milestoneAssignee, setMilestoneAssignee] = useState('');
+  const [milestoneFunction, setMilestoneFunction] = useState('');
   const [dueDate, setDueDate] = useState(weddingDate || '');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -1041,6 +1050,9 @@ const MilestoneModal: React.FC<{
     try {
       await projectApi.addMilestone(projectId, {
         milestoneName,
+        category: milestoneCategory,
+        assignedTo: milestoneAssignee || null,
+        functionId: milestoneFunction || null,
         dueDate,
         description: description || undefined,
         status: 'Pending'
@@ -1074,6 +1086,7 @@ const MilestoneModal: React.FC<{
             />
           </div>
 
+          <div className="grid gap-2"><label>Milestone category<input value={milestoneCategory} onChange={e => setMilestoneCategory(e.target.value)} className="block border p-2 w-full" /></label><label>Assigned staff ID (optional)<input value={milestoneAssignee} onChange={e => setMilestoneAssignee(e.target.value)} className="block border p-2 w-full" /></label><label>Linked function ID (optional)<input value={milestoneFunction} onChange={e => setMilestoneFunction(e.target.value)} className="block border p-2 w-full" /></label></div>
           <div>
             <label className="text-[10px] uppercase tracking-wider text-[#8C877D] font-semibold block mb-1">Deadline Date *</label>
             <input
