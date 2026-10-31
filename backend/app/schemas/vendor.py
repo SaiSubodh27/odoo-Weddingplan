@@ -10,7 +10,7 @@ class VendorBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=150, description="Vendor business name")
     category: str = Field("Catering", max_length=50, description="Vendor category (e.g. Catering, Decor, Photography)")
     contact_person: Optional[str] = Field(None, alias="contactPerson", max_length=100)
-    phone: str = Field(..., min_length=7, max_length=50, description="WhatsApp-enabled phone number")
+    phone: Optional[str] = Field("", max_length=50, description="WhatsApp-enabled phone number")
     email: Optional[str] = Field(None, max_length=255)
     city: str = Field("Jaipur", max_length=100)
     address: Optional[str] = None
@@ -35,7 +35,7 @@ class VendorUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=150)
     category: Optional[str] = Field(None, max_length=50)
     contact_person: Optional[str] = Field(None, alias="contactPerson", max_length=100)
-    phone: Optional[str] = Field(None, min_length=7, max_length=50)
+    phone: Optional[str] = Field(None, max_length=50)
     email: Optional[str] = Field(None, max_length=255)
     city: Optional[str] = Field(None, max_length=100)
     address: Optional[str] = None

@@ -32,27 +32,26 @@ session_module.engine = test_engine
 session_module.SessionLocal = TestSessionLocal
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(autouse=True)
 def setup_test_database():
     Base.metadata.create_all(bind=test_engine)
     yield
-    Base.metadata.drop_all(bind=test_engine)
-    if test_db_path.exists():
-        try:
-            test_db_path.unlink()
-        except Exception:
-            pass
 
 
 @pytest.fixture(autouse=True)
 def override_get_db():
+    if get_db in app.dependency_overrides:
+        yield
+        return
     def _get_test_db():
-        db = TestSessionLocal()
+        db = session_module.SessionLocal()
         try:
             yield db
         finally:
             db.close()
     app.dependency_overrides[get_db] = _get_test_db
-    yield
-    app.dependency_overrides.pop(get_db, None)
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_db, None)
 

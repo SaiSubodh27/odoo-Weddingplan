@@ -1,7 +1,7 @@
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict, Dict
 from datetime import date, datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import model_validator,  BaseModel, ConfigDict, Field
 
 
 class WeddingFunctionSchema(BaseModel):
@@ -13,12 +13,26 @@ class WeddingFunctionSchema(BaseModel):
 
 
 class PaymentMilestoneInput(BaseModel):
-    milestone_name: str = Field(..., description="Milestone title")
-    percentage: Decimal = Field(..., ge=0, le=100, description="Percentage of total")
-    amount: Decimal = Field(..., ge=0, description="Amount in INR")
-    due_description: str = Field(..., description="When the payment is due")
+    name: Optional[str] = None
+    milestone_name: Optional[str] = None
+    percentage: Decimal = Field(..., ge=0, le=100, description="Percentage of total contract price")
+    amount: Decimal = Field(..., ge=0, description="Exact milestone amount in INR")
     due_date: Optional[date] = None
+    description: Optional[str] = None
+    due_description: Optional[str] = None
     sequence_order: int = Field(1, ge=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def unify_milestone_fields(cls, values):
+        if isinstance(values, dict):
+            name_val = values.get("name") or values.get("milestone_name") or "Milestone"
+            desc_val = values.get("description") or values.get("due_description") or ""
+            values["name"] = name_val
+            values["milestone_name"] = name_val
+            values["description"] = desc_val
+            values["due_description"] = desc_val
+        return values
 
 
 class PaymentMilestoneResponse(BaseModel):
@@ -26,13 +40,44 @@ class PaymentMilestoneResponse(BaseModel):
 
     id: str
     agreement_id: str
-    milestone_name: str
+    name: Optional[str] = None
+    milestone_name: Optional[str] = None
     percentage: Decimal
     amount: Decimal
-    due_description: str
+    description: Optional[str] = None
+    due_description: Optional[str] = None
     due_date: Optional[date] = None
-    status: str
-    sequence_order: int
+    status: Optional[str] = "PENDING"
+    sequence_order: int = 1
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_aliases(cls, data):
+        if not isinstance(data, dict):
+            name_val = getattr(data, "name", None) or getattr(data, "milestone_name", "Milestone")
+            desc_val = getattr(data, "description", None) or getattr(data, "due_description", "")
+            return {
+                "id": str(getattr(data, "id", "")),
+                "agreement_id": str(getattr(data, "agreement_id", "")),
+                "name": name_val,
+                "milestone_name": name_val,
+                "percentage": getattr(data, "percentage", Decimal("0")),
+                "amount": getattr(data, "amount", Decimal("0")),
+                "description": desc_val,
+                "due_description": desc_val,
+                "due_date": getattr(data, "due_date", None),
+                "status": getattr(data, "status", "PENDING"),
+                "sequence_order": getattr(data, "sequence_order", 1),
+            }
+        elif isinstance(data, dict):
+            name_val = data.get("name") or data.get("milestone_name") or "Milestone"
+            desc_val = data.get("description") or data.get("due_description") or ""
+            data["name"] = name_val
+            data["milestone_name"] = name_val
+            data["description"] = desc_val
+            data["due_description"] = desc_val
+            return data
+        return data
 
 
 class ServiceAgreementCreate(BaseModel):
@@ -51,6 +96,7 @@ class ServiceAgreementCreate(BaseModel):
     discount_amount: Decimal = Field(Decimal("0.00"), ge=0)
     additional_terms: Optional[str] = None
     milestones: Optional[List[PaymentMilestoneInput]] = None
+    created_by: Optional[str] = "Maharani Gayatri Singh"
 
 
 class ServiceAgreementUpdate(BaseModel):
@@ -167,3 +213,90 @@ class AgreementMetricsResponse(BaseModel):
     verified_count: int
     total_contract_value: Decimal
 
+
+
+class ServiceAgreementMetricsResponse(BaseModel):
+    total_agreements: int
+    draft_agreements: int
+    pending_approval: int
+    signing_pending: int
+    signed_agreements: int
+    awaiting_verification: int
+    verified_agreements: int
+    confirmed_bookings: int
+
+class AgreementApproveRequest(BaseModel):
+    approved_by: str = Field(..., description="Staff member approving agreement")
+    notes: Optional[str] = None
+
+class AgreementReviewRequest(BaseModel):
+    reviewer_name: str = Field(..., description="Staff reviewer name")
+    decision: str = Field(..., description="'VERIFIED' or 'REJECTED' or 'NEEDS_CORRECTION'")
+    remarks: str = Field(..., min_length=3, description="Verification observations or rejection reason")
+
+class SendForSignatureRequest(BaseModel):
+    provider: Optional[str] = Field(None, description="Electronic signature provider override ('zoho_sign' or 'leegality')")
+    signer_name: Optional[str] = None
+    signer_email: Optional[str] = None
+    signer_phone: Optional[str] = None
+    signing_reason: Optional[str] = "Service Agreement Execution for Wedding Planning Services"
+
+class SendForSignatureResponse(BaseModel):
+    success: bool
+    message: str
+    agreement_id: str
+    agreement_number: str
+    version_number: int
+    provider: str = "Zoho Sign"
+    environment: str = "sandbox"
+    provider_request_id: Optional[str] = None
+    provider_document_id: Optional[str] = None
+    leegality_document_id: Optional[str] = None
+    signing_url: Optional[str] = None
+    status: str
+    sent_at: Optional[datetime] = None
+
+class SigningStatusResponse(BaseModel):
+    agreement_id: str
+    agreement_number: str
+    version_number: int
+    signing_status: str
+    agreement_status: str
+    provider: str = "Zoho Sign"
+    environment: str = "sandbox"
+    provider_request_id: Optional[str] = None
+    provider_document_id: Optional[str] = None
+    leegality_document_id: Optional[str] = None
+    signing_url: Optional[str] = None
+    signer_name: Optional[str] = None
+    signer_email: Optional[str] = None
+    completed_at: Optional[datetime] = None
+    last_status_checked_at: Optional[datetime] = None
+    next_status_check_at: Optional[datetime] = None
+    polling_attempt_count: int = 0
+    last_polling_error: Optional[str] = None
+    has_signed_pdf: bool = False
+    has_audit_certificate: bool = False
+    raw_provider_status: Optional[Dict[str, Any]] = None
+
+class BookingConfirmRequest(BaseModel):
+    confirmed_by: str = Field(..., description="Authorized Staff Manager confirming booking")
+    confirmation_notes: Optional[str] = None
+
+class BookingConfirmResponse(BaseModel):
+    success: bool
+    message: str
+    booking_id: str
+    booking_reference: str
+    client_id: str
+    agreement_id: str
+    confirmed_version_number: int
+    couple_title: str
+    wedding_date: date
+    wedding_location: str
+    venue: Optional[str] = None
+    confirmed_total_amount: Decimal
+    advance_amount_agreed: Decimal
+    confirmed_by: str
+    confirmed_at: datetime
+    phase3_handoff_ready: bool
