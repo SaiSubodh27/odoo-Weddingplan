@@ -249,7 +249,7 @@ export const ClientActivationPage: React.FC = () => {
       </div>
 
       <div className="mt-8 text-center text-[11px] text-[#8C877D] tracking-widest uppercase">
-        The Royal Knot · Jaipur & Udaipur Destination Wedding Agency
+        The Royal Knot · Jaipur and Udaipur Destination Wedding Agency
       </div>
     </div>
   );

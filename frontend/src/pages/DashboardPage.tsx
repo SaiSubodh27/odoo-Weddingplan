@@ -1,21 +1,59 @@
-import React, {useEffect, useState} from 'react';
-import {enquiryApi} from '../services/api';
-import {Link} from 'react-router-dom';
-import {useClients} from '../context/ClientContext';
-import {ArrowUpRight,CalendarDays,ClipboardCheck,Clock3,Users,Inbox} from 'lucide-react';
-export const DashboardPage:React.FC=()=>{
- const {clients,currentUser}=useClients();
- const [enquiries,setEnquiries]=useState<Array<{id:string;clientName:string;status:string}>>([]);
- useEffect(()=>{let mounted=true;const load=async()=>{try{const result=await enquiryApi.list({pageSize:100});if(mounted)setEnquiries((result.items||[]).filter((e:{status:string})=>e.status==='New'));}catch{if(mounted)setEnquiries([]);}};void load();return()=>{mounted=false};},[]);
- const pending=clients.filter(c=>c.status==='Registration Pending'||c.status==='Agreement Pending');
- const active=clients.filter(c=>c.status==='Confirmed');
- const weddings=clients.filter(c=>c.status==='Confirmed').sort((a,b)=>new Date(a.weddingDate).getTime()-new Date(b.weddingDate).getTime()).slice(0,5);
- const card='bg-white border border-[#E8E1D8] rounded-xl p-6 shadow-sm';
- const items=[{label:'New Enquiries',count:enquiries.length,desc:'Prospective couples awaiting first contact',icon:Inbox,link:'/enquiries'},{label:'Pending Requests',count:pending.length,desc:'Registrations and agreements requiring action',icon:Clock3,link:'/enquiries'},{label:'Active Clients',count:active.length,desc:'Confirmed clients in the planning pipeline',icon:Users,link:'/clients?status=Confirmed'}];
- return <div className="space-y-7">
-  <header className="pb-5 border-b border-[#E8E1D8]"><p className="text-[#A17B50] text-xs font-bold uppercase tracking-[.18em] mb-2">The Royal Knot · Agency Overview</p><h1 className="font-serif text-3xl md:text-4xl font-semibold text-[#272522]">Good day, {currentUser.name}</h1><p className="text-sm text-[#716C66] mt-2">Your wedding planning workspace at a glance.</p></header>
-  <div className="grid md:grid-cols-3 gap-4">{items.map(x=><Link to={x.link} key={x.label} className={card+' hover:border-[#C9A67D] transition-colors'}><div className="flex items-center justify-between"><p className="text-sm font-bold text-[#3B3834]">{x.label}</p><x.icon size={20} className="text-[#A47C51]"/></div><p className="font-serif text-4xl font-semibold mt-5 text-[#2A2724]">{x.count}</p><p className="text-xs text-[#81796F] mt-2">{x.desc}</p></Link>)}</div>
-  <div className="grid lg:grid-cols-5 gap-5"><section className={card+' lg:col-span-3'}><div className="flex items-center gap-2 mb-5"><ClipboardCheck size={20} className="text-[#A17B50]"/><h2 className="font-serif text-2xl font-semibold">Action Required</h2></div><div className="space-y-2">{pending.length===0&&enquiries.length===0?<p className="text-sm text-[#81796F]">No outstanding registration or enquiry requests.</p>:<>{pending.slice(0,4).map(c=><Link to={'/clients/'+c.id} key={c.id} className="flex items-center justify-between gap-3 border border-[#EEE6DB] rounded-lg p-4 hover:bg-[#FCF7F0]"><div><p className="text-sm font-semibold">{c.partner1Name} and {c.partner2Name}</p><p className="text-xs text-[#8A7B6D] mt-1">{c.status}</p></div><ArrowUpRight size={17}/></Link>)}{enquiries.slice(0,3).map(c=><Link to={'/enquiries/'+c.id} key={c.id} className="flex items-center justify-between gap-3 border border-[#EEE6DB] rounded-lg p-4 hover:bg-[#FCF7F0]"><div><p className="text-sm font-semibold">{c.clientName}</p><p className="text-xs text-[#8A7B6D] mt-1">New enquiry to review</p></div><ArrowUpRight size={17}/></Link>)}</>}</div></section>
-  <section className={card+' lg:col-span-2'}><div className="flex items-center gap-2 mb-5"><CalendarDays size={20} className="text-[#A17B50]"/><h2 className="font-serif text-2xl font-semibold">Upcoming Weddings</h2></div>{weddings.length===0?<p className="text-sm text-[#81796F]">No confirmed weddings scheduled yet.</p>:<div className="space-y-2">{weddings.map(c=><Link key={c.id} to={'/weddings/'+c.id} className="block border-b border-[#EEE6DB] py-3 hover:text-[#A17B50]"><p className="text-sm font-semibold">{c.partner1Name} and {c.partner2Name}</p><p className="text-xs text-[#8A7B6D] mt-1">{new Date(c.weddingDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} · {c.weddingLocation}</p></Link>)}</div>}</section></div>
- </div>;
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Inbox, Clock3, Users, ClipboardCheck, CalendarDays, ArrowRight, MapPin } from 'lucide-react';
+import { enquiryApi } from '../services/api';
+import { useClients } from '../context/ClientContext';
+
+type NewEnquiry = { id: string; clientName: string; status: string };
+export const DashboardPage: React.FC = () => {
+  const { clients } = useClients();
+  const [enquiries, setEnquiries] = useState<NewEnquiry[]>([]);
+  useEffect(() => {
+    let mounted = true;
+    enquiryApi.list({ pageSize: 100 }).then(result => {
+      if (mounted) setEnquiries((result.items || []).filter((e: NewEnquiry) => e.status === 'New'));
+    }).catch(() => { if (mounted) setEnquiries([]); });
+    return () => { mounted = false; };
+  }, []);
+  const pending = clients.filter(c => c.status === 'Registration Pending' || c.status === 'Agreement Pending');
+  const active = clients.filter(c => c.status === 'Confirmed');
+  const weddings = [...active].filter(c => !Number.isNaN(new Date(c.weddingDate).getTime())).sort((a,b) => new Date(a.weddingDate).getTime() - new Date(b.weddingDate).getTime()).slice(0,3);
+  const stats = [
+    { title: 'New Enquiries', value: enquiries.length, detail: 'Prospective couples awaiting first contact', icon: Inbox, to: '/enquiries' },
+    { title: 'Pending Requests', value: pending.length, detail: 'Registrations and agreements requiring action', icon: Clock3, to: '/enquiries' },
+    { title: 'Active Clients', value: active.length, detail: 'Confirmed clients in the planning pipeline', icon: Users, to: '/clients?status=Confirmed' },
+  ];
+  return <div className="rk-overview">
+    <div className="rk-overview-intro"><MapPin size={19}/><span>Luxury Destination Concierge</span></div>
+    <div className="rk-overview-stats">
+      {stats.map(s => <Link key={s.title} to={s.to} className="rk-overview-stat">
+        <div className="rk-overview-stat-head"><span className="rk-stat-icon"><s.icon size={25}/></span><h2>{s.title}</h2></div>
+        <strong>{s.value}</strong><p>{s.detail}</p>
+      </Link>)}
+    </div>
+    <div className="rk-overview-panels">
+      <section className="rk-overview-panel">
+        <h2><ClipboardCheck size={27}/> Action Required</h2>
+        <div className="rk-overview-action-list">
+          {pending.slice(0,4).map(c => <Link key={c.id} to={'/clients/'+c.id} className="rk-overview-action">
+            <span><b>{c.partner1Name} and {c.partner2Name}</b><small>{c.status}</small></span><ArrowRight size={20}/>
+          </Link>)}
+          {enquiries.slice(0,3).map(e => <Link key={e.id} to={'/enquiries/'+e.id} className="rk-overview-action">
+            <span><b>{e.clientName}</b><small>New enquiry to review</small></span><ArrowRight size={20}/>
+          </Link>)}
+          {pending.length===0 && enquiries.length===0 && <p className="rk-overview-empty">No outstanding enquiries or registration requests.</p>}
+        </div>
+      </section>
+      <section className="rk-overview-panel">
+        <h2><CalendarDays size={27}/> Upcoming Weddings</h2>
+        <div className="rk-overview-wedding-list">
+          {weddings.map(w => <Link key={w.id} to={'/weddings/'+w.id} className="rk-overview-wedding">
+            <b>{w.partner1Name} and {w.partner2Name}</b>
+            <small><CalendarDays size={14}/>{new Date(w.weddingDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} · {w.weddingLocation}</small>
+          </Link>)}
+          {weddings.length===0 && <p className="rk-overview-empty">No confirmed weddings scheduled yet.</p>}
+        </div>
+      </section>
+    </div>
+  </div>;
 };

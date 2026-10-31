@@ -37,3 +37,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   letter-spacing: 0;
   padding-inline: .08em;
 }
+
+@import './dashboard-theme.css';

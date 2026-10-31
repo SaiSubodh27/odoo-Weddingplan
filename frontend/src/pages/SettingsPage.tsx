@@ -10,7 +10,7 @@ export const SettingsPage: React.FC = () => {
       {/* Header */}
       <div className="pb-6 border-b border-[#E5E0D8]">
         <div className="text-[10px] tracking-[0.2em] uppercase text-[#9E7D3B] font-medium mb-1">
-          Configuration & Preferences
+          Configuration and Preferences
         </div>
         <h1 className="font-serif text-3xl text-[#1F2421]">Agency System Settings</h1>
         <p className="text-xs text-[#736F68] mt-1">
@@ -45,7 +45,7 @@ export const SettingsPage: React.FC = () => {
             <input
               type="text"
               readOnly
-              value="Jaipur & Udaipur, Rajasthan, India"
+              value="Jaipur and Udaipur, Rajasthan, India"
               className="w-full px-3.5 py-2.5 text-xs bg-[#FAF8F5] border border-[#E5E0D8] text-[#1F2421]"
             />
           </div>

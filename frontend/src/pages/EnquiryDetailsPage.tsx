@@ -555,21 +555,28 @@ export const EnquiryDetailsPage: React.FC = () => {
 
                 <div className="min-w-0">
                   <label className="block text-[10px] uppercase text-[#8C877D] mb-1">Choose File (PDF, DOCX, HTML, PNG, JPG)</label>
-                  <div className="flex flex-col gap-3 min-w-0">
-                    <input
-                      type="file"
-                      onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
-                      className="block w-full min-w-0 max-w-full text-xs file:mr-2 file:py-2 file:px-3 file:border file:border-[#E5E0D8] file:text-xs file:bg-[#FAF8F5]"
-                    />
+                  <div className="flex flex-col gap-2 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <label className="inline-flex h-9 w-36 shrink-0 items-center justify-center border border-[#D8D0C5] bg-[#FAF8F5] text-[#1F2421] text-xs font-medium cursor-pointer hover:bg-[#F2EDE6]">
+                        Choose File
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept=".pdf,.docx,.html,.png,.jpg,.jpeg"
+                          onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+                        />
+                      </label>
+                      <span className="text-xs text-[#736F68] truncate min-w-0" title={selectedFile?.name || 'No file chosen'}>{selectedFile?.name || 'No file chosen'}</span>
+                    </div>
                     <button
                       type="submit"
                       disabled={!selectedFile || isUploading}
-                      className="self-start px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider disabled:opacity-50 inline-flex items-center gap-2 font-semibold"
+                      className="inline-flex h-9 w-36 shrink-0 items-center justify-center gap-2 border border-[#1F2421] bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wide disabled:opacity-50 font-semibold"
                     >
                       <Upload size={12} />
                       <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
                     </button>
-                  </div>
+                  </div> 
                 </div>
               </div>
             </form>

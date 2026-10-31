@@ -1,6 +1,7 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
+import { VendorDirectoryPage } from './VendorDirectoryPage';
 import { Calendar, MapPin, Users, Eye } from 'lucide-react';
 import { getStatusBadgeStyle } from '../components/clients/ClientTable';
 
@@ -8,6 +9,7 @@ export const WeddingsPage: React.FC = () => {
   const { clients } = useClients();
   const navigate = useNavigate();
   const [cityFilter, setCityFilter] = useState<'All' | 'Jaipur' | 'Udaipur'>('All');
+  const [view,setView]=useState<'projects'|'vendors'>('projects');
 
   const weddings = clients
     .filter(c => {
@@ -23,7 +25,7 @@ export const WeddingsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E5E0D8]">
         <div>
           <div className="text-[10px] tracking-[0.2em] uppercase text-[#9E7D3B] font-medium mb-1">
-            Production & Venue Calendars
+            Production and Venue Calendars
           </div>
           <h1 className="font-serif text-3xl text-[#1F2421]">Palace Weddings Schedule</h1>
           <p className="text-xs text-[#736F68] mt-1">
@@ -49,6 +51,9 @@ export const WeddingsPage: React.FC = () => {
         </div>
       </div>
 
+      <div className="flex gap-2 border-b border-[#E5E0D8] pb-2"><button onClick={()=>setView('projects')} className={'px-4 py-2 text-sm font-semibold '+(view==='projects'?'bg-[#3A312C] text-white':'text-[#6D6257]')}>Wedding Projects</button><button onClick={()=>setView('vendors')} className={'px-4 py-2 text-sm font-semibold '+(view==='vendors'?'bg-[#3A312C] text-white':'text-[#6D6257]')}>Vendor Directory</button></div>
+      {view==='vendors'&&<VendorDirectoryPage mode="directory"/>}
+      {view==='projects'&&<>
       {/* Grid of Weddings */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {weddings.map((w) => (
@@ -116,6 +121,7 @@ export const WeddingsPage: React.FC = () => {
           </div>
         ))}
       </div>
+      </>}
     </div>
   );
 };

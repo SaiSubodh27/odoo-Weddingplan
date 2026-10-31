@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
 import { Client, RegistrationStatus } from '../types/client';
@@ -165,7 +165,7 @@ export const ClientDetailsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
               <div className="space-y-1">
                 <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-medium block">
-                  Chosen Venue & Destination
+                  Chosen Venue and Destination
                 </span>
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-[#1F2421]">
                   <MapPin size={14} className="text-[#9E7D3B]" />
@@ -212,7 +212,7 @@ export const ClientDetailsPage: React.FC = () => {
 
               <div className="sm:col-span-2 space-y-1 pt-2 border-t border-[#E5E0D8]/60">
                 <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-medium block">
-                  Design Aesthetic & Theme
+                  Design Aesthetic and Theme
                 </span>
                 <p className="text-xs text-[#1F2421] font-medium bg-[#FAF8F5] p-3 border border-[#E5E0D8]">
                   "{client.weddingTheme}"
@@ -225,7 +225,7 @@ export const ClientDetailsPage: React.FC = () => {
           <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-6">
             <div className="flex items-center gap-2 pb-4 border-b border-[#E5E0D8] mb-6">
               <Building2 size={16} className="text-[#9E7D3B]" />
-              <h2 className="font-serif text-xl text-[#1F2421]">Service Package & Scope</h2>
+              <h2 className="font-serif text-xl text-[#1F2421]">Service Package and Scope</h2>
             </div>
 
             <div className="space-y-4 text-xs">
@@ -240,7 +240,7 @@ export const ClientDetailsPage: React.FC = () => {
 
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-[#8C877D] font-medium block mb-1">
-                  Bespoke Requirements & Special Additions
+                  Bespoke Requirements and Special Additions
                 </span>
                 <div className="p-4 bg-[#FAF8F5] border border-[#E5E0D8] text-[#5C5850] leading-relaxed">
                   {client.additionalRequirements || 'No specific additions noted during initial consultation.'}
@@ -423,7 +423,7 @@ export const ClientDetailsPage: React.FC = () => {
               </span>
             </div>
             <h3 className="font-serif text-base font-semibold text-[#1F2421] mb-1">
-              Payments & Settlements
+              Payments and Settlements
             </h3>
             <p className="text-[11px] text-[#736F68] leading-relaxed">
               Milestone payment schedules, advance deposits, escrow disbursements, and GST invoicing.

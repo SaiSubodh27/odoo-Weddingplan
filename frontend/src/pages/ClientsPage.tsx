@@ -53,7 +53,7 @@ export const ClientsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E5E0D8]">
         <div>
           <div className="text-[10px] tracking-[0.2em] uppercase text-[#9E7D3B] font-medium mb-1">
-            Registry & Portfolios
+            Registry and Portfolios
           </div>
           <h1 className="font-serif text-3xl text-[#1F2421]">Clients Directory</h1>
           <p className="text-xs text-[#736F68] mt-1">

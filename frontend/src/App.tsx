@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ClientProvider, useClients } from './context/ClientContext';
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -15,6 +15,7 @@ import { ClientDetailsPage } from './pages/ClientDetailsPage';
 import { WeddingsPage } from './pages/WeddingsPage';
 import { WeddingProjectPage } from './pages/WeddingProjectPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { VendorDirectoryPage } from './pages/VendorDirectoryPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -52,6 +53,8 @@ export const AppContent: React.FC = () => {
         <Route path="clients/:id" element={<ClientDetailsPage />} />
         <Route path="weddings" element={<WeddingsPage />} />
         <Route path="weddings/:id" element={<WeddingProjectPage />} />
+        <Route path="vendors" element={<VendorDirectoryPage />} />
+        <Route path="quotations" element={<VendorDirectoryPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 

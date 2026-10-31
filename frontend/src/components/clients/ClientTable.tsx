@@ -47,7 +47,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({ clients }) => {
             <th className="py-3.5 px-4">Client / Couple Name</th>
             <th className="py-3.5 px-4 hidden md:table-cell">Contact Details</th>
             <th className="py-3.5 px-4">Wedding Date</th>
-            <th className="py-3.5 px-4 hidden lg:table-cell">Venue & City</th>
+            <th className="py-3.5 px-4 hidden lg:table-cell">Venue and City</th>
             <th className="py-3.5 px-4">Status</th>
             <th className="py-3.5 px-4 text-right">Actions</th>
           </tr>
