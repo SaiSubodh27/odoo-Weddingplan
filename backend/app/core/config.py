@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     FRONTEND_BASE_URL: str = "http://localhost:5173"
     BACKEND_BASE_URL: str = "http://localhost:8000"
 
+    # Google Forms & Google Sheets Registration Integration
+    GOOGLE_FORMS_REGISTRATION_URL: str = "https://docs.google.com/forms/d/e/1FAIpQLSe_theroyalknot_registration/viewform"
+    GOOGLE_SHEET_ID: Optional[str] = None
+    GOOGLE_SHEET_CSV_URL: Optional[str] = None
+    GOOGLE_SERVICE_ACCOUNT_FILE: Optional[str] = None
+    GOOGLE_FORMS_REF_ENTRY_ID: Optional[str] = None  # e.g. "entry.12345678" if prefilling enquiry ref
+
     # Token Lifespans (in minutes: 72 hours = 4320 mins)
     ACTIVATION_TOKEN_EXPIRY_MINUTES: int = 4320
 

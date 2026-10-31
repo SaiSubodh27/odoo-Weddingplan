@@ -339,6 +339,71 @@ export const authApi = {
 };
 
 export const registrationApi = {
+  async getConfig() {
+    const res = await fetch(`${API_BASE}/registrations/config`);
+    if (!res.ok) throw new Error('Failed to fetch Google Forms configuration');
+    return res.json();
+  },
+
+  async updateConfig(payload: { googleFormsRegistrationUrl?: string; googleSheetId?: string; googleSheetCsvUrl?: string }) {
+    const res = await fetch(`${API_BASE}/registrations/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update Google Forms configuration');
+    }
+    return res.json();
+  },
+
+  async syncGoogleSheet(sheetId?: string) {
+    const url = new URL(`${API_BASE}/registrations/sync-google-sheet`);
+    if (sheetId) url.searchParams.set('sheet_id', sheetId);
+    const res = await fetch(url.toString(), { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to sync Google Sheet');
+    }
+    return res.json();
+  },
+
+  async importCsv(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/registrations/import-csv`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to import CSV');
+    }
+    return res.json();
+  },
+
+  async listRegistrations(status?: string) {
+    const url = new URL(`${API_BASE}/registrations`);
+    if (status && status !== 'ALL') url.searchParams.set('status', status);
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error('Failed to fetch registrations');
+    return res.json();
+  },
+
+  async associateRegistration(registrationId: string, enquiryId: string, staffName: string = 'Agency Staff') {
+    const res = await fetch(`${API_BASE}/registrations/${registrationId}/associate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enquiryId, staffName }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to associate registration');
+    }
+    return res.json();
+  },
+
   async verifyToken(token: string) {
     const res = await fetch(`${API_BASE}/registrations/verify?token=${encodeURIComponent(token)}`);
     if (!res.ok) {

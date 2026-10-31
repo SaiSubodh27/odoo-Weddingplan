@@ -407,17 +407,17 @@ class EmailSyncService:
 
         db.commit()
 
-        # If a new enquiry was created, automatically dispatch luxury thank-you email with registration link
+        # If a new enquiry was created, automatically dispatch luxury thank-you email with Google Forms registration link
         if enquiry_created and enquiry_id:
             enq_to_notify = db.query(Enquiry).filter(Enquiry.id == enquiry_id).first()
-            if enq_to_notify and enq_to_notify.registration_token:
-                registration_url = f"{settings.FRONTEND_BASE_URL}/register?token={enq_to_notify.registration_token}"
+            if enq_to_notify:
                 try:
+                    form_url = settings.GOOGLE_FORMS_REGISTRATION_URL
                     thank_you_res = EmailService.send_enquiry_thank_you_email(
                         to_email=sender_email,
                         client_name=client_display_name,
                         enquiry_id=enquiry_id,
-                        registration_url=registration_url,
+                        registration_url=form_url,
                         db=db
                     )
                     enq_to_notify.status = "Registration Link Sent"
@@ -426,7 +426,7 @@ class EmailSyncService:
                     auto_reply_note = EnquiryNote(
                         enquiry_id=enquiry_id,
                         author="System (Auto-Response)",
-                        content=f"Dispatched automated thank-you email with online registration link ({registration_url}) to {sender_email}."
+                        content=f"Dispatched automated thank-you email with Google Forms registration link ({form_url}) to {sender_email}."
                     )
                     db.add(auto_reply_note)
                     db.commit()

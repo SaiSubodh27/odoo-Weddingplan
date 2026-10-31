@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Enquiry, EnquiryStatus, EmailMessage, ClientRegistration } from '../types/enquiry';
-import { enquiryApi } from '../services/api';
+import { enquiryApi, registrationApi } from '../services/api';
 import { getEnquiryStatusBadge, getSourceIcon } from './EnquiriesPage';
 import { 
   ArrowLeft, 
@@ -65,18 +65,23 @@ export const EnquiryDetailsPage: React.FC = () => {
   const [isApprovingRegistration, setIsApprovingRegistration] = useState(false);
   const [isSendingRegLink, setIsSendingRegLink] = useState(false);
   const [copiedRegLink, setCopiedRegLink] = useState(false);
+  const [googleFormUrl, setGoogleFormUrl] = useState<string>('https://docs.google.com/forms/d/e/1FAIpQLSe_theroyalknot_registration/viewform');
 
   const loadEnquiryAndMessages = async () => {
     if (!id) return;
     try {
-      const [data, msgs, reg] = await Promise.all([
+      const [data, msgs, reg, cfg] = await Promise.all([
         enquiryApi.get(id),
         enquiryApi.getMessages(id).catch(() => []),
-        enquiryApi.getRegistration(id).catch(() => null)
+        enquiryApi.getRegistration(id).catch(() => null),
+        registrationApi.getConfig().catch(() => null)
       ]);
       setEnquiry(data);
       setMessages(msgs || []);
       setRegistration(reg);
+      if (cfg?.googleFormsRegistrationUrl) {
+        setGoogleFormUrl(cfg.googleFormsRegistrationUrl);
+      }
       setPartner1Name(data.clientName);
       if (!replySubject) {
         setReplySubject(`Re: Concerning Your Wedding Enquiry (${data.id})`);
@@ -185,9 +190,15 @@ export const EnquiryDetailsPage: React.FC = () => {
     }
   };
 
+  const getEffectiveGoogleFormLink = () => {
+    if (!enquiry) return googleFormUrl;
+    return googleFormUrl.includes('?')
+      ? `${googleFormUrl}&enquiry_ref=${encodeURIComponent(enquiry.id)}`
+      : `${googleFormUrl}?enquiry_ref=${encodeURIComponent(enquiry.id)}`;
+  };
+
   const handleCopyRegistrationLink = () => {
-    if (!enquiry?.registrationToken) return;
-    const url = `${window.location.origin}/register?token=${enquiry.registrationToken}`;
+    const url = getEffectiveGoogleFormLink();
     navigator.clipboard.writeText(url);
     setCopiedRegLink(true);
     setTimeout(() => setCopiedRegLink(false), 3000);
@@ -437,12 +448,12 @@ export const EnquiryDetailsPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Online Registration Link Bar */}
+            {/* Google Forms Registration Link Bar */}
             <div className="p-4 border border-[#E5E0D8] bg-[#FAF8F5] space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-[#1F2421] uppercase tracking-wider flex items-center gap-1.5">
                   <Mail size={13} className="text-[#9E7D3B]" />
-                  <span>Client Online Registration Link</span>
+                  <span>Google Forms Client Registration Link</span>
                 </span>
                 {enquiry.registrationSentAt && (
                   <span className="text-[10px] text-[#2D5A3C] flex items-center gap-1 font-medium">
@@ -451,55 +462,42 @@ export const EnquiryDetailsPage: React.FC = () => {
                 )}
               </div>
 
-              {enquiry.registrationToken ? (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={`${window.location.origin}/register?token=${enquiry.registrationToken}`}
-                    className="flex-1 px-3 py-2 text-xs bg-[#FFFFFF] border border-[#E5E0D8] text-[#4A4640] font-mono focus:outline-none"
-                  />
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={handleCopyRegistrationLink}
-                      className="px-3 py-2 bg-[#FFFFFF] border border-[#E5E0D8] text-xs uppercase tracking-wider text-[#1F2421] hover:bg-[#F2EFE8] flex items-center gap-1.5 transition-colors"
-                    >
-                      {copiedRegLink ? <Check size={12} className="text-[#2D5A3C]" /> : <Copy size={12} />}
-                      <span>{copiedRegLink ? 'Copied' : 'Copy'}</span>
-                    </button>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={getEffectiveGoogleFormLink()}
+                  className="flex-1 px-3 py-2 text-xs bg-[#FFFFFF] border border-[#E5E0D8] text-[#4A4640] font-mono focus:outline-none"
+                />
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={handleCopyRegistrationLink}
+                    className="px-3 py-2 bg-[#FFFFFF] border border-[#E5E0D8] text-xs uppercase tracking-wider text-[#1F2421] hover:bg-[#F2EFE8] flex items-center gap-1.5 transition-colors"
+                  >
+                    {copiedRegLink ? <Check size={12} className="text-[#2D5A3C]" /> : <Copy size={12} />}
+                    <span>{copiedRegLink ? 'Copied' : 'Copy Form Link'}</span>
+                  </button>
 
-                    <a
-                      href={`/register?token=${enquiry.registrationToken}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-3 py-2 bg-[#FFFFFF] border border-[#E5E0D8] text-xs uppercase tracking-wider text-[#1F2421] hover:bg-[#F2EFE8] flex items-center gap-1.5 transition-colors"
-                    >
-                      <ExternalLink size={12} />
-                      <span>Open Form</span>
-                    </a>
+                  <a
+                    href={getEffectiveGoogleFormLink()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-2 bg-[#FFFFFF] border border-[#E5E0D8] text-xs uppercase tracking-wider text-[#1F2421] hover:bg-[#F2EFE8] flex items-center gap-1.5 transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    <span>Open Form</span>
+                  </a>
 
-                    <button
-                      onClick={handleSendRegistrationLink}
-                      disabled={isSendingRegLink}
-                      className="px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider font-semibold hover:bg-[#343733] flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                    >
-                      <Send size={12} className="text-[#D9C496]" />
-                      <span>{isSendingRegLink ? 'Sending...' : 'Re-send Email'}</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#8C877D]">No registration link generated yet.</span>
                   <button
                     onClick={handleSendRegistrationLink}
                     disabled={isSendingRegLink}
-                    className="px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider font-semibold hover:bg-[#343733]"
+                    className="px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider font-semibold hover:bg-[#343733] flex items-center gap-1.5 transition-colors disabled:opacity-50"
                   >
-                    <span>Generate & Send Registration Link</span>
+                    <Send size={12} className="text-[#D9C496]" />
+                    <span>{isSendingRegLink ? 'Sending...' : 'Send Form Link via Email'}</span>
                   </button>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Submitted Client Dossier Display */}
@@ -511,6 +509,9 @@ export const EnquiryDetailsPage: React.FC = () => {
                     <h3 className="font-serif text-base text-[#1F2421]">
                       Client Submitted Dossier: {registration.fullName} {registration.partnerName ? `& ${registration.partnerName}` : ''}
                     </h3>
+                    <span className="px-2 py-0.5 bg-[#FAF8F5] border border-[#E5E0D8] text-[9px] uppercase tracking-wider text-[#9E7D3B] font-semibold">
+                      Google Forms Response
+                    </span>
                   </div>
                   <span className="text-[10px] text-[#8C877D]">
                     Submitted: {new Date(registration.submittedAt).toLocaleString('en-IN')}

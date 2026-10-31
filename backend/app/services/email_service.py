@@ -254,15 +254,23 @@ class EmailService:
         to_email: str,
         client_name: str,
         enquiry_id: str,
-        registration_url: str,
+        registration_url: Optional[str] = None,
         wedding_location: Optional[str] = None,
         db: Optional[Session] = None
     ) -> dict:
         """
         Sends an automated luxury thank-you email immediately upon enquiry receipt,
-        welcoming the couple and directing them to complete their private online registration form.
+        welcoming the couple and providing the configured Google Forms registration link.
         Contains no document attachments and no plain-text credentials.
         """
+        google_form_url = registration_url or settings.GOOGLE_FORMS_REGISTRATION_URL
+        if enquiry_id and "?" in google_form_url:
+            form_link = f"{google_form_url}&enquiry_ref={enquiry_id}"
+        elif enquiry_id:
+            form_link = f"{google_form_url}?enquiry_ref={enquiry_id}"
+        else:
+            form_link = google_form_url
+
         subject = f"Thank You for Contacting The Royal Knot — Wedding Celebration Enquiry ({enquiry_id})"
 
         html_content = f"""
@@ -277,7 +285,7 @@ class EmailService:
             .tagline {{ font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: #9E7D3B; margin-top: 6px; }}
             .content {{ padding: 32px 0; font-size: 14px; line-height: 1.85; color: #4A4640; }}
             .btn {{ display: inline-block; padding: 14px 32px; background: #1F2421; color: #FAF8F5 !important; text-decoration: none; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin: 24px 0; border: 1px solid #1F2421; }}
-            .highlight-box {{ background: #FAF8F5; border-left: 2px solid #9E7D3B; padding: 16px 20px; margin: 20px 0; font-size: 13px; color: #2C2724; }}
+            .highlight-box {{ background: #FAF8F5; border-left: 2px solid #9E7D3B; padding: 18px 22px; margin: 22px 0; font-size: 13px; color: #2C2724; line-height: 1.8; }}
             .footer {{ border-top: 1px solid #E5E0D8; padding-top: 24px; font-size: 11px; color: #8C877D; text-align: center; line-height: 1.6; }}
           </style>
         </head>
@@ -289,28 +297,27 @@ class EmailService:
             </div>
             <div class="content">
               <p>Dear {client_name},</p>
-              <p>Thank you for reaching out to <strong>The Royal Knot</strong>. It is our distinct honor to welcome you as you begin envisioning your destination wedding celebration.</p>
-              <p>At The Royal Knot, we orchestrate extraordinary celebrations across the regal heritage palaces of Rajasthan. From intimate gatherings on Lake Pichola to grand royal pageantry in Jaipur, every chapter is thoughtfully designed around your singular love story.</p>
+              <p>Thank you for contacting <strong>The Royal Knot</strong>. We are delighted that you are considering us for your special celebration.</p>
               
               <div class="highlight-box">
-                <strong>Next Step: Your Private Client Registration</strong><br>
-                To enable our lead wedding directors to prepare a personalized celebration blueprint tailored to your guest count, preferred dates, and celebration aesthetic, please complete your confidential online registration form:
+                <p style="margin: 0 0 10px 0;">To help us understand your requirements and proceed with your registration, kindly complete the registration form using the link below.</p>
+                <strong>Enquiry Reference:</strong> <span style="font-family: monospace; font-size: 14px; color: #1F2421;">{enquiry_id}</span>
               </div>
 
               <p style="text-align: center;">
-                <a href="{registration_url}" class="btn">Complete Online Registration Form</a>
+                <a href="{form_link}" class="btn">Open Registration Form</a>
               </p>
 
-              <p>Once you submit your details online, our senior concierges will review your celebration parameters and issue your confidential client portal activation link so you can begin private planning consultations.</p>
+              <p>Once you submit your details through the form, our senior wedding concierges will review your celebration parameters and issue your confidential client portal activation link so you can begin private planning consultations.</p>
 
               <p>With our warmest regards,<br>
-              <strong>The Royal Knot Lead Concierge</strong><br>
+              <strong>The Royal Knot Concierge Team</strong><br>
               <em>Jaipur: Rambagh Enclave · Udaipur: Lake Pichola Promenade</em></p>
             </div>
             <div class="footer">
               Enquiry Reference: <strong>{enquiry_id}</strong><br>
               Official Concierge Desk: {settings.AGENCY_EMAIL}<br>
-              Direct Link: <a href="{registration_url}" style="color: #9E7D3B;">{registration_url}</a>
+              Direct Form Link: <a href="{form_link}" style="color: #9E7D3B;">{form_link}</a>
             </div>
           </div>
         </body>
@@ -319,9 +326,9 @@ class EmailService:
 
         text_content = (
             f"Dear {client_name},\n\n"
-            f"Thank you for reaching out to The Royal Knot regarding your destination wedding celebration.\n\n"
-            f"To enable our senior wedding directors to prepare your celebration blueprint, please complete your private client registration form online:\n"
-            f"{registration_url}\n\n"
+            f"Thank you for contacting The Royal Knot. We are delighted that you are considering us for your special celebration. "
+            f"To help us understand your requirements and proceed with your registration, kindly complete the registration form using the link below:\n\n"
+            f"{form_link}\n\n"
             f"Enquiry Reference: {enquiry_id}\n\n"
             f"Warm regards,\n"
             f"The Royal Knot Concierge Team\n"

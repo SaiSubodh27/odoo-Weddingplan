@@ -60,7 +60,11 @@ class ClientRegistrationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: str
-    enquiry_id: str = Field(..., alias="enquiryId")
+    enquiry_id: Optional[str] = Field(None, alias="enquiryId")
+    google_form_response_id: Optional[str] = Field(None, alias="googleFormResponseId")
+    google_sheet_row: Optional[int] = Field(None, alias="googleSheetRow")
+    enquiry_reference: Optional[str] = Field(None, alias="enquiryReference")
+    source: str = Field("Google Forms", alias="source")
     full_name: str = Field(..., alias="fullName")
     partner_name: Optional[str] = Field(None, alias="partnerName")
     email: str
@@ -72,7 +76,7 @@ class ClientRegistrationResponse(BaseModel):
     estimated_budget: Optional[Decimal] = Field(None, alias="estimatedBudget")
     wedding_events: Optional[str] = Field(None, alias="weddingEvents")
     preferred_theme: Optional[str] = Field(None, alias="preferredTheme")
-    service_package: str = Field(..., alias="servicePackage")
+    service_package: str = Field("Full-Service", alias="servicePackage")
     preferences: Optional[str] = None
     status: str
     reviewed_by: Optional[str] = Field(None, alias="reviewedBy")
@@ -94,3 +98,26 @@ class RegistrationCorrectionRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     staff_name: str = Field("Agency Staff", alias="staffName")
     correction_notes: str = Field(..., min_length=5, alias="correctionNotes")
+
+
+class GoogleFormsConfigUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    google_forms_registration_url: Optional[str] = Field(None, alias="googleFormsRegistrationUrl")
+    google_sheet_id: Optional[str] = Field(None, alias="googleSheetId")
+    google_sheet_csv_url: Optional[str] = Field(None, alias="googleSheetCsvUrl")
+
+
+class GoogleFormsConfigResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    google_forms_registration_url: str = Field(..., alias="googleFormsRegistrationUrl")
+    google_sheet_id: Optional[str] = Field(None, alias="googleSheetId")
+    google_sheet_csv_url: Optional[str] = Field(None, alias="googleSheetCsvUrl")
+    webhook_url: str = Field(..., alias="webhookUrl")
+    agency_email: str = Field(..., alias="agencyEmail")
+
+
+class RegistrationAssociateRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    enquiry_id: str = Field(..., min_length=3, alias="enquiryId")
+    staff_name: str = Field("Agency Staff", alias="staffName")
+
