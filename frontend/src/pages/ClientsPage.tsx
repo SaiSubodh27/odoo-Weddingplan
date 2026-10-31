@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
 import { ClientTable } from '../components/clients/ClientTable';
 import { RegistrationStatus } from '../types/client';
@@ -8,7 +8,13 @@ import { Search, Plus, Filter, RotateCcw } from 'lucide-react';
 export const ClientsPage: React.FC = () => {
   const { clients } = useClients();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter = searchParams.get('status') || 'All';
+  const setStatusFilter = (status: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (status === 'All') next.delete('status'); else next.set('status', status);
+    setSearchParams(next);
+  };
 
   const statusOptions: ('All' | RegistrationStatus)[] = [
     'All',
@@ -47,7 +53,7 @@ export const ClientsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E5E0D8]">
         <div>
           <div className="text-[10px] tracking-[0.2em] uppercase text-[#9E7D3B] font-medium mb-1">
-            Registry & Portfolios
+            Registry and Portfolios
           </div>
           <h1 className="font-serif text-3xl text-[#1F2421]">Clients Directory</h1>
           <p className="text-xs text-[#736F68] mt-1">

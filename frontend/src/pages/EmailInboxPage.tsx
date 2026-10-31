@@ -200,7 +200,7 @@ export const EmailInboxPage: React.FC = () => {
             <span>Gmail Communications Hub</span>
           </div>
           <h1 className="font-serif text-2xl sm:text-3xl text-[#1F2421]">
-            Agency Email Inbox & Intake
+            Agency Email Inbox and Intake
           </h1>
           <div className="flex flex-wrap items-center gap-3 text-xs text-[#736F68] mt-2">
             <span>Connected Inbox: <strong className="text-[#1F2421]">{status?.agencyEmail || 'saisubodh6@gmail.com'}</strong></span>
@@ -463,7 +463,7 @@ export const EmailInboxPage: React.FC = () => {
           <div className="pb-4 border-b border-[#E5E0D8]">
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#9E7D3B] font-medium mb-1">
               <Sparkles size={14} />
-              <span>Developer & Testing Console</span>
+              <span>Developer and Testing Console</span>
             </div>
             <h2 className="font-serif text-2xl text-[#1F2421]">
               Simulate Incoming Client Email

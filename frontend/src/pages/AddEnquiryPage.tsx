@@ -99,7 +99,7 @@ export const AddEnquiryPage: React.FC = () => {
         <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-6 sm:p-8 space-y-6">
           <div className="flex items-center gap-2 pb-4 border-b border-[#E5E0D8]">
             <Sparkles size={16} className="text-[#9E7D3B]" />
-            <h2 className="font-serif text-xl text-[#1F2421]">1. Channel & Contact Person</h2>
+            <h2 className="font-serif text-xl text-[#1F2421]">1. Channel and Contact Person</h2>
           </div>
 
           <div>
