@@ -13,7 +13,10 @@ from app.routes.enquiries import router as enquiries_router
 from app.routes.auth import router as auth_router
 from app.routes.emails import router as emails_router
 from app.routes.registrations import router as registrations_router
+from app.routes.agreements import router as agreements_router
+from app.routes.webhooks import router as webhooks_router
 from app.services.email_sync_service import email_sync_service
+from app.services.zoho_polling_service import zoho_polling_service
 
 logger = logging.getLogger("royal_knot")
 
@@ -41,10 +44,16 @@ async def periodic_email_sync():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     sync_task = asyncio.create_task(periodic_email_sync())
+    polling_task = asyncio.create_task(zoho_polling_service.run_polling_background_loop())
     yield
     sync_task.cancel()
+    polling_task.cancel()
     try:
         await sync_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await polling_task
     except asyncio.CancelledError:
         pass
 
@@ -54,9 +63,9 @@ app = FastAPI(
     description=(
         "Production-grade backend service for **The Royal Knot** Luxury Wedding Planning Agency "
         "(Jaipur & Udaipur operations). Manages enquiry workflows, real Gmail incoming/outgoing communication, "
-        "registration document exchange, and client account activation."
+        "registration document exchange, client account activation, and Phase 2 Service Agreement & Wedding Booking Confirmation."
     ),
-    version="1.2.0",
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
@@ -99,6 +108,8 @@ app.include_router(enquiries_router, prefix=f"{settings.API_V1_STR}/enquiries")
 app.include_router(registrations_router, prefix=f"{settings.API_V1_STR}/registrations")
 app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth")
 app.include_router(emails_router, prefix=f"{settings.API_V1_STR}/emails")
+app.include_router(agreements_router, prefix=f"{settings.API_V1_STR}/service-agreements")
+app.include_router(webhooks_router, prefix=f"{settings.API_V1_STR}/webhooks")
 
 
 # Top-level /health route
@@ -107,7 +118,7 @@ def root_health():
     return {
         "service": settings.PROJECT_NAME,
         "status": "operational",
-        "version": "1.2.0",
+        "version": "2.0.0",
         "agency_email": settings.AGENCY_EMAIL,
         "imap_configured": email_sync_service.is_imap_configured(),
         "api_v1_docs": "/docs"
@@ -127,6 +138,8 @@ def root():
             "enquiries": f"{settings.API_V1_STR}/enquiries",
             "clients": f"{settings.API_V1_STR}/clients",
             "emails": f"{settings.API_V1_STR}/emails",
+            "service_agreements": f"{settings.API_V1_STR}/service-agreements",
+            "webhooks": f"{settings.API_V1_STR}/webhooks",
             "auth": f"{settings.API_V1_STR}/auth",
             "documentation": "/docs"
         }

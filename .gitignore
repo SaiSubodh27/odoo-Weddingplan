@@ -40,3 +40,6 @@ ENV/
 *.sln
 *.sw?
 *.tsbuildinfo
+
+venv_app/
+backend/uploads/agreements/

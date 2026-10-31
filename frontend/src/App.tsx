@@ -17,6 +17,10 @@ import { AddClientPage } from './pages/AddClientPage';
 import { ClientDetailsPage } from './pages/ClientDetailsPage';
 import { WeddingsPage } from './pages/WeddingsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AgreementsPage } from './pages/AgreementsPage';
+import { AddAgreementPage } from './pages/AddAgreementPage';
+import { AgreementDetailsPage } from './pages/AgreementDetailsPage';
+import { ClientSigningPage } from './pages/ClientSigningPage';
 
 // Protected Route for Agency Employees
 const StaffRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -48,6 +52,7 @@ export const AppContent: React.FC = () => {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/activate" element={<ClientActivationPage />} />
+      <Route path="/sign-agreement/:id" element={<ClientSigningPage />} />
       <Route path="/register" element={<ClientRegistrationPage />} />
       <Route path="/client-register" element={<WebsiteRegistrationPage />} />
 
@@ -87,6 +92,9 @@ export const AppContent: React.FC = () => {
         <Route path="clients" element={<ClientsPage />} />
         <Route path="clients/new" element={<AddClientPage />} />
         <Route path="clients/:id" element={<ClientDetailsPage />} />
+        <Route path="agreements" element={<AgreementsPage />} />
+        <Route path="agreements/new" element={<AddAgreementPage />} />
+        <Route path="agreements/:id" element={<AgreementDetailsPage />} />
         <Route path="weddings" element={<WeddingsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

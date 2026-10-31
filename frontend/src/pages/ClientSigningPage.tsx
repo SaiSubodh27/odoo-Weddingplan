@@ -1,0 +1,149 @@
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { ExternalLink, CheckCircle, ShieldCheck } from 'lucide-react';
+import { agreementApi } from '../services/api';
+import { ServiceAgreement, SignatureStatusResponse } from '../types/agreement';
+
+export const ClientSigningPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+
+  const [agreement, setAgreement] = useState<ServiceAgreement | null>(null);
+  const [sigStatus, setSigStatus] = useState<SignatureStatusResponse | null>(null);
+  const [signingUrl, setSigningUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!id) return;
+      try {
+        const data = await agreementApi.get(id);
+        setAgreement(data);
+
+        // Fetch electronic signing details
+        const statusData = await agreementApi.getSignatureStatus(id);
+        if (statusData) {
+          setSigStatus(statusData);
+          if (statusData.signing_url) {
+            setSigningUrl(statusData.signing_url);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id]);
+
+  if (loading) {
+    return <div className="p-12 text-center text-xs text-[#8C877D]">Loading client agreement portal...</div>;
+  }
+
+  if (!agreement) {
+    return <div className="p-12 text-center text-xs text-red-600">Agreement not found.</div>;
+  }
+
+  const pdfUrl = agreementApi.getPdfUrl(agreement.id, true);
+  const providerName = sigStatus?.provider || 'Zoho Sign';
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="text-center pb-6 border-b border-[#E5E0D8]">
+        <div className="text-[10px] uppercase tracking-[0.2em] text-[#9E7D3B] font-medium mb-1">
+          ✦ The Royal Knot Client Portal ✦
+        </div>
+        <h1 className="font-serif text-3xl text-[#1F2421]">Review & Execute Your Service Agreement</h1>
+        <p className="text-xs text-[#736F68] mt-1 max-w-lg mx-auto">
+          Please review your bespoke royal wedding planning contract below. Once approved, proceed to {providerName}'s secure hosted signing portal.
+        </p>
+      </div>
+
+      {/* Summary Card */}
+      <div className="bg-white border border-[#E5E0D8] p-6 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+        <div>
+          <span className="text-[#8C877D] block">Agreement Ref:</span>
+          <span className="font-mono font-bold text-[#1F2421] text-sm">{agreement.agreement_number}</span>
+        </div>
+        <div>
+          <span className="text-[#8C877D] block">Total Contract Value:</span>
+          <span className="font-serif font-bold text-[#1F2421] text-sm">
+            ₹ {Number(agreement.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        <div>
+          <span className="text-[#8C877D] block">eSigning Status:</span>
+          <span className="font-semibold text-purple-700 text-sm">{agreement.signing_status}</span>
+        </div>
+        <div>
+          <span className="text-[#8C877D] block">Provider & Mode:</span>
+          <span className={`inline-block mt-0.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border ${
+            sigStatus?.environment === 'sandbox' || sigStatus?.environment === 'production'
+              ? 'bg-blue-50 text-blue-800 border-blue-200'
+              : 'bg-amber-50 text-amber-800 border-amber-200'
+          }`}>
+            {sigStatus?.environment === 'sandbox' ? `Real ${providerName} Sandbox` : sigStatus?.environment === 'production' ? `Real ${providerName} Production` : 'Simulation Mock'}
+          </span>
+        </div>
+      </div>
+
+      {/* Signing Action Card */}
+      <div className="bg-[#FAF8F5] border border-[#E5E0D8] p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={16} className="text-[#9E7D3B]" />
+            <h3 className="font-serif text-base font-semibold text-[#1F2421]">
+              Secure Electronic Signature via {providerName}
+            </h3>
+          </div>
+          <p className="text-xs text-[#736F68]">
+            Legally binding electronic signature under the Information Technology Act, 2000.
+          </p>
+        </div>
+
+        {agreement.signing_status === 'COMPLETED' ? (
+          <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">
+            <CheckCircle size={14} /> Signed Successfully
+          </div>
+        ) : signingUrl ? (
+          <a
+            href={signingUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#9E7D3B] hover:bg-[#86682F] text-white text-xs uppercase tracking-widest font-medium transition-colors shadow-sm"
+          >
+            Sign Agreement Now <ExternalLink size={13} />
+          </a>
+        ) : (
+          <div className="text-xs text-[#8C877D] italic">
+            Signing invitation being generated by agency concierge...
+          </div>
+        )}
+      </div>
+
+      {/* PDF Document Preview */}
+      <div className="bg-white border border-[#E5E0D8] p-4 space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-[#E5E0D8]">
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#1F2421]">
+            Document Preview (Version {agreement.current_version_number}.0)
+          </span>
+          <a
+            href={agreementApi.getPdfUrl(agreement.id, false)}
+            download
+            className="text-xs text-[#9E7D3B] hover:underline"
+          >
+            Download Copy
+          </a>
+        </div>
+        <div className="w-full h-[600px] bg-[#FAF8F5] border border-[#E5E0D8]">
+          <iframe
+            src={pdfUrl}
+            title="Agreement PDF"
+            className="w-full h-full"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};

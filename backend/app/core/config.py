@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     ]
     SECRET_KEY: str = "theroyalknot-luxury-wedding-management-secret-key-2026"
 
-    # File uploads for registration documents & email attachments
+    # File uploads for registration documents & agreement attachments
     UPLOAD_DIR: str = str(Path(__file__).resolve().parent.parent.parent / "uploads")
 
     # Agency Primary Email
@@ -55,6 +55,38 @@ class Settings(BaseSettings):
 
     # Token Lifespans (in minutes: 72 hours = 4320 mins)
     ACTIVATION_TOKEN_EXPIRY_MINUTES: int = 4320
+
+    # Electronic Signature Provider Selection ('zoho_sign' | 'mock' | 'leegality')
+    ESIGN_PROVIDER: str = "zoho_sign"
+
+    # Zoho Sign API Configuration (OAuth 2.0 & Multi-Region DC Support)
+    ZOHO_SIGN_ENV: str = "mock"  # 'sandbox' | 'production' | 'mock'
+    ZOHO_SIGN_CLIENT_ID: Optional[str] = None
+    ZOHO_SIGN_CLIENT_SECRET: Optional[str] = None
+    ZOHO_SIGN_REFRESH_TOKEN: Optional[str] = None
+    ZOHO_SIGN_ACCOUNTS_BASE_URL: str = "https://accounts.zoho.in"  # or https://accounts.zoho.com, .eu, etc.
+    ZOHO_SIGN_API_BASE_URL: str = "https://sign.zoho.in/api/v1"      # or https://sign.zoho.com/api/v1
+    ZOHO_SIGN_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/zoho/callback"
+    ZOHO_SIGN_WEBHOOK_SECRET: Optional[str] = None
+    ZOHO_SIGN_TIMEOUT_SECONDS: int = 30
+
+    # Zoho Sign Polling Configuration (for local dev and background sync without ngrok)
+    ZOHO_SIGN_POLLING_ENABLED: bool = True
+    ZOHO_SIGN_POLLING_INTERVAL_SECONDS: int = 60
+    ZOHO_SIGN_POLLING_MAX_RETRIES: int = 5
+    ZOHO_SIGN_POLLING_TIMEOUT_SECONDS: int = 30
+
+    # Leegality Configuration (Historical / Fallback Provider)
+    LEEGALITY_ENV: str = "sandbox"  # 'sandbox' | 'production' | 'mock'
+    LEEGALITY_BASE_URL: str = "https://sandbox.leegality.com/api/v2.1"
+    LEEGALITY_AUTH_TOKEN: Optional[str] = None
+    LEEGALITY_PRIVATE_SALT: Optional[str] = None
+    LEEGALITY_API_VERSION: str = "2.1"
+    LEEGALITY_WEBHOOK_SUCCESS_URL: Optional[str] = "http://localhost:8000/api/v1/webhooks/leegality/success"
+    LEEGALITY_WEBHOOK_FAILURE_URL: Optional[str] = "http://localhost:8000/api/v1/webhooks/leegality/failure"
+    LEEGALITY_WEBHOOK_VERSION: str = "1.0"
+    LEEGALITY_TIMEOUT_SECONDS: int = 30
+    LEEGALITY_ALLOWED_IPS: Optional[str] = None
 
     @field_validator("CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
