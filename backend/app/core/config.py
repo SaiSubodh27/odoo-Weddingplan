@@ -9,10 +9,17 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "development"
     DATABASE_URL: str = "postgresql+psycopg://postgres@localhost:5432/royal_knot_db"
-    CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: Union[str, List[str]] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
     SECRET_KEY: str = "theroyalknot-luxury-wedding-management-secret-key-2026"
 
-    # File uploads for registration documents & email attachments
+    # File uploads for registration documents & agreement attachments
     UPLOAD_DIR: str = str(Path(__file__).resolve().parent.parent.parent / "uploads")
 
     # Agency Primary Email
@@ -39,8 +46,47 @@ class Settings(BaseSettings):
     FRONTEND_BASE_URL: str = "http://localhost:5173"
     BACKEND_BASE_URL: str = "http://localhost:8000"
 
+    # Google Forms & Google Sheets Registration Integration
+    GOOGLE_FORMS_REGISTRATION_URL: str = "https://docs.google.com/forms/d/e/1FAIpQLSd0VzWy2DNa5YvyHwJ7jigckhi4JIA4zVfVj7BMdtT2J-yPWQ/viewform?usp=header"
+    GOOGLE_SHEET_ID: Optional[str] = None
+    GOOGLE_SHEET_CSV_URL: Optional[str] = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRxUzT6U5L9nEZfsAyPYa3pTadewAAwfkU4Fw_eBnQENF1IDMHUuw3FYmhmq72WIvQEi4vYGO37xgi5/pub?gid=424781715&single=true&output=csv"
+    GOOGLE_SERVICE_ACCOUNT_FILE: Optional[str] = None
+    GOOGLE_FORMS_REF_ENTRY_ID: Optional[str] = None  # e.g. "entry.12345678" if prefilling enquiry ref
+
     # Token Lifespans (in minutes: 72 hours = 4320 mins)
     ACTIVATION_TOKEN_EXPIRY_MINUTES: int = 4320
+
+    # Electronic Signature Provider Selection ('zoho_sign' | 'mock' | 'leegality')
+    ESIGN_PROVIDER: str = "zoho_sign"
+
+    # Zoho Sign API Configuration (OAuth 2.0 & Multi-Region DC Support)
+    ZOHO_SIGN_ENV: str = "mock"  # 'sandbox' | 'production' | 'mock'
+    ZOHO_SIGN_CLIENT_ID: Optional[str] = None
+    ZOHO_SIGN_CLIENT_SECRET: Optional[str] = None
+    ZOHO_SIGN_REFRESH_TOKEN: Optional[str] = None
+    ZOHO_SIGN_ACCOUNTS_BASE_URL: str = "https://accounts.zoho.in"  # or https://accounts.zoho.com, .eu, etc.
+    ZOHO_SIGN_API_BASE_URL: str = "https://sign.zoho.in/api/v1"      # or https://sign.zoho.com/api/v1
+    ZOHO_SIGN_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/zoho/callback"
+    ZOHO_SIGN_WEBHOOK_SECRET: Optional[str] = None
+    ZOHO_SIGN_TIMEOUT_SECONDS: int = 30
+
+    # Zoho Sign Polling Configuration (for local dev and background sync without ngrok)
+    ZOHO_SIGN_POLLING_ENABLED: bool = True
+    ZOHO_SIGN_POLLING_INTERVAL_SECONDS: int = 60
+    ZOHO_SIGN_POLLING_MAX_RETRIES: int = 5
+    ZOHO_SIGN_POLLING_TIMEOUT_SECONDS: int = 30
+
+    # Leegality Configuration (Historical / Fallback Provider)
+    LEEGALITY_ENV: str = "sandbox"  # 'sandbox' | 'production' | 'mock'
+    LEEGALITY_BASE_URL: str = "https://sandbox.leegality.com/api/v2.1"
+    LEEGALITY_AUTH_TOKEN: Optional[str] = None
+    LEEGALITY_PRIVATE_SALT: Optional[str] = None
+    LEEGALITY_API_VERSION: str = "2.1"
+    LEEGALITY_WEBHOOK_SUCCESS_URL: Optional[str] = "http://localhost:8000/api/v1/webhooks/leegality/success"
+    LEEGALITY_WEBHOOK_FAILURE_URL: Optional[str] = "http://localhost:8000/api/v1/webhooks/leegality/failure"
+    LEEGALITY_WEBHOOK_VERSION: str = "1.0"
+    LEEGALITY_TIMEOUT_SECONDS: int = 30
+    LEEGALITY_ALLOWED_IPS: Optional[str] = None
 
     @field_validator("CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
