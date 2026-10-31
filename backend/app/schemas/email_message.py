@@ -96,3 +96,4 @@ class EmailStatusResponse(BaseModel):
     last_sync_at: Optional[datetime] = Field(None, alias="lastSyncAt")
     total_messages_received: int = Field(0, alias="totalMessagesReceived")
     total_unclassified: int = Field(0, alias="totalUnclassified")
+

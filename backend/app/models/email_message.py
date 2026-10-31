@@ -65,3 +65,4 @@ class EmailAttachment(Base):
 
     def __repr__(self):
         return f"<EmailAttachment {self.id}: {self.original_filename} ({self.file_size} bytes)>"
+
