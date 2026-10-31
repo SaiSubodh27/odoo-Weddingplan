@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.core.dependencies import require_signed_agreement
 from app.services.vendor_service import vendor_service
 from app.schemas.vendor import (
     VendorCreate,
@@ -13,7 +14,7 @@ from app.schemas.vendor import (
     VendorListResponse,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_signed_agreement)])
 
 
 @router.get(

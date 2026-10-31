@@ -198,3 +198,73 @@ def test_login_enforces_agreement_and_gating(db_session: Session, agreement_test
     })
     assert res_login_after.status_code == 200
     assert res_login_after.json()["hasSignedAgreement"] is True
+
+
+def test_agreement_gate_middleware_blocks_client_until_signed(db_session: Session, agreement_test_client):
+    user = agreement_test_client["user"]
+    c = agreement_test_client["client"]
+
+    # Client is not signed yet
+    headers = {"Authorization": f"Bearer trk_token_{user.id}"}
+    res_blocked = client.get("/api/v1/vendors", headers=headers)
+    assert res_blocked.status_code == 403
+    assert res_blocked.json()["detail"] == "AGREEMENT_REQUIRED"
+    assert res_blocked.headers.get("X-Agreement-Required") == "true"
+
+    # Now sign the agreement
+    agr = agreement_service.get_or_create_agreement_for_client(db_session, c.id)
+    agr.status = "SIGNED"
+    agr.is_verified = True
+    agr.signed_at = datetime.now(timezone.utc)
+    db_session.commit()
+
+    # Now access to vendors succeeds
+    res_allowed = client.get("/api/v1/vendors", headers=headers)
+    assert res_allowed.status_code == 200
+
+
+def test_signing_twice_returns_existing_record(db_session: Session, agreement_test_client):
+    c = agreement_test_client["client"]
+    agr = agreement_service.get_or_create_agreement_for_client(db_session, c.id)
+
+    # Pre-verify OTP
+    test_otp = "112233"
+    agr.signing_otp_hash = hash_otp(test_otp)
+    agr.signing_otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+    agr.signing_otp_verified = True
+    db_session.commit()
+
+    # First sign
+    res1 = client.post(f"/api/v1/agreements/{agr.id}/sign", json={
+        "signature_data": "data:image/png;base64,sample_sig_data",
+        "consent": True,
+        "signer_name": "Princess Ananya"
+    })
+    assert res1.status_code == 200
+    assert res1.json()["status"] == "SIGNED"
+
+    # Second sign -> idempotent, returns existing record without error
+    res2 = client.post(f"/api/v1/agreements/{agr.id}/sign", json={
+        "signature_data": "data:image/png;base64,sample_sig_data",
+        "consent": True,
+        "signer_name": "Princess Ananya"
+    })
+    assert res2.status_code == 200
+    assert res2.json()["status"] == "SIGNED"
+    assert res2.json()["agreement_id"] == agr.id
+
+
+def test_planner_can_open_signed_pdf(db_session: Session, agreement_test_client):
+    c = agreement_test_client["client"]
+    agr = agreement_service.get_or_create_agreement_for_client(db_session, c.id)
+    agr.status = "SIGNED"
+    agr.signed_at = datetime.now(timezone.utc)
+    agr.signed_by_name = "Princess Ananya"
+    db_session.commit()
+
+    # Planner requests PDF with staff header
+    headers = {"Authorization": "Bearer trk_staff_session_token_2026"}
+    res_pdf = client.get(f"/api/v1/agreements/{agr.id}/pdf", headers=headers)
+    assert res_pdf.status_code == 200
+    assert res_pdf.headers["content-type"] == "application/pdf"
+    assert res_pdf.content.startswith(b"%PDF-")

@@ -52,11 +52,10 @@ def require_signed_agreement(
         if not agreement or (agreement.status != "SIGNED" and not agreement.is_verified):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Digital execution of the Service Agreement is required before accessing client portal resources.",
+                detail="AGREEMENT_REQUIRED",
                 headers={"X-Agreement-Required": "true", "X-Agreement-Id": agreement.id if agreement else ""}
             )
 
         return {"role": "client", "user": user, "agreement": agreement}
 
     return None
-
