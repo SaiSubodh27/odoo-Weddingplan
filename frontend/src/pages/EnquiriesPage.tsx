@@ -108,7 +108,7 @@ export const EnquiriesPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E5E0D8]">
         <div>
           <div className="text-[10px] tracking-[0.2em] uppercase text-[#9E7D3B] font-medium mb-1">
-            Inbound Inquiries and Lead Management
+            Inbound Inquiries & Lead Management
           </div>
           <h1 className="font-serif text-3xl text-[#1F2421]">Wedding Enquiries</h1>
           <p className="text-xs text-[#736F68] mt-1">
@@ -219,10 +219,10 @@ export const EnquiriesPage: React.FC = () => {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#FAF8F5] border-b border-[#E5E0D8] text-[11px] font-semibold tracking-wider text-[#736F68] uppercase">
-                <th className="py-3.5 px-4">Ref ID and Client Name</th>
+                <th className="py-3.5 px-4">Ref ID & Client Name</th>
                 <th className="py-3.5 px-4">Source</th>
                 <th className="py-3.5 px-4 hidden md:table-cell">Contact</th>
-                <th className="py-3.5 px-4">Target Date and Location</th>
+                <th className="py-3.5 px-4">Target Date & Location</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
