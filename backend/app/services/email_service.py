@@ -118,7 +118,24 @@ class EmailService:
         # 2. Live SMTP network transmission
         msg_id = f"MSG-OUT-{uuid.uuid4().hex[:12].upper()}"
         try:
-            msg = MIMEMultipart("alternative")
+            if attachments:
+                msg = MIMEMultipart("mixed")
+                body_part = MIMEMultipart("alternative")
+                if text_content:
+                    body_part.attach(MIMEText(text_content, "plain", "utf-8"))
+                body_part.attach(MIMEText(html_content, "html", "utf-8"))
+                msg.attach(body_part)
+
+                for att in attachments:
+                    part = MIMEApplication(att["content"], Name=att.get("filename", "document.pdf"))
+                    part["Content-Disposition"] = f'attachment; filename="{att.get("filename", "document.pdf")}"'
+                    msg.attach(part)
+            else:
+                msg = MIMEMultipart("alternative")
+                if text_content:
+                    msg.attach(MIMEText(text_content, "plain", "utf-8"))
+                msg.attach(MIMEText(html_content, "html", "utf-8"))
+
             msg["Subject"] = subject
             msg["From"] = f"{sender_name} <{sender_email}>"
             msg["To"] = to_email
@@ -129,17 +146,6 @@ class EmailService:
                 msg["In-Reply-To"] = in_reply_to
             if references:
                 msg["References"] = references
-
-            if text_content:
-                msg.attach(MIMEText(text_content, "plain", "utf-8"))
-            msg.attach(MIMEText(html_content, "html", "utf-8"))
-
-            # Attach files if provided
-            if attachments:
-                for att in attachments:
-                    part = MIMEApplication(att["content"], Name=att.get("filename", "document.pdf"))
-                    part["Content-Disposition"] = f'attachment; filename="{att.get("filename", "document.pdf")}"'
-                    msg.attach(part)
 
             server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
             if settings.SMTP_USE_TLS:
