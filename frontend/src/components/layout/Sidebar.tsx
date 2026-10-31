@@ -9,7 +9,8 @@ import {
   Settings, 
   LogOut,
   Sparkles,
-  MapPin
+  MapPin,
+  Store
 } from 'lucide-react';
 import { useClients } from '../../context/ClientContext';
 
@@ -33,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Enquiries', path: '/enquiries', icon: Inbox },
     { name: 'Clients', path: '/clients', icon: Users },
     { name: 'Projects', path: '/projects', icon: HeartHandshake },
+    { name: 'Vendors', path: '/vendors', icon: Store },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 

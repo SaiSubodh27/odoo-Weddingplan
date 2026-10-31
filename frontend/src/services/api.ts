@@ -501,3 +501,277 @@ export const projectApi = {
     return res.json();
   },
 };
+
+
+
+export const vendorApi = {
+  async list(params?: { category?: string; city?: string; search?: string; isActive?: boolean }) {
+    const searchParams = new URLSearchParams();
+    if (params?.category && params.category !== 'All') searchParams.set('category', params.category);
+    if (params?.city && params.city !== 'All') searchParams.set('city', params.city);
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.isActive !== undefined) searchParams.set('is_active', String(params.isActive));
+
+    const res = await fetch(`${API_BASE}/vendors?${searchParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch vendors');
+    return res.json();
+  },
+
+  async get(id: string) {
+    const res = await fetch(`${API_BASE}/vendors/${id}`);
+    if (!res.ok) throw new Error(`Failed to fetch vendor ${id}`);
+    return res.json();
+  },
+
+  async create(data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/vendors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to register vendor');
+    }
+    return res.json();
+  },
+
+  async update(id: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/vendors/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update vendor');
+    }
+    return res.json();
+  },
+
+  async delete(id: string) {
+    const res = await fetch(`${API_BASE}/vendors/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to deactivate vendor');
+    }
+    return res.json();
+  },
+};
+
+export const cateringApi = {
+  async getProjectCateringPlans(projectId: string) {
+    const res = await fetch(`${API_BASE}/projects/${projectId}/catering`);
+    if (!res.ok) throw new Error('Failed to fetch project catering plans');
+    return res.json();
+  },
+
+  async getFunctionCateringPlan(projectId: string, functionId: string) {
+    const res = await fetch(`${API_BASE}/projects/${projectId}/functions/${functionId}/catering`);
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      throw new Error('Failed to fetch function catering plan');
+    }
+    return res.json();
+  },
+
+  async createPlan(projectId: string, functionId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/projects/${projectId}/functions/${functionId}/catering`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to create catering plan');
+    }
+    return res.json();
+  },
+
+  async updatePlan(cateringId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update catering requirements');
+    }
+    return res.json();
+  },
+
+  async updateStatus(cateringId: string, status: string, notes?: string) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, notes }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update catering status');
+    }
+    return res.json();
+  },
+
+  async listMenuItems(cateringId: string) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/menu-items`);
+    if (!res.ok) throw new Error('Failed to fetch menu items');
+    return res.json();
+  },
+
+  async createMenuItem(cateringId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/menu-items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to add dish to menu');
+    }
+    return res.json();
+  },
+
+  async updateMenuItem(cateringId: string, itemId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/menu-items/${itemId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update menu dish');
+    }
+    return res.json();
+  },
+
+  async deleteMenuItem(cateringId: string, itemId: string) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/menu-items/${itemId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to delete dish');
+    }
+    return res.json();
+  },
+
+  async reorderMenuItems(cateringId: string, itemIds: string[]) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/menu-items/reorder`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(itemIds),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to reorder menu items');
+    }
+    return res.json();
+  },
+
+  async listPresets() {
+    const res = await fetch(`${API_BASE}/catering/presets`);
+    if (!res.ok) throw new Error('Failed to fetch luxury menu presets');
+    return res.json();
+  },
+
+  async getPreset(presetId: string) {
+    const res = await fetch(`${API_BASE}/catering/presets/${presetId}`);
+    if (!res.ok) throw new Error(`Failed to fetch preset ${presetId}`);
+    return res.json();
+  },
+
+  async applyPreset(cateringId: string, presetId: string, mode: 'append' | 'replace' = 'append') {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/apply-preset/${presetId}?mode=${mode}`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to apply menu preset');
+    }
+    return res.json();
+  },
+
+  async listQuotations(cateringId: string) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/quotations`);
+    if (!res.ok) throw new Error('Failed to fetch catering quotations');
+    return res.json();
+  },
+
+  async createQuotation(cateringId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/quotations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to record vendor quotation');
+    }
+    return res.json();
+  },
+
+  async updateQuotation(cateringId: string, quotationId: string, data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/quotations/${quotationId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update quotation');
+    }
+    return res.json();
+  },
+
+  async selectWinningQuotation(cateringId: string, quotationId: string) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/quotations/${quotationId}/select`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to select winning caterer');
+    }
+    return res.json();
+  },
+
+  getQuotationPdfUrl(cateringId: string, quotationId: string) {
+    return `${API_BASE}/catering/${cateringId}/quotations/${quotationId}/pdf`;
+  },
+
+  getCateringPlanPdfUrl(cateringId: string) {
+    return `${API_BASE}/catering/${cateringId}/pdf`;
+  },
+
+  async shareWhatsApp(cateringId: string, payload: {
+    quotationId?: string;
+    vendorId?: string;
+    recipientPhone?: string;
+    customMessage?: string;
+  }) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/share-whatsapp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        quotationId: payload.quotationId,
+        vendorId: payload.vendorId,
+        recipientPhone: payload.recipientPhone,
+        customMessage: payload.customMessage,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to generate WhatsApp share link');
+    }
+    return res.json();
+  },
+
+  async listCommunications(cateringId: string) {
+    const res = await fetch(`${API_BASE}/catering/${cateringId}/communications`);
+    if (!res.ok) throw new Error('Failed to fetch communications history');
+    return res.json();
+  },
+};

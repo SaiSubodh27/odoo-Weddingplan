@@ -6,6 +6,13 @@ from app.models.document import RegistrationDocument
 from app.models.user import UserAccount, ActivationToken
 from app.models.email_message import EmailMessage, EmailAttachment
 from app.models.project import WeddingProject, WeddingFunction, ProjectMilestone, ProjectStatusHistory
+from app.models.vendor import Vendor
+from app.models.catering import (
+    CateringPlan,
+    CateringMenuItem,
+    CateringQuotation,
+    CateringCommunicationLog
+)
 
 __all__ = [
     "Base",
@@ -22,4 +29,9 @@ __all__ = [
     "WeddingFunction",
     "ProjectMilestone",
     "ProjectStatusHistory",
+    "Vendor",
+    "CateringPlan",
+    "CateringMenuItem",
+    "CateringQuotation",
+    "CateringCommunicationLog",
 ]

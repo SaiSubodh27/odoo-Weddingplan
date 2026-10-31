@@ -38,6 +38,7 @@ class WeddingProject(Base):
     functions = relationship("WeddingFunction", back_populates="project", cascade="all, delete-orphan", order_by="WeddingFunction.function_date")
     milestones = relationship("ProjectMilestone", back_populates="project", cascade="all, delete-orphan", order_by="ProjectMilestone.due_date")
     status_history = relationship("ProjectStatusHistory", back_populates="project", cascade="all, delete-orphan", order_by="desc(ProjectStatusHistory.id)")
+    catering_plans = relationship("CateringPlan", back_populates="project", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<WeddingProject {self.project_code}: {self.project_name} ({self.status})>"

@@ -19,8 +19,10 @@ import {
   X,
   CheckCircle,
   ExternalLink,
-  IndianRupee
+  IndianRupee,
+  UtensilsCrossed
 } from 'lucide-react';
+import { CateringTab } from '../components/catering/CateringTab';
 import { projectApi } from '../services/api';
 import { 
   WeddingProject, 
@@ -38,7 +40,7 @@ export const ProjectDetailsPage: React.FC = () => {
 
   const [project, setProject] = useState<WeddingProject | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'functions' | 'milestones' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'functions' | 'catering' | 'milestones' | 'history'>('overview');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Modals state
@@ -225,6 +227,7 @@ export const ProjectDetailsPage: React.FC = () => {
         {[
           { key: 'overview', label: 'Overview & Specs', icon: Building2 },
           { key: 'functions', label: `Wedding Functions (${project.functions.length})`, icon: Calendar },
+          { key: 'catering', label: 'Catering & Menus', icon: UtensilsCrossed },
           { key: 'milestones', label: `Milestones (${completedMilestones}/${totalMilestones})`, icon: CheckCircle2 },
           { key: 'history', label: `Status History (${project.statusHistory.length})`, icon: History },
         ].map((tab) => {
@@ -598,7 +601,12 @@ export const ProjectDetailsPage: React.FC = () => {
         );
       })()}
 
-      {/* TAB 3: MILESTONES & TIMELINE */}
+      {/* TAB 3: CATERING & MENUS */}
+      {activeTab === 'catering' && (
+        <CateringTab project={project} onRefresh={fetchProjectDetails} />
+      )}
+
+      {/* TAB 4: MILESTONES & TIMELINE */}
       {activeTab === 'milestones' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-[#E5E0D8]">

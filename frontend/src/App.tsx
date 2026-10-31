@@ -16,6 +16,7 @@ import { ClientDetailsPage } from './pages/ClientDetailsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailsPage } from './pages/ProjectDetailsPage';
 import { WeddingsPage } from './pages/WeddingsPage';
+import { VendorsPage } from './pages/VendorsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 // Protected Route wrapper
@@ -57,6 +58,7 @@ export const AppContent: React.FC = () => {
         <Route path="projects/:id" element={<ProjectDetailsPage />} />
         <Route path="weddings" element={<ProjectsPage />} />
         <Route path="weddings-calendar" element={<WeddingsPage />} />
+        <Route path="vendors" element={<VendorsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 
