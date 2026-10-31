@@ -333,6 +333,18 @@ def test_phone_enquiry_full_document_workflow():
     assert len(sent_docs) >= 1
     assert "The_Royal_Knot_Registration_Dossier" in sent_docs[0]["originalFilename"]
 
+    # Verify outgoing email in messages records attachment metadata
+    messages_res = client.get(f"/api/v1/enquiries/{enq_id}/messages")
+    assert messages_res.status_code == 200
+    out_msgs = [m for m in messages_res.json() if m["direction"] == "outgoing"]
+    assert len(out_msgs) >= 1
+    sent_msg = out_msgs[0]
+    assert len(sent_msg["attachments"]) >= 1
+    att_meta = sent_msg["attachments"][0]
+    assert "The_Royal_Knot_Registration_Dossier" in att_meta["originalFilename"]
+    assert att_meta["fileSize"] > 0
+    assert "downloadUrl" in att_meta
+
     # 3. Client returns completed and signed HTML form via email
     completed_html_bytes = b"<!DOCTYPE html><html><body><h1>Filled Form by Vikramaditya Rathore</h1></body></html>"
     return_email_res = client.post(
@@ -381,5 +393,42 @@ def test_phone_enquiry_full_document_workflow():
     assert reg_json["success"] is True
     assert "client_id" in reg_json
     assert "activation_url" in reg_json
+
+
+def test_send_document_smtp_failure_handling(monkeypatch):
+    """
+    Automated test verifies that SMTP failure is not reported as successful delivery.
+    When SMTP transmission fails, send-document must return HTTP 502 and NOT advance enquiry status.
+    """
+    uid = uuid.uuid4().hex[:6]
+    test_email = f"fail.smtp.{uid}@luxurytest.in"
+    create_res = client.post("/api/v1/enquiries", json={
+        "clientName": f"Test Fail Lead {uid}",
+        "email": test_email,
+        "phone": "+91 99999 11111",
+        "enquirySource": "Phone"
+    })
+    enq_id = create_res.json()["id"]
+
+    # Mock send_registration_document_email to simulate an SMTP network failure
+    from app.services.email_service import EmailService
+    def mock_failed_send(*args, **kwargs):
+        return {
+            "success": False,
+            "mode": "error",
+            "message_id": "<simulated_fail@theroyalknot.in>",
+            "message": "SMTP transmission failed: Connection refused to smtp.gmail.com:587"
+        }
+
+    monkeypatch.setattr(EmailService, "send_registration_document_email", mock_failed_send)
+
+    send_res = client.post(f"/api/v1/enquiries/{enq_id}/send-document")
+    assert send_res.status_code == 502
+    assert "failed to dispatch" in send_res.json()["detail"].lower()
+
+    # Verify enquiry status was NOT marked as 'Registration Document Sent'
+    enq_check = client.get(f"/api/v1/enquiries/{enq_id}").json()
+    assert enq_check["status"] == "New"
+    assert enq_check["registrationSentAt"] is None
 
 

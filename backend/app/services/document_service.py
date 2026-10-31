@@ -183,7 +183,7 @@ class DocumentService:
     def generate_blank_registration_form_html(cls, enquiry: Enquiry) -> str:
         """
         Generates a clean, professional, printable Royal Knot Client Registration Form.
-        Pre-fills initial enquiry details while providing fields for couple signatures and wedding choices.
+        Pre-fills initial enquiry details while providing fields for couple signatures, wedding events, and choices.
         """
         agency_email = settings.AGENCY_EMAIL
         budget_str = f"₹ {enquiry.estimated_budget:,.0f}" if enquiry.estimated_budget else ""
@@ -203,7 +203,7 @@ class DocumentService:
     body {{
       font-family: 'Georgia', 'Times New Roman', serif;
       margin: 40px auto;
-      max-width: 800px;
+      max-width: 850px;
       color: #1F2421;
       background: #FAF8F5;
       line-height: 1.6;
@@ -272,7 +272,7 @@ class DocumentService:
       border-collapse: collapse;
       margin-bottom: 15px;
     }}
-    td {{
+    td, th {{
       padding: 10px 12px;
       border: 1px solid #E5E0D8;
       font-size: 13px;
@@ -342,7 +342,7 @@ class DocumentService:
           <td><input type="text" placeholder="Full legal name of fiancé / partner" /></td>
         </tr>
         <tr>
-          <td class="label">Primary Email:</td>
+          <td class="label">Primary Email Address:</td>
           <td><input type="text" value="{enquiry.email}" /></td>
         </tr>
         <tr>
@@ -358,8 +358,8 @@ class DocumentService:
       <div class="section-title">2. Destination Wedding Parameters</div>
       <table>
         <tr>
-          <td class="label">Target Wedding Date:</td>
-          <td><input type="text" value="{date_str}" placeholder="DD/MM/YYYY or season (e.g. November 2027)" /></td>
+          <td class="label">Target Wedding Date(s):</td>
+          <td><input type="text" value="{date_str}" placeholder="e.g. 26-28 November 2027 (3 Days)" /></td>
         </tr>
         <tr>
           <td class="label">Preferred Destination / Venue:</td>
@@ -371,27 +371,92 @@ class DocumentService:
         </tr>
         <tr>
           <td class="label">Estimated Wedding Budget:</td>
-          <td><input type="text" value="{budget_str}" placeholder="e.g. ₹ 3,00,00,000 (3 Crores)" /></td>
+          <td><input type="text" value="{budget_str}" placeholder="e.g. ₹ 3,50,00,000 (3.5 Crores)" /></td>
         </tr>
         <tr>
           <td class="label">Design Aesthetic / Theme:</td>
-          <td><input type="text" placeholder="e.g. Royal Marwar Heritage, Twilight Palace Glamour, Ivory & Antique Gold" /></td>
+          <td><input type="text" placeholder="e.g. Royal Rajputana Splendor, Twilight Palace Glamour, Ivory & Antique Gold" /></td>
         </tr>
       </table>
 
-      <div class="section-title">3. Service Tier Selection & Special Requests</div>
+      <div class="section-title">3. Wedding Functions & Key Events Planned</div>
+      <table>
+        <thead>
+          <tr style="background: #FAF8F5; text-align: left;">
+            <th style="width: 25%;">Event / Function</th>
+            <th style="width: 25%;">Target Date / Time</th>
+            <th style="width: 50%;">Preferred Venue & Experience Vision</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Welcome Dinner & Mehndi</strong></td>
+            <td><input type="text" placeholder="Day 1 Afternoon / Evening" /></td>
+            <td><input type="text" placeholder="Lakeside courtyard or palace terrace with folk music" /></td>
+          </tr>
+          <tr>
+            <td><strong>Royal Sangeet & Cocktail</strong></td>
+            <td><input type="text" placeholder="Day 2 Evening" /></td>
+            <td><input type="text" placeholder="Grand ballroom / palace lawn with concert staging" /></td>
+          </tr>
+          <tr>
+            <td><strong>Haldi & Chuda Rituals</strong></td>
+            <td><input type="text" placeholder="Day 3 Morning" /></td>
+            <td><input type="text" placeholder="Yellow marigold canopy, poolside floral showers" /></td>
+          </tr>
+          <tr>
+            <td><strong>Mandap, Baraat & Pheras</strong></td>
+            <td><input type="text" placeholder="Day 3 Evening / Sunset" /></td>
+            <td><input type="text" placeholder="Vintage car / elephant procession, floating lake mandap" /></td>
+          </tr>
+          <tr>
+            <td><strong>Grand Palace Reception</strong></td>
+            <td><input type="text" placeholder="Day 3 Night" /></td>
+            <td><input type="text" placeholder="Black-tie gala dinner, royal Mewari feast & pyrotechnics" /></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="section-title">4. Service Tier & Agency Retainer Scope</div>
       <table>
         <tr>
           <td class="label">Requested Service Package:</td>
           <td>
             <label style="margin-right: 15px;"><input type="radio" name="pkg" checked /> Full-Service Royal Concierge</label>
-            <label style="margin-right: 15px;"><input type="radio" name="pkg" /> Partial Planning</label>
-            <label><input type="radio" name="pkg" /> Day-of Coordination</label>
+            <label style="margin-right: 15px;"><input type="radio" name="pkg" /> Partial-Service Planning</label>
+            <label><input type="radio" name="pkg" /> Executive Day-of Coordination</label>
           </td>
         </tr>
         <tr>
-          <td class="label">Special Culinary & Vendor Requests:</td>
-          <td><textarea rows="3">{enquiry.requirements or ''}</textarea></td>
+          <td class="label">Key Planning Services Needed:</td>
+          <td>
+            <label style="margin-right: 15px;"><input type="checkbox" checked /> Palace Venue Sourcing</label>
+            <label style="margin-right: 15px;"><input type="checkbox" checked /> Royal Artist & Entertainment</label>
+            <label style="margin-right: 15px;"><input type="checkbox" checked /> Bespoke Spatial Decor</label>
+            <label><input type="checkbox" checked /> Guest Logistics & Airport Fleet</label>
+          </td>
+        </tr>
+      </table>
+
+      <div class="section-title">5. Culinary, Vendor & Special Requirements</div>
+      <table>
+        <tr>
+          <td class="label">Catering & Culinary Framework:</td>
+          <td>
+            <input type="text" placeholder="e.g. Royal Marwari Maharaj cuisine, Jain counter, Modern European & Asian" />
+          </td>
+        </tr>
+        <tr>
+          <td class="label">Special Vendor Requirements:</td>
+          <td><textarea rows="3" placeholder="Specific photographers, floral designers, sound engineers, or stylists requested">{enquiry.requirements or ''}</textarea></td>
+        </tr>
+      </table>
+
+      <div class="section-title">6. Additional Notes & VIP Family Protocols</div>
+      <table>
+        <tr>
+          <td class="label">Confidential Notes / Requests:</td>
+          <td><textarea rows="3" placeholder="Security protocols, private air charter / helicopter transfers, elderly assistance, or bespoke rituals"></textarea></td>
         </tr>
       </table>
 

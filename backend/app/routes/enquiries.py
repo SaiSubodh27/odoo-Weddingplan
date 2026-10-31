@@ -300,6 +300,12 @@ def send_registration_document(
         db=db
     )
 
+    if not email_result.get("success", False):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to dispatch registration document email: {email_result.get('message', 'SMTP transmission failed')}"
+        )
+
     enquiry_service.mark_document_sent(db=db, enquiry_id=enquiry_id)
 
     # Note
@@ -307,7 +313,7 @@ def send_registration_document(
         db=db,
         enquiry_id=enquiry_id,
         author="Agency Staff",
-        content=f"Dispatched formal Client Registration Document to {enquiry.email}."
+        content=f"Dispatched formal Client Registration Document with attachment to {enquiry.email}."
     )
 
     return {

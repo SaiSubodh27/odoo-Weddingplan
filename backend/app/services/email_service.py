@@ -177,6 +177,21 @@ class EmailService:
                     sent_at=now
                 )
                 db.add(db_msg)
+
+                # Persist attachment records if any
+                if attachments:
+                    for att in attachments:
+                        att_id = f"ATT-OUT-{uuid.uuid4().hex[:10].upper()}"
+                        db_att = EmailAttachment(
+                            id=att_id,
+                            email_message_id=msg_id,
+                            original_filename=att.get("filename", "document.html"),
+                            stored_filename=att.get("stored_filename", att.get("filename", "document.html")),
+                            file_size=len(att.get("content", b"")),
+                            mime_type=att.get("mime_type", "text/html")
+                        )
+                        db.add(db_att)
+
                 db.commit()
 
             return {
@@ -209,6 +224,21 @@ class EmailService:
                     sent_at=now
                 )
                 db.add(db_msg)
+
+                # Persist attachment records if any
+                if attachments:
+                    for att in attachments:
+                        att_id = f"ATT-OUT-{uuid.uuid4().hex[:10].upper()}"
+                        db_att = EmailAttachment(
+                            id=att_id,
+                            email_message_id=msg_id,
+                            original_filename=att.get("filename", "document.html"),
+                            stored_filename=att.get("stored_filename", att.get("filename", "document.html")),
+                            file_size=len(att.get("content", b"")),
+                            mime_type=att.get("mime_type", "text/html")
+                        )
+                        db.add(db_att)
+
                 db.commit()
 
             return {
