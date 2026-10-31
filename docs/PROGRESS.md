@@ -1,13 +1,14 @@
-# The Royal Knot — Progress Tracker
+# Implementation Progress - The Royal Knot
 
-## Status Summary
-- **Current Branch:** `integration/final`
-- **Backup Tags Created:**
-  - `backup/main-20261101`
-  - `backup/feature-service-agreement-20261101`
-  - `backup/front_end(j07)-20261101`
-  - `backup/feature-phase-3-wedding-project-management-20261101`
-  - `backup/phase-4-20261101`
-- **Step 1:** Completed. Merged 3 branches into `integration/final` in order of diff size (`front_end(j07)`, `feature/service-agreement`, `phase-3/4`). Verified 47 backend tests pass and frontend builds cleanly. Created `docs/GAPS.md`.
-- **Database:** Local PostgreSQL (`royal_knot_db` / `royalknot_demo`) verified.
-- **Next Step:** Step 2: Build the remaining work in priority order (P0: Agreement Gate -> Quotes -> Deposit/Tasks -> Founder Profit, P1: Big Day -> Settlement -> Client Overview, P2: Founder Season View -> Vendor Area -> Catering check, P3: Polish).
+## Step 1: Gap Check
+- Comprehensive gap check completed. Initial checklist and gap matrix established.
+
+## Step 2: Build Remaining Work
+- **P0 Item 1: Agreement Gate (COMPLETED)**
+  - Unified AgreementService with in-app client OTP signing (10-min expiry, 5 attempts, SHA-256 hashed) and agency electronic signature workflows (Zoho Sign & Leegality).
+  - Digital signature PDF generation with cryptographic SHA-256 audit block, timestamp, IP, User Agent, and consent tracking.
+  - Idempotent signature handling: re-signing returns existing signed agreement record.
+  - Backend `require_signed_agreement` middleware enforcing 403 `AGREEMENT_REQUIRED` + `X-Agreement-Required: true`.
+  - Frontend auto-redirect to `/agreement` via `ProtectedRoute` and global fetch interceptor.
+  - Planners can access and download executed signed PDF.
+  - 37/37 tests passing (`test_service_agreement_otp_signing.py`, `test_zoho_sign_polling.py`, `test_service_agreement_workflow.py`).

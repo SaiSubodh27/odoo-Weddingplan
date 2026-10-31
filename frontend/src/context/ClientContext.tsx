@@ -36,6 +36,8 @@ const ClientContext = createContext<ClientContextType | undefined>(undefined);
 const STORAGE_KEY = 'the_royal_knot_clients_v1';
 const AUTH_KEY = 'the_royal_knot_auth_v1';
 const TOKEN_KEY = 'the_royal_knot_token_v1';
+const USER_KEY = 'the_royal_knot_user_v1';
+const CLIENT_ID_KEY = 'the_royal_knot_client_id_v1';
 const DETAILS_COMPLETED_KEY = 'the_royal_knot_details_completed_v1';
 const AGREEMENT_SIGNED_KEY = 'the_royal_knot_agreement_signed_v1';
 const AGREEMENT_ID_KEY = 'the_royal_knot_agreement_id_v1';
@@ -119,12 +121,36 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const [currentUser, setCurrentUser] = useState({
-    name: 'Maharani Gayatri Singh',
-    role: 'Principal Wedding Planner',
-    email: 'gayatri@theroyalknot.in',
-    clientId: undefined as string | undefined
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem(USER_KEY);
+      if (savedUser) return JSON.parse(savedUser);
+    } catch (_) {}
+    return {
+      name: 'Maharani Gayatri Singh',
+      role: 'Principal Wedding Planner',
+      email: 'gayatri@theroyalknot.in',
+      clientId: undefined as string | undefined
+    };
   });
+
+  // Global interceptor for 403 AGREEMENT_REQUIRED
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      if (response.status === 403) {
+        const isAgr = response.headers.get("x-agreement-required") === "true";
+        if (isAgr && window.location.pathname !== "/agreement") {
+          window.location.href = "/agreement";
+        }
+      }
+      return response;
+    };
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
 
   // Check and fetch from PostgreSQL backend
   useEffect(() => {
@@ -173,12 +199,19 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setAgreementId(details.agreementId);
     }
 
-    setCurrentUser({
+    const userObj = {
       email: email || 'planner@theroyalknot.in',
       name: details?.name || email.split('@')[0].replace('.', ' ').replace(/^\w/, c => c.toUpperCase()) || 'Agency Staff',
       role: details?.role || (isStaff ? 'Principal Wedding Planner' : 'Client Workspace'),
-      clientId: details?.clientId
-    });
+      clientId: details?.clientId || localStorage.getItem(CLIENT_ID_KEY) || undefined
+    };
+    setCurrentUser(userObj);
+    try {
+      localStorage.setItem(USER_KEY, JSON.stringify(userObj));
+      if (details?.clientId) {
+        localStorage.setItem(CLIENT_ID_KEY, details.clientId);
+      }
+    } catch (_) {}
   };
 
   const logout = () => {
@@ -188,6 +221,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.removeItem(DETAILS_COMPLETED_KEY);
     localStorage.removeItem(AGREEMENT_SIGNED_KEY);
     localStorage.removeItem(AGREEMENT_ID_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(CLIENT_ID_KEY);
   };
 
   const addClient = (newClientData: Omit<Client, 'id' | 'createdAt'>): string => {

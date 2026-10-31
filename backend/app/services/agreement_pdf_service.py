@@ -252,12 +252,12 @@ def generate_service_agreement_pdf(agreement: ServiceAgreement, output_path: Opt
     if agreement.milestones:
         for m in agreement.milestones:
             milestones_rows.append([
-                Paragraph(str(m.sequence_order), style_body),
-                Paragraph(m.milestone_name, style_body),
-                Paragraph(f"{m.percentage}%", style_body),
-                Paragraph(format_inr(m.amount), style_body),
-                Paragraph(m.due_description, style_body),
-                Paragraph(f"<b>{m.status}</b>", style_body)
+                Paragraph(str(getattr(m, "sequence_order", "")), style_body),
+                Paragraph(str(getattr(m, "milestone_name", getattr(m, "name", "Milestone"))), style_body),
+                Paragraph(f"{getattr(m, 'percentage', '')}%", style_body),
+                Paragraph(format_inr(getattr(m, "amount", 0)), style_body),
+                Paragraph(str(getattr(m, "due_description", getattr(m, "description", ""))), style_body),
+                Paragraph(f"<b>{getattr(m, 'status', 'PENDING')}</b>", style_body)
             ])
     else:
         milestones_rows.append([

@@ -139,11 +139,12 @@ export const ClientIntakePage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const clientId = currentUser.clientId;
+      let clientId = currentUser.clientId || localStorage.getItem('the_royal_knot_client_id_v1') || undefined;
+      const clientEmail = email.trim().toLowerCase();
       const payload = {
         partner1Name: partner1Name.trim(),
         partner2Name: partner2Name.trim(),
-        email: email.trim().toLowerCase(),
+        email: clientEmail,
         phone: phone.trim(),
         weddingDate,
         weddingLocation: weddingLocation.trim(),
@@ -154,6 +155,18 @@ export const ClientIntakePage: React.FC = () => {
         additionalRequirements: additionalRequirements.trim() || undefined,
         status: 'Agreement Pending'
       };
+
+      // If clientId is not set, try finding by email
+      if (!clientId && clientEmail) {
+        try {
+          const sRes = await fetch(`http://localhost:8000/api/v1/clients/search?query=${encodeURIComponent(clientEmail)}`);
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            const match = sData.items?.find((c: any) => c.email.toLowerCase() === clientEmail);
+            if (match) clientId = match.id;
+          }
+        } catch (_) {}
+      }
 
       if (clientId) {
         // Update client dossier in backend
@@ -167,15 +180,33 @@ export const ClientIntakePage: React.FC = () => {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.detail || 'Failed to save celebration details.');
         }
-
-        // Fetch or create agreement for client
-        const agrRes = await fetch(`http://localhost:8000/api/v1/agreements/client/${clientId}`);
-        if (agrRes.ok) {
-          const agrData = await agrRes.json();
-          if (agrData && agrData.id) {
-            setAgreementId(agrData.id);
+      } else {
+        // Create new client record if not already present
+        const cRes = await fetch('http://localhost:8000/api/v1/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (cRes.ok) {
+          const cData = await cRes.json();
+          if (cData && cData.id) {
+            clientId = cData.id;
           }
         }
+      }
+
+      if (clientId) {
+        localStorage.setItem('the_royal_knot_client_id_v1', clientId);
+        // Fetch or create agreement for client
+        try {
+          const agrRes = await fetch(`http://localhost:8000/api/v1/agreements/client/${clientId}`);
+          if (agrRes.ok) {
+            const agrData = await agrRes.json();
+            if (agrData && agrData.id) {
+              setAgreementId(agrData.id);
+            }
+          }
+        } catch (_) {}
       }
 
       // Mark details intake completed

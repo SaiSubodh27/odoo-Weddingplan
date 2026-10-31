@@ -4,19 +4,9 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 import re
 
-RegistrationStatusType = Literal[
-    "Enquiry",
-    "Registration Pending",
-    "Registered",
-    "Agreement Pending",
-    "Confirmed"
-]
+RegistrationStatusType = str
 
-ServicePackageType = Literal[
-    "Full-Service",
-    "Partial-Service",
-    "Day-of Coordination"
-]
+ServicePackageType = str
 
 EnquirySourceType = str
 
@@ -92,6 +82,25 @@ class ClientUpdate(BaseModel):
     enquiry_source: Optional[EnquirySourceType] = Field(None, alias="enquirySource")
     notes: Optional[str] = Field(None)
     status: Optional[RegistrationStatusType] = Field(None)
+
+    @field_validator("estimated_budget", mode="before")
+    def parse_budget_update_input(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, (int, float, Decimal)):
+            return Decimal(str(v))
+        if isinstance(v, str):
+            clean = v.replace("₹", "").replace(",", "").strip()
+            if not clean:
+                return None
+            if "cr" in clean.lower():
+                num = float(clean.lower().replace("cr", "").strip())
+                return Decimal(str(int(num * 10_000_000)))
+            if "lakh" in clean.lower():
+                num = float(clean.lower().replace("lakh", "").replace("s", "").strip())
+                return Decimal(str(int(num * 100_000)))
+            return Decimal(clean)
+        return v
 
 
 class ClientResponse(ClientBase):

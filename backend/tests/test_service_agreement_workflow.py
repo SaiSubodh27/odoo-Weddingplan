@@ -47,6 +47,10 @@ def db_session():
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     
+    from app.core.config import settings
+    settings.LEEGALITY_ENV = 'mock'
+    leegality_client.env = 'mock'
+
     # Seed a registered client
     test_client = Client(
         id="CLT-TEST-001",
