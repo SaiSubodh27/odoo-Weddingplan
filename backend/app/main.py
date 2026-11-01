@@ -19,6 +19,8 @@ from app.routes.catering import router as catering_router
 from app.routes.agreements import router as agreements_router
 from app.routes.service_agreements import router as service_agreements_router
 from app.routes.webhooks import router as webhooks_router
+from app.routes.founder import router as founder_router
+from app.routes.vendor_portal import router as vendor_portal_router
 from app.services.email_sync_service import email_sync_service
 
 logger = logging.getLogger("royal_knot")
@@ -138,6 +140,8 @@ app.include_router(catering_router, prefix=settings.API_V1_STR)
 app.include_router(agreements_router, prefix=settings.API_V1_STR)
 app.include_router(service_agreements_router, prefix=f"{settings.API_V1_STR}/service-agreements")
 app.include_router(webhooks_router, prefix=f"{settings.API_V1_STR}/webhooks")
+app.include_router(founder_router, prefix=f"{settings.API_V1_STR}/founder")
+app.include_router(vendor_portal_router, prefix=f"{settings.API_V1_STR}/vendor-portal")
 
 
 # Top-level /health route
