@@ -76,3 +76,16 @@
   - Verified formal catering specification PDF generation and download (`%PDF-` verified).
   - Verified authentic WhatsApp deep-link generation (`wa.me`) with pre-filled message formatting and communication audit logging.
   - Tests passing (`backend/tests/test_p2_founder_and_vendor_portal.py`).
+
+## Step 3: Sample Data and Proof Verification
+- [x] **Idempotent Demo Database Seeder (`scripts/seed-demo`):**
+  - Strict non-dev database guard refusing execution if host/db does not match local dev patterns.
+  - Seeds core accounts (1 founder, 2 senior planners, 1 hero couple).
+  - Seeds 20 luxury Rajasthan vendors including 3 competing caterers (Mewar, Rajputana, Udaipur Heritage).
+  - Seeds 8 operational wedding celebrations covering all stages (Hero Udaipur wedding at enquiry, loss-making palace wedding with -27L gross margin, 60-extra gala dinner plates wedding with settlement payouts, live Big Day with late alerts, completed wedding, planning with 28 tasks).
+  - Verified 100% idempotent: running repeatedly leaves record counts and IDs unchanged.
+
+- [x] **Comprehensive End-to-End User Story Test (`backend/tests/test_e2e_complete_wedding_journey.py`):**
+  - Runs full lifecycle from Aarav & Meera hero enquiry through digital agreement signing, 3 caterer quote comparison, atomic winner selection, deposit payment, 28-task template generation, Big Day live schedule check-in, settlement extras, idempotent vendor payouts, and founder profitability.
+  - 100% hand-written financial expectations (₹3,54,00,000 receipts, ₹2,02,75,000 vendor costs, ₹18,00,000 labor costs -> ₹1,33,25,000 founder gross profit, 37.64% margin).
+  - All assertions green and verified.

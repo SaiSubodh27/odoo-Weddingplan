@@ -129,30 +129,16 @@ class AgreementPaymentMilestone(Base):
     version_number = Column(Integer, nullable=False, default=1)
     sequence_order = Column(Integer, nullable=False, default=1)
 
-    name = Column(String(150), nullable=False)  # e.g. Advance Booking Fee (25%)
-    percentage = Column(Numeric(5, 2), nullable=False)  # e.g. 25.00
+    name = Column(String(150), nullable=True)
+    milestone_name = Column(String(150), nullable=True)
+    percentage = Column(Numeric(5, 2), nullable=False)
     amount = Column(Numeric(15, 2), nullable=False)
     due_date = Column(Date, nullable=False)
     description = Column(String(255), nullable=True)
+    due_description = Column(String(255), nullable=True)
     status = Column(String(50), nullable=False, default="PENDING")
 
     agreement = relationship("ServiceAgreement", back_populates="milestones")
-
-    @property
-    def milestone_name(self):
-        return self.name
-
-    @milestone_name.setter
-    def milestone_name(self, value):
-        self.name = value
-
-    @property
-    def due_description(self):
-        return self.description
-
-    @due_description.setter
-    def due_description(self, value):
-        self.description = value
 
     def __repr__(self):
         return f"<AgreementPaymentMilestone {self.name}: {self.amount}>"

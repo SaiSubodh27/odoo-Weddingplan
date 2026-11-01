@@ -33,6 +33,7 @@ from app.schemas.agreement import (
 from app.services.pdf_service import pdf_service
 from app.services.zoho_sign_service import zoho_sign_client
 from app.services.leegality_service import leegality_client
+from app.services.email_service import EmailService
 
 
 
@@ -968,8 +969,8 @@ class AgreementService:
                 html_content=email_body
             )
         except Exception as e:
-            # Fallback for offline dev
-            pass
+            import logging
+            logging.getLogger("royal_knot.otp").warning(f"OTP email dispatch failed: {e}")
 
         return SendOTPResponse(
             success=True,
