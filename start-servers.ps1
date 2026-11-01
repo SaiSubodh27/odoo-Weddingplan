@@ -19,12 +19,26 @@ Write-Host ""
     }
 }
 
+# Resolve project root and python path dynamically
+$rootDir = $PSScriptRoot
+$backendDir = Join-Path $rootDir "backend"
+
+$pythonExe = "python"
+if (Test-Path "C:\RoyalKnot\venv\Scripts\python.exe") {
+    $pythonExe = "C:\RoyalKnot\venv\Scripts\python.exe"
+} elseif (Test-Path (Join-Path $backendDir ".venv\Scripts\python.exe")) {
+    $pythonExe = Join-Path $backendDir ".venv\Scripts\python.exe"
+} elseif (Test-Path (Join-Path $rootDir ".venv\Scripts\python.exe")) {
+    $pythonExe = Join-Path $rootDir ".venv\Scripts\python.exe"
+}
+
 # Start Backend
 Write-Host "  [1/2] Starting FastAPI backend on http://127.0.0.1:8000 ..." -ForegroundColor Cyan
 $backendJob = Start-Job -ScriptBlock {
-    Set-Location "c:\Users\saisu\OneDrive\Desktop\odoo-Weddingplan\backend"
-    .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-}
+    param($bDir, $py)
+    Set-Location $bDir
+    & $py -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+} -ArgumentList $backendDir, $pythonExe
 
 Start-Sleep -Seconds 4
 
@@ -48,9 +62,10 @@ if ($backendOk) {
 # Start Frontend
 Write-Host "  [2/2] Starting Vite frontend on http://localhost:5173 ..." -ForegroundColor Cyan
 $frontendJob = Start-Job -ScriptBlock {
-    Set-Location "c:\Users\saisu\OneDrive\Desktop\odoo-Weddingplan"
+    param($rDir)
+    Set-Location $rDir
     npm --prefix frontend run dev
-}
+} -ArgumentList $rootDir
 
 Start-Sleep -Seconds 3
 
@@ -78,4 +93,3 @@ try {
     Write-Host ""
     Write-Host "  Servers stopped." -ForegroundColor Gray
 }
-
