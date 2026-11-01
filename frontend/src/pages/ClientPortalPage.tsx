@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
 import { authApi } from '../services/api';
 import {
@@ -14,10 +14,13 @@ import {
   CheckCircle2,
   LogOut,
   Building,
+  FileText,
+  ArrowRight,
+  ClipboardList
 } from 'lucide-react';
 
 export const ClientPortalPage: React.FC = () => {
-  const { currentUser, logout } = useClients();
+  const { currentUser, logout, hasSignedAgreement } = useClients();
   const navigate = useNavigate();
 
   const [dossier, setDossier] = useState<any | null>(null);
@@ -59,8 +62,25 @@ export const ClientPortalPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs">
-            <div className="hidden sm:block text-right">
+          <div className="flex items-center gap-3 sm:gap-4 text-xs">
+            {/* Quick Navigation Links */}
+            <Link
+              to="/agreement"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#9E7D3B] hover:text-[#1F2421] border border-[#E5E0D8] bg-[#FAF8F5] hover:bg-white transition-colors"
+            >
+              <FileText size={13} />
+              <span className="hidden sm:inline">Service Agreement</span>
+            </Link>
+
+            <Link
+              to="/client-intake"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#736F68] hover:text-[#1F2421] border border-[#E5E0D8] bg-[#FAF8F5] hover:bg-white transition-colors"
+            >
+              <ClipboardList size={13} />
+              <span className="hidden sm:inline">Celebration Details</span>
+            </Link>
+
+            <div className="hidden md:block text-right border-l border-[#E5E0D8] pl-4">
               <div className="font-medium text-[#1F2421]">{currentUser.name || 'Private Client'}</div>
               <div className="text-[10px] text-[#8C877D]">{currentUser.email}</div>
             </div>
@@ -96,8 +116,8 @@ export const ClientPortalPage: React.FC = () => {
 
             <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
               <span className="text-[10px] uppercase tracking-wider text-[#8C877D]">Dossier Status</span>
-              <span className="px-3 py-1 bg-[#F0F4FA] text-[#1D4E89] border border-[#B5CEEB] text-xs font-semibold uppercase tracking-wider">
-                {dossier?.status ? dossier.status.replace('_', ' ') : 'Registration Submitted'}
+              <span className="px-3 py-1 bg-[#EBF3ED] text-[#2D5A3C] border border-[#C3D9C9] text-xs font-semibold uppercase tracking-wider">
+                {dossier?.status ? dossier.status.replace('_', ' ') : 'Confirmed'}
               </span>
               {dossier?.enquiryId && (
                 <span className="text-[11px] font-mono text-[#8C877D]">
@@ -120,23 +140,30 @@ export const ClientPortalPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="p-4 bg-white border border-[#E8D49E] bg-[#FDF6E2]/40">
-            <div className="flex items-center gap-2 text-[#8C6D1F] text-xs font-semibold uppercase tracking-wider mb-1">
-              <Clock size={14} />
-              <span>2. Concierge Review</span>
+          <div className="p-4 bg-white border border-[#C3D9C9] bg-[#EBF3ED]/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#2D5A3C] text-xs font-semibold uppercase tracking-wider mb-1">
+                <CheckCircle2 size={14} />
+                <span>2. Service Agreement</span>
+              </div>
+              <Link to="/agreement" className="text-[10px] text-[#9E7D3B] hover:underline flex items-center gap-0.5">
+                View <ArrowRight size={10} />
+              </Link>
             </div>
             <p className="text-[11px] text-[#736F68]">
-              Senior wedding directors are reviewing palace availability and guest logistics.
+              {hasSignedAgreement 
+                ? 'Legally executed & digitally ratified by client.' 
+                : 'Service agreement ratified with 18% GST and payment schedule.'}
             </p>
           </div>
 
-          <div className="p-4 bg-white border border-[#E5E0D8]">
-            <div className="flex items-center gap-2 text-[#8C877D] text-xs font-semibold uppercase tracking-wider mb-1">
-              <Sparkles size={14} />
-              <span>3. Master Blueprint Consultation</span>
+          <div className="p-4 bg-white border border-[#E8D49E] bg-[#FDF6E2]/40">
+            <div className="flex items-center gap-2 text-[#8C6D1F] text-xs font-semibold uppercase tracking-wider mb-1">
+              <Clock size={14} />
+              <span>3. Concierge Review</span>
             </div>
-            <p className="text-[11px] text-[#8C877D]">
-              Formal presentation of ceremonial decor, artist lineups, and luxury hospitality.
+            <p className="text-[11px] text-[#736F68]">
+              Senior wedding directors are finalizing palace layouts, catering & vendor crew.
             </p>
           </div>
         </div>
@@ -146,9 +173,17 @@ export const ClientPortalPage: React.FC = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Parameters Card */}
             <div className="bg-white border border-[#E5E0D8] p-6 space-y-6">
-              <div className="flex items-center gap-2 pb-4 border-b border-[#E5E0D8]">
-                <Calendar size={16} className="text-[#9E7D3B]" />
-                <h2 className="font-serif text-lg text-[#1F2421]">Registered Celebration Logistics</h2>
+              <div className="flex items-center justify-between pb-4 border-b border-[#E5E0D8]">
+                <div className="flex items-center gap-2">
+                  <Calendar size={16} className="text-[#9E7D3B]" />
+                  <h2 className="font-serif text-lg text-[#1F2421]">Registered Celebration Logistics</h2>
+                </div>
+                <Link
+                  to="/client-intake"
+                  className="text-xs text-[#9E7D3B] hover:underline font-medium flex items-center gap-1"
+                >
+                  Edit Logistics <ArrowRight size={12} />
+                </Link>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
@@ -239,8 +274,27 @@ export const ClientPortalPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column: Concierge Team Card */}
+          {/* Right Column: Concierge Team Card & Agreement Access */}
           <div className="space-y-6">
+            <div className="bg-white border border-[#E5E0D8] p-6 space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-[#E5E0D8]">
+                <FileText size={16} className="text-[#9E7D3B]" />
+                <h3 className="font-serif text-base text-[#1F2421]">Service Agreement</h3>
+              </div>
+
+              <p className="text-xs text-[#736F68] leading-relaxed">
+                Your legally binding service agreement outlining milestone disbursements, GST invoice schedules, and cancellation covenants.
+              </p>
+
+              <Link
+                to="/agreement"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-wider font-medium hover:bg-[#343733] transition-colors"
+              >
+                <span>Review Service Agreement</span>
+                <ArrowRight size={13} className="text-[#D9C496]" />
+              </Link>
+            </div>
+
             <div className="bg-white border border-[#E5E0D8] p-6 space-y-4">
               <div className="flex items-center gap-2 pb-3 border-b border-[#E5E0D8]">
                 <Building size={16} className="text-[#9E7D3B]" />

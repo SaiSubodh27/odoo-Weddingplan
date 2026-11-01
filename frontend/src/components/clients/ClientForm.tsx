@@ -18,7 +18,7 @@ export const ClientForm: React.FC = () => {
   const [weddingLocation, setWeddingLocation] = useState('The Leela Palace, Udaipur');
   const [expectedGuestCount, setExpectedGuestCount] = useState<number>(300);
   const [estimatedBudget, setEstimatedBudget] = useState('₹ 1.50 Cr');
-  const [weddingTheme, setWeddingTheme] = useState('Royal Rajputana Heritage & Floating Candles');
+  const [weddingTheme, setWeddingTheme] = useState('Royal Rajputana Heritage and Floating Candles');
 
   const [servicePackage, setServicePackage] = useState<ServicePackage>('Full-Service');
   const [additionalRequirements, setAdditionalRequirements] = useState('');
@@ -203,7 +203,7 @@ export const ClientForm: React.FC = () => {
 
           <div>
             <label className="block text-xs uppercase tracking-wider text-[#736F68] font-medium mb-1.5">
-              Venue & Location *
+              Venue and Location *
             </label>
             <input
               type="text"
@@ -249,13 +249,13 @@ export const ClientForm: React.FC = () => {
 
           <div className="md:col-span-2">
             <label className="block text-xs uppercase tracking-wider text-[#736F68] font-medium mb-1.5">
-              Wedding Theme & Aesthetic Vision
+              Wedding Theme and Aesthetic Vision
             </label>
             <input
               type="text"
               value={weddingTheme}
               onChange={(e) => setWeddingTheme(e.target.value)}
-              placeholder="e.g. Royal Marwar Heritage with Floating Jasmine & Lantern Courtyards"
+              placeholder="e.g. Royal Marwar Heritage with Floating Jasmine and Lantern Courtyards"
               className="w-full px-3.5 py-2.5 text-xs bg-[#FAF8F5] border border-[#E5E0D8] text-[#1F2421] focus:outline-none focus:border-[#1F2421]"
             />
           </div>
@@ -266,7 +266,7 @@ export const ClientForm: React.FC = () => {
       <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-6 sm:p-8">
         <div className="flex items-center gap-2 mb-6 pb-4 border-b border-[#E5E0D8]">
           <Building2 size={16} className="text-[#9E7D3B]" />
-          <h2 className="font-serif text-xl text-[#1F2421]">3. Service Engagement & Requirements</h2>
+          <h2 className="font-serif text-xl text-[#1F2421]">3. Service Engagement and Requirements</h2>
         </div>
 
         <div className="space-y-6">
@@ -279,7 +279,7 @@ export const ClientForm: React.FC = () => {
                 {
                   id: 'Full-Service',
                   title: 'Full-Service Royal Concierge',
-                  desc: 'Comprehensive end-to-end planning, royal venue buyout, vendor curation & hospitality management.'
+                  desc: 'Comprehensive end-to-end planning, royal venue buyout, vendor curation and hospitality management.'
                 },
                 {
                   id: 'Partial-Service',
@@ -317,7 +317,7 @@ export const ClientForm: React.FC = () => {
 
           <div>
             <label className="block text-xs uppercase tracking-wider text-[#736F68] font-medium mb-1.5">
-              Additional Requirements & Special Requests
+              Additional Requirements and Special Requests
             </label>
             <textarea
               rows={3}
@@ -334,7 +334,7 @@ export const ClientForm: React.FC = () => {
       <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-6 sm:p-8">
         <div className="flex items-center gap-2 mb-6 pb-4 border-b border-[#E5E0D8]">
           <FileText size={16} className="text-[#9E7D3B]" />
-          <h2 className="font-serif text-xl text-[#1F2421]">4. Registration & Internal Notes</h2>
+          <h2 className="font-serif text-xl text-[#1F2421]">4. Registration and Internal Notes</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -395,7 +395,7 @@ export const ClientForm: React.FC = () => {
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-xs uppercase tracking-wider text-[#5C5850] bg-[#FAF8F5] border border-[#E5E0D8] hover:bg-[#F2EFE8] transition-colors"
         >
           <ArrowLeft size={14} />
-          <span>Cancel & Return</span>
+          <span>Cancel and Return</span>
         </button>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -405,7 +405,7 @@ export const ClientForm: React.FC = () => {
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 text-xs uppercase tracking-wider font-semibold text-[#FAF8F5] bg-[#1F2421] hover:bg-[#343733] border border-[#1F2421] transition-colors disabled:opacity-50"
           >
             <Sparkles size={14} className="text-[#D9C496]" />
-            <span>{isSubmitting ? 'Registering Client...' : 'Save & Register Client'}</span>
+            <span>{isSubmitting ? 'Registering Client...' : 'Save and Register Client'}</span>
           </button>
         </div>
       </div>

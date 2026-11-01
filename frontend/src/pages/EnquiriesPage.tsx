@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Enquiry, EnquiryStatus, EnquirySource } from '../types/enquiry';
-import { enquiryApi, registrationApi } from '../services/api';
+import { enquiryApi } from '../services/api';
 import { 
   Search, 
   Plus, 
@@ -11,10 +11,8 @@ import {
   Calendar, 
   MapPin, 
   Eye, 
-  Globe,
-  FileSpreadsheet,
-  Link as LinkIcon,
-  CheckCircle2
+  RotateCcw,
+  Globe
 } from 'lucide-react';
 
 export const getEnquiryStatusBadge = (status: EnquiryStatus) => {
@@ -25,7 +23,7 @@ export const getEnquiryStatusBadge = (status: EnquiryStatus) => {
     case 'Under Review':
       return 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49E] font-semibold';
     case 'Registration Submitted':
-      return 'bg-[#F0F4FA] text-[#1D4E89] border-[#B5CEEB] font-bold';
+      return 'bg-[#F0F4FA] text-[#1D4E89] border-[#B5CEEB] font-semibold';
     case 'Corrections Requested':
       return 'bg-[#FFF3E8] text-[#B85D1B] border-[#FAD3B4] font-semibold';
     case 'Registration Link Sent':
@@ -63,13 +61,6 @@ export const EnquiriesPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [sourceFilter, setSourceFilter] = useState<string>('All');
 
-  // Unmatched Google Forms Submissions
-  const [unmatchedRegs, setUnmatchedRegs] = useState<any[]>([]);
-  const [showUnmatched, setShowUnmatched] = useState<boolean>(false);
-  const [associatingId, setAssociatingId] = useState<string | null>(null);
-  const [selectedEnquiryId, setSelectedEnquiryId] = useState<string>('');
-  const [associateFeedback, setAssociateFeedback] = useState<string | null>(null);
-
   const fetchEnquiries = async () => {
     setIsLoading(true);
     try {
@@ -81,40 +72,16 @@ export const EnquiriesPage: React.FC = () => {
       });
       setEnquiries(data.items || []);
     } catch {
+      // Fallback empty if backend offline
       setEnquiries([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchUnmatchedRegistrations = async () => {
-    try {
-      const regs = await registrationApi.listRegistrations('UNMATCHED');
-      setUnmatchedRegs(regs || []);
-    } catch (err) {
-      console.error('Failed to load unmatched registrations', err);
-    }
-  };
-
   useEffect(() => {
     fetchEnquiries();
-    fetchUnmatchedRegistrations();
   }, [statusFilter, sourceFilter]);
-
-  const handleAssociate = async (registrationId: string) => {
-    if (!selectedEnquiryId) return;
-    try {
-      const res = await registrationApi.associateRegistration(registrationId, selectedEnquiryId);
-      setAssociateFeedback(res.message || 'Successfully associated registration with enquiry.');
-      setAssociatingId(null);
-      setSelectedEnquiryId('');
-      fetchEnquiries();
-      fetchUnmatchedRegistrations();
-      setTimeout(() => setAssociateFeedback(null), 4000);
-    } catch (err: any) {
-      alert(err.message || 'Failed to associate registration.');
-    }
-  };
 
   // Client-side quick filter on search query
   const filteredEnquiries = useMemo(() => {
@@ -129,6 +96,12 @@ export const EnquiriesPage: React.FC = () => {
     );
   }, [enquiries, searchTerm]);
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setSourceFilter('All');
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -139,7 +112,7 @@ export const EnquiriesPage: React.FC = () => {
           </div>
           <h1 className="font-serif text-3xl text-[#1F2421]">Wedding Enquiries</h1>
           <p className="text-xs text-[#736F68] mt-1">
-            Tracking luxury email, phone, and Google Forms client registrations before client onboarding.
+            Tracking luxury email and phone enquiries before client dossier registration.
           </p>
         </div>
 
@@ -151,100 +124,6 @@ export const EnquiriesPage: React.FC = () => {
           <span>Record New Enquiry</span>
         </Link>
       </div>
-
-      {/* Unmatched Google Forms Alert Banner */}
-      {unmatchedRegs.length > 0 && (
-        <div className="bg-[#FAF8F5] border border-[#9E7D3B] p-4 text-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[#1F2421]">
-              <FileSpreadsheet size={16} className="text-[#9E7D3B]" />
-              <span className="font-serif font-semibold text-sm">
-                {unmatchedRegs.length} Unmatched Google Forms Submission{unmatchedRegs.length > 1 ? 's' : ''} Received
-              </span>
-              <span className="text-[10px] bg-[#9E7D3B] text-white px-2 py-0.5 uppercase tracking-wider font-semibold">
-                Action Required
-              </span>
-            </div>
-            <button
-              onClick={() => setShowUnmatched(!showUnmatched)}
-              className="text-[#9E7D3B] hover:underline text-xs font-medium"
-            >
-              {showUnmatched ? 'Hide Submissions' : 'Review Submissions'}
-            </button>
-          </div>
-
-          <p className="text-[#736F68] text-[11px] leading-relaxed">
-            These clients completed the Google Form, but their submission could not be matched automatically to an enquiry reference ID or email address.
-          </p>
-
-          {associateFeedback && (
-            <div className="p-2.5 bg-[#EBF3ED] text-[#2D5A3C] border border-[#C3D9C9] flex items-center gap-2">
-              <CheckCircle2 size={13} />
-              <span>{associateFeedback}</span>
-            </div>
-          )}
-
-          {showUnmatched && (
-            <div className="pt-2 border-t border-[#E5E0D8] space-y-2">
-              {unmatchedRegs.map((reg) => (
-                <div key={reg.id} className="p-3 bg-white border border-[#E5E0D8] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-[#1F2421]">
-                      {reg.fullName} {reg.partnerName ? `& ${reg.partnerName}` : ''}
-                    </div>
-                    <div className="text-[11px] text-[#736F68] mt-0.5">
-                      Email: <span className="font-mono text-[#1F2421]">{reg.email}</span> · Phone: {reg.phone}
-                    </div>
-                    <div className="text-[11px] text-[#8C877D] mt-0.5">
-                      Venue: {reg.weddingLocation || 'TBD'} · Date: {reg.weddingDate || 'TBD'} · Guests: {reg.expectedGuestCount || '—'}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
-                    {associatingId === reg.id ? (
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={selectedEnquiryId}
-                          onChange={(e) => setSelectedEnquiryId(e.target.value)}
-                          className="px-2 py-1.5 text-xs bg-[#FAF8F5] border border-[#E5E0D8] text-[#1F2421]"
-                        >
-                          <option value="">Select Target Enquiry...</option>
-                          {enquiries.map((enq) => (
-                            <option key={enq.id} value={enq.id}>
-                              {enq.id} — {enq.clientName}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => handleAssociate(reg.id)}
-                          disabled={!selectedEnquiryId}
-                          className="px-3 py-1.5 bg-[#1F2421] text-white text-[11px] uppercase tracking-wider font-semibold disabled:opacity-50"
-                        >
-                          Link
-                        </button>
-                        <button
-                          onClick={() => setAssociatingId(null)}
-                          className="px-2 py-1.5 text-[#736F68] hover:text-[#1F2421] text-xs"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => { setAssociatingId(reg.id); setSelectedEnquiryId(''); }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[#9E7D3B] text-[#9E7D3B] text-[11px] uppercase tracking-wider font-semibold hover:bg-[#FAF8F5]"
-                      >
-                        <LinkIcon size={12} />
-                        <span>Link to Enquiry</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Filter and Search Bar */}
       <div className="bg-[#FFFFFF] border border-[#E5E0D8] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -273,12 +152,11 @@ export const EnquiriesPage: React.FC = () => {
           >
             <option value="All">All Statuses</option>
             <option value="New">New</option>
-            <option value="Registration Link Sent">Registration Link Sent</option>
-            <option value="Registration Submitted">Registration Submitted (Google Forms)</option>
-            <option value="Under Review">Under Review</option>
-            <option value="Corrections Requested">Corrections Requested</option>
-            <option value="Registered">Registered (Client Approved)</option>
             <option value="Contacted">Contacted</option>
+            <option value="Registration Document Sent">Registration Document Sent</option>
+            <option value="Registration Received">Registration Received</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Registered">Registered</option>
             <option value="Closed">Closed</option>
           </select>
 
@@ -296,6 +174,26 @@ export const EnquiriesPage: React.FC = () => {
             <option value="Phone">Phone</option>
             <option value="Website">Website</option>
           </select>
+
+          {(searchTerm || statusFilter !== 'All' || sourceFilter !== 'All') && (
+            <button
+              onClick={handleResetFilters}
+              title="Reset Filters"
+              className="p-2 border border-[#E5E0D8] text-[#736F68] hover:text-[#1F2421] hover:bg-[#FAF8F5]"
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Results Header */}
+      <div className="flex items-center justify-between text-xs text-[#736F68] px-1">
+        <span>
+          Showing <strong className="text-[#1F2421]">{filteredEnquiries.length}</strong> enquiries
+        </span>
+        <div className="flex items-center gap-2 text-[11px]">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-[#9E7D3B]" /> Manual Staff Intake Active</span>
         </div>
       </div>
 
@@ -338,7 +236,7 @@ export const EnquiriesPage: React.FC = () => {
                 >
                   <td className="py-4 px-4">
                     <div className="font-serif text-base font-semibold text-[#1F2421] group-hover:text-[#9E7D3B] transition-colors">
-                      {enq.clientName}
+                      {enq.clientName} {enq.id.startsWith('DEMO-ENQ-') && <span className="ml-2 align-middle rounded border border-[#D8C6AC] bg-[#FAF2E6] px-2 py-0.5 font-sans text-[10px] font-semibold text-[#85633C]">DEMO</span>}
                     </div>
                     <div className="text-[11px] text-[#8C877D] tracking-wide mt-0.5 font-mono">
                       {enq.id} {enq.clientId ? `· Linked Client: ${enq.clientId}` : ''}

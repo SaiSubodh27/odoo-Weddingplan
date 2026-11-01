@@ -41,5 +41,6 @@ ENV/
 *.sw?
 *.tsbuildinfo
 
-venv_app/
-backend/uploads/agreements/
+
+uploads/
+backend/uploads/

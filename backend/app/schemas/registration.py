@@ -120,4 +120,3 @@ class RegistrationAssociateRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     enquiry_id: str = Field(..., min_length=3, alias="enquiryId")
     staff_name: str = Field("Agency Staff", alias="staffName")
-

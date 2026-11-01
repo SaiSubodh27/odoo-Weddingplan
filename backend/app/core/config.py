@@ -97,7 +97,7 @@ class Settings(BaseSettings):
         return ["http://localhost:5173", "http://localhost:3000"]
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env", str(Path(__file__).resolve().parent.parent.parent / ".env")),
         env_file_encoding="utf-8",
         extra="ignore"
     )

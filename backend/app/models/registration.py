@@ -52,4 +52,3 @@ class ClientRegistration(Base):
 
     def __repr__(self):
         return f"<ClientRegistration {self.id} for Enquiry {self.enquiry_id} ({self.status})>"
-

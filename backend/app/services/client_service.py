@@ -88,6 +88,43 @@ class ClientService:
 
         db.commit()
         db.refresh(db_client)
+
+        # Synchronize or generate ServiceAgreement snapshot with updated client wedding details
+        try:
+            from app.models.agreement import ServiceAgreement, AgreementPaymentMilestone
+            from decimal import Decimal
+            agreement = db.query(ServiceAgreement).filter(
+                ServiceAgreement.client_id == client_id,
+                ServiceAgreement.is_deleted == False
+            ).order_by(ServiceAgreement.created_at.desc()).first()
+
+            if not agreement:
+                from app.services.agreement_service import agreement_service
+                agreement_service.get_or_create_agreement_for_client(db, client_id)
+            elif agreement.status in ("DRAFT", "PENDING_SIGNATURE"):
+                if db_client.wedding_date:
+                    agreement.wedding_date = db_client.wedding_date
+                if db_client.wedding_location:
+                    agreement.wedding_location = db_client.wedding_location
+                    agreement.venue = db_client.wedding_location
+                if db_client.expected_guest_count:
+                    agreement.guest_count = db_client.expected_guest_count
+                if db_client.service_package:
+                    agreement.service_package = db_client.service_package
+                if db_client.estimated_budget and db_client.estimated_budget > 0:
+                    tax_pct = Decimal("18.00")
+                    agreement.package_price = db_client.estimated_budget
+                    agreement.tax_amount = (agreement.package_price * (tax_pct / Decimal("100.00"))).quantize(Decimal("0.01"))
+                    agreement.total_amount = agreement.package_price + agreement.tax_amount
+
+                    # Re-create milestones
+                    db.query(AgreementPaymentMilestone).filter(AgreementPaymentMilestone.agreement_id == agreement.id).delete()
+                    from app.services.agreement_service import agreement_service
+                    agreement_service._create_default_milestones(db, agreement)
+                db.commit()
+        except Exception:
+            db.rollback()
+
         return db_client
 
     @staticmethod

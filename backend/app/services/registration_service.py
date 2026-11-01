@@ -298,9 +298,8 @@ class RegistrationService:
         enquiry = reg.enquiry
         enquiry.status = "Corrections Requested"
 
-        # Dispatch email requesting corrections with Google Forms link
-        form_url = settings.GOOGLE_FORMS_REGISTRATION_URL
-        registration_url = form_url  # Use the direct URL as configured
+        # Dispatch email requesting corrections
+        registration_url = f"{settings.FRONTEND_BASE_URL}/register?token={enquiry.registration_token}"
         email_res = EmailService.send_corrections_requested_email(
             to_email=reg.email,
             client_name=reg.full_name,

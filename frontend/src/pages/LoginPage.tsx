@@ -1,208 +1,149 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
 import { authApi } from '../services/api';
-import { Lock, Mail, ShieldCheck, ArrowRight, Sparkles, Building, UserCheck } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Check } from 'lucide-react';
+import './LoginPage.css';
 
+function Lotus() {
+  return <svg viewBox="0 0 64 40" className="lovable-lotus" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+    <path d="M32 4c-6 8-6 20 0 30 6-10 6-22 0-30Z" />
+    <path d="M32 34c-4-9-12-15-20-16 1 9 9 16 20 16Z" />
+    <path d="M32 34c4-9 12-15 20-16-1 9-9 16-20 16Z" />
+    <path d="M32 34C24 30 12 28 4 30c6 4 16 6 28 4Z" />
+    <path d="M32 34c8-4 20-6 28-4-6 4-16 6-28 4Z" />
+  </svg>;
+}
 export const LoginPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'staff' | 'client'>('staff');
+  const [mode,setMode]=useState<'login'|'signup'>('login');
+  const [accountType,setAccountType]=useState<'User'|'Employee'|'Vendor'>('User');
+  const [signupMethod,setSignupMethod]=useState<'email'|'phone'>('email');
+  const [fullName,setFullName]=useState('');
+  const [phone,setPhone]=useState('');
+  const [signupNotice,setSignupNotice]=useState('');
   const [email, setEmail] = useState('planner@theroyalknot.in');
-  const [password, setPassword] = useState('RoyalKnot2026');
-  const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('RoyalKnot2026!');
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
-  const { login } = useClients();
-  const navigate = useNavigate();
-
-  const handleTabChange = (tab: 'staff' | 'client') => {
-    setActiveTab(tab);
-    setError('');
-    if (tab === 'staff') {
-      setEmail('planner@theroyalknot.in');
-      setPassword('RoyalKnot2026');
-    } else {
-      setEmail('');
-      setPassword('');
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
-      setError('Please provide your registered email and password.');
+    if (!fullName.trim()) {
+      setSignupNotice('Please enter your full name.');
       return;
     }
-
-    setIsLoading(true);
-    setError('');
-
+    const finalEmail = signupMethod === 'email' ? signupEmail.trim() : `user_${phone.replace(/\D/g, '')}@theroyalknot.in`;
+    if (!finalEmail) {
+      setSignupNotice('Please provide a valid email or phone number.');
+      return;
+    }
+    setIsSigningUp(true);
+    setSignupNotice('');
     try {
-      // Authenticate via backend API (supports staff and activated clients)
-      const res = await authApi.login({ email, password });
+      const role = accountType === 'User' ? 'client' : accountType === 'Employee' ? 'staff' : 'vendor';
+      const res = await authApi.signup({
+        fullName: fullName.trim(),
+        email: finalEmail,
+        phone: signupMethod === 'phone' ? phone.trim() : undefined,
+        password: signupPassword.trim() || 'RoyalKnot2026!',
+        role
+      });
+
       const isClient = res.role === 'client';
+      const hasCompletedDetails = res.hasCompletedDetails ?? res.has_completed_details ?? (!isClient);
+      const hasSigned = res.hasSignedAgreement ?? res.has_signed_agreement ?? (!isClient);
+
       login(res.email, {
-        name: res.clientName || res.client_name,
-        role: isClient ? 'Client' : 'Principal Wedding Planner'
+        name: res.clientName || res.client_name || fullName,
+        role: isClient ? 'Client Workspace' : res.role === 'staff' ? 'Principal Wedding Planner' : 'Vendor Partner',
+        clientId: res.clientId || res.client_id,
+        hasCompletedDetails,
+        hasSignedAgreement: hasSigned,
+        agreementId: res.agreementId || res.agreement_id,
+        token: res.accessToken || res.access_token
       });
 
       if (isClient) {
-        navigate('/portal');
+        if (!hasCompletedDetails) {
+          navigate('/client-intake');
+        } else if (!hasSigned) {
+          navigate('/agreement');
+        } else {
+          navigate('/client-portal');
+        }
+      } else if (res.role === 'vendor') {
+        navigate('/vendor-portal');
       } else {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      // Fallback for offline demo if using default staff demo credentials
-      if (email.includes('theroyalknot.in') && (!err.message || err.message.includes('fetch'))) {
-        login(email);
-        navigate('/dashboard');
-      } else {
-        setError(err.message || 'Authentication failed. Please verify your credentials.');
-      }
+      setSignupNotice(err.message || 'Registration failed. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsSigningUp(false);
     }
   };
+  const [password, setPassword] = useState('RoyalKnot2026');
+  const [show, setShow] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useClients();
+  const navigate = useNavigate();
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) { setError('Please provide your registered email and password.'); return; }
+    setIsLoading(true); setError('');
+    try {
+      const res = await authApi.login({ email, password });
+      const isClient = res.role === 'client';
+      const hasCompletedDetails = res.hasCompletedDetails ?? res.has_completed_details ?? (!isClient);
+      const hasSigned = res.hasSignedAgreement ?? res.has_signed_agreement ?? (!isClient);
 
-  return (
-    <div className="min-h-screen bg-[#FAF8F5] flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
-      {/* Decorative top badge */}
-      <div className="mb-6 flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-[#9E7D3B] font-medium">
-        <span>✦</span>
-        <span>The Royal Knot Access Gate</span>
-        <span>✦</span>
-      </div>
-
-      <div className="w-full max-w-md bg-[#FFFFFF] border border-[#E5E0D8] p-8 sm:p-10 shadow-sm">
-        {/* Brand Header */}
-        <div className="text-center mb-6 pb-6 border-b border-[#E5E0D8]">
-          <h1 className="font-serif text-3xl font-normal text-[#1F2421] uppercase tracking-wider mb-1">
-            The Royal Knot
-          </h1>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[#8C877D]">
-            Jaipur · Udaipur Wedding Management
-          </p>
+      login(res.email, {
+        name: res.clientName || res.client_name,
+        role: isClient ? 'Client Workspace' : 'Principal Wedding Planner',
+        clientId: res.clientId || res.client_id,
+        hasCompletedDetails,
+        hasSignedAgreement: hasSigned,
+        agreementId: res.agreementId || res.agreement_id,
+        token: res.accessToken || res.access_token
+      });
+      if (isClient) {
+        if (!hasCompletedDetails) {
+          navigate('/client-intake');
+        } else if (!hasSigned) {
+          navigate('/agreement');
+        } else {
+          navigate('/client-portal');
+        }
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      if (email.includes('theroyalknot.in') && (!err.message || err.message.includes('fetch'))) { login(email); navigate('/dashboard'); }
+      else setError(err.message || 'Authentication failed. Please verify your credentials.');
+    } finally { setIsLoading(false); }
+  };
+  return <main className="lovable-login">
+    <div className="lovable-overlay" aria-hidden="true" />
+    <section aria-labelledby="brand" className="lovable-card">
+      <p className="lovable-eyebrow">✦ AGENCY AND CLIENT PORTAL ✦</p>
+      <div className="lovable-lotus-row"><Lotus /></div>
+      <h1 id="brand">THE <span>ROYAL</span> KNOT</h1>
+      <p className="lovable-subtitle">WEDDING MANAGEMENT</p>
+      <div className="lovable-divider" aria-hidden="true"><i />◆<i /></div>
+      <div className="lovable-auth-switch" role="tablist" aria-label="Account access"><button type="button" role="tab" aria-selected={mode==='login'} className={mode==='login'?'active':''} onClick={()=>{setMode('login');setSignupNotice('')}}>Sign in</button><button type="button" role="tab" aria-selected={mode==='signup'} className={mode==='signup'?'active':''} onClick={()=>{setMode('signup');setSignupNotice('')}}>Sign up</button></div>
+      {mode==='signup'?<div className="lovable-signup"><p className="lovable-signup-label">I AM JOINING AS</p><div className="lovable-role-picker">{(['User','Employee','Vendor'] as const).map(role=><button key={role} type="button" className={accountType===role?'selected':''} onClick={()=>{setAccountType(role);setSignupNotice('')}}>{role}</button>)}</div><p className="lovable-signup-help">{accountType==='User'?'Create an account to manage your wedding experience.':accountType==='Employee'?'Employee accounts require approval from your agency administrator.':'Vendor accounts require verification before portal access.'}</p><div className="lovable-role-picker lovable-method-picker"><button type="button" className={signupMethod==='email'?'selected':''} onClick={()=>setSignupMethod('email')}>Email</button><button type="button" className={signupMethod==='phone'?'selected':''} onClick={()=>setSignupMethod('phone')}>Phone number</button></div><form className="lovable-form lovable-signup-form" onSubmit={handleSignup}><div><label htmlFor="signup-name">FULL NAME</label><div className="lovable-input"><input id="signup-name" value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Your full name" required/></div></div>{signupMethod==='email'?<div><label htmlFor="signup-email">EMAIL ADDRESS</label><div className="lovable-input"><Mail size={16}/><input id="signup-email" type="email" value={signupEmail} onChange={e=>setSignupEmail(e.target.value)} placeholder="name@example.com" required/></div></div>:<div><label htmlFor="signup-phone">PHONE NUMBER</label><div className="lovable-input"><input id="signup-phone" type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+91 98765 43210" required/></div></div>}<div><label htmlFor="signup-password">CONFIDENTIAL PASSWORD</label><div className="lovable-input"><Lock size={16}/><input id="signup-password" type="password" value={signupPassword} onChange={e=>setSignupPassword(e.target.value)} placeholder="••••••••" minLength={6} required/></div></div><button className="lovable-submit" type="submit" disabled={isSigningUp}>{isSigningUp?'CREATING ACCOUNT…':'CREATE ACCOUNT'} <ArrowRight size={16}/></button></form>{signupNotice&&<p role="status" className="lovable-signup-notice">{signupNotice}</p>}<p className="lovable-signup-foot">Secure registration and account creation connected to The Royal Knot heritage portal.</p></div>:<form onSubmit={handleLogin} className="lovable-form">
+        {error && <p role="alert" className="lovable-error">{error}</p>}
+        <div><label htmlFor="email">EMAIL ADDRESS</label><div className="lovable-input"><Mail size={16} /><input id="email" type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} placeholder="planner@theroyalknot.in" required /></div></div>
+        <div><div className="lovable-label-row"><label htmlFor="password">PASSWORD</label><button type="button" onClick={()=>alert('Please contact your agency administrator for password assistance.')}>Forgot password?</button></div>
+          <div className="lovable-input"><Lock size={16}/><input id="password" type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required/><button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)}>{show?<EyeOff size={16}/>:<Eye size={16}/>}</button></div>
         </div>
-
-        {/* Portal Switcher Tabs */}
-        <div className="flex border border-[#E5E0D8] mb-6 bg-[#FAF8F5] p-1">
-          <button
-            type="button"
-            onClick={() => handleTabChange('staff')}
-            className={`flex-1 py-2 text-xs font-semibold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 ${
-              activeTab === 'staff'
-                ? 'bg-[#1F2421] text-[#FAF8F5] shadow-xs'
-                : 'text-[#736F68] hover:text-[#1F2421]'
-            }`}
-          >
-            <Building size={12} />
-            <span>Employee Portal</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange('client')}
-            className={`flex-1 py-2 text-xs font-semibold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 ${
-              activeTab === 'client'
-                ? 'bg-[#1F2421] text-[#FAF8F5] shadow-xs'
-                : 'text-[#736F68] hover:text-[#1F2421]'
-            }`}
-          >
-            <UserCheck size={12} />
-            <span>Client Portal</span>
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-6 p-3 bg-[#FBF1F0] border border-[#E9C3C0] text-[#94352D] text-xs">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label className="block text-xs uppercase tracking-wider text-[#736F68] font-medium mb-1.5">
-              {activeTab === 'staff' ? 'Agency Email Address' : 'Client Account Email'}
-            </label>
-            <div className="relative">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={activeTab === 'staff' ? 'planner@theroyalknot.in' : 'your.email@gmail.com'}
-                className="w-full px-3.5 py-2.5 text-xs bg-[#FAF8F5] border border-[#E5E0D8] text-[#1F2421] focus:outline-none focus:border-[#9E7D3B]"
-              />
-              <Mail size={14} className="absolute right-3.5 top-3 text-[#9E7D3B]" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs uppercase tracking-wider text-[#736F68] font-medium mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full px-3.5 py-2.5 text-xs bg-[#FAF8F5] border border-[#E5E0D8] text-[#1F2421] focus:outline-none focus:border-[#9E7D3B]"
-              />
-              <Lock size={14} className="absolute right-3.5 top-3 text-[#9E7D3B]" />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-[#736F68]">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="accent-[#9E7D3B]"
-              />
-              <span>Remember session</span>
-            </label>
-
-            {activeTab === 'client' && (
-              <Link to="/activate" className="text-[#9E7D3B] hover:underline font-medium">
-                Activate Invite Link
-              </Link>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3 bg-[#1F2421] text-[#FAF8F5] text-xs uppercase tracking-[0.2em] font-semibold hover:bg-[#9E7D3B] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            <span>{isLoading ? 'Verifying...' : activeTab === 'staff' ? 'Enter Staff ERP' : 'Enter Client Portal'}</span>
-            <ArrowRight size={14} />
-          </button>
-        </form>
-
-        {/* Public Client Registration Promo */}
-        <div className="mt-8 pt-6 border-t border-[#E5E0D8] text-center space-y-2">
-          <p className="text-xs text-[#736F68]">
-            Planning a luxury destination wedding with us?
-          </p>
-          <Link
-            to="/client-register"
-            className="inline-flex items-center gap-1.5 text-xs text-[#9E7D3B] font-semibold uppercase tracking-wider hover:underline"
-          >
-            <Sparkles size={13} />
-            <span>Register Your Wedding on Website</span>
-            <ArrowRight size={12} />
-          </Link>
-        </div>
-
-        {/* System security note */}
-        <div className="mt-6 flex items-center justify-center gap-1.5 text-[10px] text-[#8C877D] uppercase tracking-wider">
-          <ShieldCheck size={12} className="text-[#2D5A3C]" />
-          <span>Encrypted Session · Argon2 Protocol</span>
-        </div>
-      </div>
-    </div>
-  );
+        <label className="lovable-remember"><input type="checkbox" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)}/><span className="lovable-checkbox">{rememberMe&&<Check size={12} strokeWidth={3}/>}</span>Remember this terminal</label>
+        <button className="lovable-submit" type="submit" disabled={isLoading}>{isLoading?'VERIFYING…':'ENTER AGENCY SYSTEM'}<ArrowRight size={16}/></button>
+      </form>}
+      <p className="lovable-authorized"><ShieldCheck size={16}/>Secure access for authorised agency staff and registered clients</p>
+    </section>
+    <footer className="lovable-footer">JAIPUR OFFICE: RAMBAGH ENCLAVE <span>|</span> UDAIPUR OFFICE: PICHOLA PROMENADE</footer>
+  </main>;
 };

@@ -413,11 +413,12 @@ class EmailSyncService:
             if enq_to_notify:
                 try:
                     form_url = settings.GOOGLE_FORMS_REGISTRATION_URL
+                    portal_url = f"{settings.FRONTEND_BASE_URL}/register?token={enq_to_notify.registration_token}" if enq_to_notify.registration_token else form_url
                     thank_you_res = EmailService.send_enquiry_thank_you_email(
                         to_email=sender_email,
                         client_name=client_display_name,
                         enquiry_id=enquiry_id,
-                        registration_url=form_url,
+                        registration_url=portal_url,
                         db=db
                     )
                     enq_to_notify.status = "Registration Link Sent"

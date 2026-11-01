@@ -260,12 +260,18 @@ class EmailService:
     ) -> dict:
         """
         Sends an automated luxury thank-you email immediately upon enquiry receipt,
-        welcoming the couple and providing the configured Google Forms registration link.
+        welcoming the couple and providing both the Google Forms link and the private portal registration link.
         Contains no document attachments and no plain-text credentials.
         """
-        google_form_url = registration_url or settings.GOOGLE_FORMS_REGISTRATION_URL
-        # Use the form URL as-is — it's a full Google Forms direct link
-        form_link = google_form_url
+        google_form_url = settings.GOOGLE_FORMS_REGISTRATION_URL
+        if enquiry_id and "?" in google_form_url:
+            form_link = f"{google_form_url}&enquiry_ref={enquiry_id}"
+        elif enquiry_id:
+            form_link = f"{google_form_url}?enquiry_ref={enquiry_id}"
+        else:
+            form_link = google_form_url
+
+        portal_link = registration_url or f"{settings.FRONTEND_BASE_URL}/register"
 
         subject = f"Thank You for Contacting The Royal Knot — Wedding Celebration Enquiry ({enquiry_id})"
 
@@ -304,6 +310,8 @@ class EmailService:
                 <a href="{form_link}" class="btn">Open Registration Form</a>
               </p>
 
+              <p>Alternatively, you may complete your registration via our private portal: <a href="{portal_link}" style="color: #9E7D3B;">{portal_link}</a></p>
+
               <p>Once you submit your details through the form, our senior wedding concierges will review your celebration parameters and issue your confidential client portal activation link so you can begin private planning consultations.</p>
 
               <p>With our warmest regards,<br>
@@ -313,7 +321,8 @@ class EmailService:
             <div class="footer">
               Enquiry Reference: <strong>{enquiry_id}</strong><br>
               Official Concierge Desk: {settings.AGENCY_EMAIL}<br>
-              Direct Form Link: <a href="{form_link}" style="color: #9E7D3B;">{form_link}</a>
+              Direct Form Link: <a href="{form_link}" style="color: #9E7D3B;">{form_link}</a><br>
+              Direct Portal Link: <a href="{portal_link}" style="color: #9E7D3B;">{portal_link}</a>
             </div>
           </div>
         </body>
@@ -325,6 +334,7 @@ class EmailService:
             f"Thank you for contacting The Royal Knot. We are delighted that you are considering us for your special celebration. "
             f"To help us understand your requirements and proceed with your registration, kindly complete the registration form using the link below:\n\n"
             f"{form_link}\n\n"
+            f"Direct Portal Link: {portal_link}\n\n"
             f"Enquiry Reference: {enquiry_id}\n\n"
             f"Warm regards,\n"
             f"The Royal Knot Concierge Team\n"

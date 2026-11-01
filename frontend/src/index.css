@@ -1,39 +1,41 @@
 @import "tailwindcss";
 
 @theme {
-  --font-serif: 'Cormorant Garamond', Georgia, serif;
-  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
 }
 
 :root {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: #1F2421;
-  background-color: #FAF8F5;
-}
-
-/* Ensure no border radius anywhere to strictly fulfill design requirements */
-*, ::before, ::after {
-  border-radius: 0px !important;
-}
-
-/* Luxury typography styling */
-h1, h2, h3, h4, .font-serif {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  letter-spacing: -0.01em;
-}
-
-/* Custom minimal scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: #292622;
   background: #FAF8F5;
+  font-synthesis: none;
 }
-::-webkit-scrollbar-thumb {
-  background: #D9D3C7;
+body { margin: 0; }
+h1, h2, h3, h4, .font-serif {
+  font-family: 'Playfair Display', Georgia, serif;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #B8B0A2;
+h1, h2 { font-weight: 600; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid #A17B50;
+  outline-offset: 2px;
+}
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: #FAF8F5; }
+::-webkit-scrollbar-thumb { background: #D9D3C7; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #B8B0A2; }
+
+/* Keep decorative serif headings, but render ampersands cleanly and legibly. */
+.royal-ampersand {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: .82em;
+  letter-spacing: 0;
+  padding-inline: .08em;
 }
 
+@import './dashboard-theme.css';

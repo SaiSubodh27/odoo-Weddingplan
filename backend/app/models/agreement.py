@@ -43,6 +43,7 @@ class ServiceAgreement(Base):
 
     # Version Tracking
     current_version_number = Column(Integer, nullable=False, default=1)
+    agreement_version = Column(String(50), nullable=False, default="v1.0")
 
     # Internal Approval Tracking
     is_internally_approved = Column(Boolean, nullable=False, default=False)
@@ -57,6 +58,23 @@ class ServiceAgreement(Base):
 
     # Timestamps & Soft Deletion
     is_deleted = Column(Boolean, nullable=False, default=False, index=True)
+
+    # In-App OTP & Digital Signing Audit Trail
+    signed_at = Column(DateTime(timezone=True), nullable=True)
+    signed_by_name = Column(String(150), nullable=True)
+    signed_by_email = Column(String(255), nullable=True)
+    signature_data = Column(Text, nullable=True)
+    signer_ip = Column(String(50), nullable=True)
+    signer_user_agent = Column(String(500), nullable=True)
+    signed_pdf_path = Column(String(500), nullable=True)
+
+    # OTP verification state
+    signing_otp_hash = Column(String(64), nullable=True)
+    signing_otp_expires_at = Column(DateTime(timezone=True), nullable=True)
+    signing_otp_attempts = Column(Integer, nullable=False, default=0)
+    signing_otp_verified = Column(Boolean, nullable=False, default=False)
+    consent_confirmed = Column(Boolean, nullable=False, default=False)
+
     created_by = Column(String(150), nullable=False, default="Agency Concierge")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -111,11 +129,14 @@ class AgreementPaymentMilestone(Base):
     version_number = Column(Integer, nullable=False, default=1)
     sequence_order = Column(Integer, nullable=False, default=1)
 
-    name = Column(String(150), nullable=False)  # e.g. Advance Booking Fee (25%)
-    percentage = Column(Numeric(5, 2), nullable=False)  # e.g. 25.00
+    name = Column(String(150), nullable=True)
+    milestone_name = Column(String(150), nullable=True)
+    percentage = Column(Numeric(5, 2), nullable=False)
     amount = Column(Numeric(15, 2), nullable=False)
     due_date = Column(Date, nullable=False)
     description = Column(String(255), nullable=True)
+    due_description = Column(String(255), nullable=True)
+    status = Column(String(50), nullable=False, default="PENDING")
 
     agreement = relationship("ServiceAgreement", back_populates="milestones")
 
@@ -133,6 +154,7 @@ class AgreementDocument(Base):
     # Document type: 'generated_unsigned_pdf', 'signed_agreement_pdf', 'leegality_audit_trail', 'completion_certificate'
     document_type = Column(String(50), nullable=False, index=True)
 
+    file_name = Column(String(255), nullable=True)
     original_filename = Column(String(255), nullable=False)
     stored_filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)

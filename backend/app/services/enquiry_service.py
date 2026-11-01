@@ -74,12 +74,12 @@ class EnquiryService:
             db.commit()
             db.refresh(enquiry)
 
-        form_url = settings.GOOGLE_FORMS_REGISTRATION_URL
+        reg_url = f"{settings.FRONTEND_BASE_URL}/register?token={enquiry.registration_token}"
         email_res = EmailService.send_enquiry_thank_you_email(
             to_email=enquiry.email,
             client_name=enquiry.client_name,
             enquiry_id=enquiry.id,
-            registration_url=form_url,
+            registration_url=reg_url,
             db=db
         )
 
@@ -89,15 +89,15 @@ class EnquiryService:
             db=db,
             enquiry_id=enquiry.id,
             author="Agency Staff",
-            content=f"Dispatched Google Forms registration invitation link ({form_url}) to {enquiry.email}."
+            content=f"Dispatched online registration invitation link ({reg_url}) to {enquiry.email}."
         )
         db.commit()
         db.refresh(enquiry)
 
         return {
             "success": email_res.get("success", False),
-            "message": f"Google Forms registration link dispatched to {enquiry.email}.",
-            "registration_url": form_url,
+            "message": f"Online registration link dispatched to {enquiry.email}.",
+            "registration_url": reg_url,
             "delivery": email_res,
             "enquiry_status": enquiry.status
         }

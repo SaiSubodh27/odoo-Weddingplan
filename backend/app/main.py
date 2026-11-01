@@ -13,10 +13,15 @@ from app.routes.enquiries import router as enquiries_router
 from app.routes.auth import router as auth_router
 from app.routes.emails import router as emails_router
 from app.routes.registrations import router as registrations_router
+from app.routes.projects import router as projects_router
+from app.routes.vendors import router as vendors_router
+from app.routes.catering import router as catering_router
 from app.routes.agreements import router as agreements_router
+from app.routes.service_agreements import router as service_agreements_router
 from app.routes.webhooks import router as webhooks_router
+from app.routes.founder import router as founder_router
+from app.routes.vendor_portal import router as vendor_portal_router
 from app.services.email_sync_service import email_sync_service
-from app.services.zoho_polling_service import zoho_polling_service
 
 logger = logging.getLogger("royal_knot")
 
@@ -43,17 +48,51 @@ async def periodic_email_sync():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure database schema is initialized
+    from app.database.base import Base
+    import app.models  # noqa: F401
+    from app.database.session import engine, SessionLocal
+    from sqlalchemy import inspect, text
+    Base.metadata.create_all(bind=engine)
+
+    # Ensure estimated_cost column exists in wedding_functions and backfill
+    try:
+        inspector = inspect(engine)
+        if "wedding_functions" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("wedding_functions")]
+            if "estimated_cost" not in columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE wedding_functions ADD COLUMN estimated_cost NUMERIC(15, 2) DEFAULT 0.00 NOT NULL"))
+                    conn.commit()
+
+        if "client_registrations" in inspector.get_table_names():
+            reg_cols = [col["name"] for col in inspector.get_columns("client_registrations")]
+            with engine.connect() as conn:
+                if "google_form_response_id" not in reg_cols:
+                    conn.execute(text("ALTER TABLE client_registrations ADD COLUMN google_form_response_id VARCHAR(100)"))
+                if "google_sheet_row" not in reg_cols:
+                    conn.execute(text("ALTER TABLE client_registrations ADD COLUMN google_sheet_row INTEGER"))
+                if "enquiry_reference" not in reg_cols:
+                    conn.execute(text("ALTER TABLE client_registrations ADD COLUMN enquiry_reference VARCHAR(100)"))
+                if "source" not in reg_cols:
+                    conn.execute(text("ALTER TABLE client_registrations ADD COLUMN source VARCHAR(50) DEFAULT 'Google Forms' NOT NULL"))
+                conn.commit()
+        from app.services.project_service import project_service
+        db = SessionLocal()
+        try:
+            project_service.backfill_function_costs(db)
+        except Exception as e:
+            logger.warning(f"Could not backfill function costs: {e}")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"Schema check error: {e}")
+
     sync_task = asyncio.create_task(periodic_email_sync())
-    polling_task = asyncio.create_task(zoho_polling_service.run_polling_background_loop())
     yield
     sync_task.cancel()
-    polling_task.cancel()
     try:
         await sync_task
-    except asyncio.CancelledError:
-        pass
-    try:
-        await polling_task
     except asyncio.CancelledError:
         pass
 
@@ -63,9 +102,9 @@ app = FastAPI(
     description=(
         "Production-grade backend service for **The Royal Knot** Luxury Wedding Planning Agency "
         "(Jaipur & Udaipur operations). Manages enquiry workflows, real Gmail incoming/outgoing communication, "
-        "registration document exchange, client account activation, and Phase 2 Service Agreement & Wedding Booking Confirmation."
+        "registration document exchange, client account activation, and wedding project setup & management."
     ),
-    version="2.0.0",
+    version="1.3.0",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
@@ -108,8 +147,14 @@ app.include_router(enquiries_router, prefix=f"{settings.API_V1_STR}/enquiries")
 app.include_router(registrations_router, prefix=f"{settings.API_V1_STR}/registrations")
 app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth")
 app.include_router(emails_router, prefix=f"{settings.API_V1_STR}/emails")
-app.include_router(agreements_router, prefix=f"{settings.API_V1_STR}/service-agreements")
+app.include_router(projects_router, prefix=f"{settings.API_V1_STR}/projects")
+app.include_router(vendors_router, prefix=f"{settings.API_V1_STR}/vendors")
+app.include_router(catering_router, prefix=settings.API_V1_STR)
+app.include_router(agreements_router, prefix=settings.API_V1_STR)
+app.include_router(service_agreements_router, prefix=f"{settings.API_V1_STR}/service-agreements")
 app.include_router(webhooks_router, prefix=f"{settings.API_V1_STR}/webhooks")
+app.include_router(founder_router, prefix=f"{settings.API_V1_STR}/founder")
+app.include_router(vendor_portal_router, prefix=f"{settings.API_V1_STR}/vendor-portal")
 
 
 # Top-level /health route
@@ -118,7 +163,7 @@ def root_health():
     return {
         "service": settings.PROJECT_NAME,
         "status": "operational",
-        "version": "2.0.0",
+        "version": "1.3.0",
         "agency_email": settings.AGENCY_EMAIL,
         "imap_configured": email_sync_service.is_imap_configured(),
         "api_v1_docs": "/docs"
@@ -136,10 +181,12 @@ def root():
         "api_v1_endpoints": {
             "health": f"{settings.API_V1_STR}/health",
             "enquiries": f"{settings.API_V1_STR}/enquiries",
+            "registrations": f"{settings.API_V1_STR}/registrations",
             "clients": f"{settings.API_V1_STR}/clients",
+            "projects": f"{settings.API_V1_STR}/projects",
+            "vendors": f"{settings.API_V1_STR}/vendors",
+            "catering": f"{settings.API_V1_STR}/catering",
             "emails": f"{settings.API_V1_STR}/emails",
-            "service_agreements": f"{settings.API_V1_STR}/service-agreements",
-            "webhooks": f"{settings.API_V1_STR}/webhooks",
             "auth": f"{settings.API_V1_STR}/auth",
             "documentation": "/docs"
         }

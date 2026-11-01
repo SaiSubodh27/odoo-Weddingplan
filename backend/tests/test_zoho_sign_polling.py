@@ -322,7 +322,7 @@ def test_12_provider_api_timeout(db_session, monkeypatch):
 
 # 13. Provider API rate limiting
 def test_13_provider_api_rate_limiting(db_session, monkeypatch):
-    agreement = db_session.query(ServiceAgreement).order_by(ServiceAgreement.created_at.desc()).first()
+    agreement = db_session.query(ServiceAgreement).filter(ServiceAgreement.status == 'SIGNING_PENDING').order_by(ServiceAgreement.created_at.desc()).first()
 
     def raise_rate_limit(*args, **kwargs):
         raise ZohoRateLimitError("Rate limited by Zoho Sign", retry_after=45)
@@ -335,7 +335,7 @@ def test_13_provider_api_rate_limiting(db_session, monkeypatch):
 
 # 14. Exponential backoff
 def test_14_exponential_backoff(db_session, monkeypatch):
-    agreement = db_session.query(ServiceAgreement).order_by(ServiceAgreement.created_at.desc()).first()
+    agreement = db_session.query(ServiceAgreement).filter(ServiceAgreement.status == 'SIGNING_PENDING').order_by(ServiceAgreement.created_at.desc()).first()
     sig_req = db_session.query(AgreementSignatureRequest).filter(
         AgreementSignatureRequest.agreement_id == agreement.id
     ).first()

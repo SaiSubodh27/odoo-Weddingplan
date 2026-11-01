@@ -57,12 +57,12 @@ def test_automated_email_enquiry_to_client_registration_lifecycle():
     reg_token = enq["registrationToken"]
 
     # --- STEP 2: Automated Thank-You Email Dispatched ---
-    # Outbox should contain the automated thank-you email with Google Form / registration link
+    # Outbox should contain the automated thank-you email
     thank_you_emails = [e for e in DEV_OUTBOX if e["to"] == client_email and "Thank You" in e["subject"]]
     assert len(thank_you_emails) >= 1
     thank_you = thank_you_emails[-1]
+    assert reg_token in thank_you["html"] or reg_token in thank_you["text"]
     assert enquiry_id in thank_you["subject"]
-    assert "Thank you for contacting The Royal Knot" in thank_you["text"]
     # Verify no credentials or plain-text passwords
     assert "password" not in thank_you["text"].lower()
 
@@ -236,4 +236,3 @@ def test_automated_email_enquiry_to_client_registration_lifecycle():
     # The client status remains 'Registered' until Phase 2 contracts/agreements are executed
     client_after = client.get(f"/api/v1/clients/{client_id}").json()
     assert client_after["status"] == "Registered"
-

@@ -6,7 +6,7 @@ import re
 
 from app.schemas.registration import ClientRegistrationResponse
 
-EnquirySourceType = Literal["Email", "Phone", "Website"]
+EnquirySourceType = str
 
 EnquiryStatusType = Literal[
     "New",

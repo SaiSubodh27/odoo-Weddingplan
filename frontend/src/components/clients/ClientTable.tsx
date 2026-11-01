@@ -47,7 +47,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({ clients }) => {
             <th className="py-3.5 px-4">Client / Couple Name</th>
             <th className="py-3.5 px-4 hidden md:table-cell">Contact Details</th>
             <th className="py-3.5 px-4">Wedding Date</th>
-            <th className="py-3.5 px-4 hidden lg:table-cell">Venue & City</th>
+            <th className="py-3.5 px-4 hidden lg:table-cell">Venue and City</th>
             <th className="py-3.5 px-4">Status</th>
             <th className="py-3.5 px-4 text-right">Actions</th>
           </tr>
@@ -63,7 +63,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({ clients }) => {
                 {/* Couple Name */}
                 <td className="py-4 px-4">
                   <div className="font-serif text-base font-semibold text-[#1F2421] group-hover:text-[#9E7D3B] transition-colors flex items-center gap-1.5">
-                    <span>{client.partner1Name} & {client.partner2Name}</span>
+                    <span>{client.partner1Name} and {client.partner2Name}</span>
                     <ArrowUpRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-[#9E7D3B]" />
                   </div>
                   <div className="text-[11px] text-[#8C877D] tracking-wide mt-0.5">
