@@ -57,3 +57,22 @@
   - Implemented consolidated couple read-only endpoint `GET /api/v1/projects/{id}/client-overview`.
   - Delivers ceremony schedules, task progress percentage, confirmed vendor rosters, milestone payment tracking, and final cost summaries.
   - Tests passing (`backend/tests/test_p1_settlement_and_overview.py`).
+
+- **P2 Item 8: Founder Season Overview & Shareable Report (COMPLETED)**
+  - Implemented `GET /api/v1/founder/season-overview`:
+    - Comprehensive multi-wedding season metrics: total projected budgets, received client payments, vendor contracted costs, team labor, net profit, and profit margin percentage.
+    - Vendor performance scorecards with job counts, contract volumes, and client ratings.
+    - Cash flow radar: upcoming payment dues in the next 4 weeks (28 days) with countdown days remaining.
+    - Shareable read-only report generation with cryptographically secure expiring token.
+  - Implemented `GET /api/v1/founder/season-overview/export` delivering an executive HTML/PDF-ready report.
+  - Tests passing (`backend/tests/test_p2_founder_and_vendor_portal.py`).
+
+- **P2 Item 9: Real Vendor Portal (COMPLETED)**
+  - Implemented `POST /api/v1/vendor-portal/login` supporting vendor authentication via email, phone, or registered company name.
+  - Implemented `GET /api/v1/vendor-portal/{id}/dashboard`: real assigned wedding projects, incoming RFQ requests, quote status (Won, Closed, Pending Review).
+  - Implemented `POST /api/v1/vendor-portal/{id}/quotes`: vendor submission of itemized quotations with line items and automatic pricing calculation.
+
+- **P2 Item 10: Catering PDF & WhatsApp Deep-link Verification (COMPLETED)**
+  - Verified formal catering specification PDF generation and download (`%PDF-` verified).
+  - Verified authentic WhatsApp deep-link generation (`wa.me`) with pre-filled message formatting and communication audit logging.
+  - Tests passing (`backend/tests/test_p2_founder_and_vendor_portal.py`).
