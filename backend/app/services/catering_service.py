@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Tuple
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from fastapi import HTTPException, status
 
 from app.models.project import WeddingProject, WeddingFunction, ProjectVendor
@@ -100,7 +100,9 @@ class CateringService:
         self, db: Session, project_id: str, function_id: Optional[str] = None
     ) -> tuple[WeddingProject, Optional[WeddingFunction]]:
         """Ensures wedding project and ceremony function exist and are validly related."""
-        project = db.query(WeddingProject).filter(WeddingProject.id == project_id).first()
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id)
+        ).first()
         if not project or project.is_deleted:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -135,10 +137,10 @@ class CateringService:
 
     def list_catering_plans_for_project(self, db: Session, project_id: str) -> List[Dict[str, Any]]:
         """Lists all event-linked catering plans for a given wedding project."""
-        self._verify_project_and_function(db, project_id)
+        project, _ = self._verify_project_and_function(db, project_id)
         plans = (
             db.query(CateringPlan)
-            .filter(CateringPlan.project_id == project_id)
+            .filter(or_(CateringPlan.project_id == project.id, CateringPlan.project_id == project_id))
             .options(
                 joinedload(CateringPlan.function),
                 joinedload(CateringPlan.project),

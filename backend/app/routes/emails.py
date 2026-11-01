@@ -51,6 +51,11 @@ def sync_mailbox(db: Session = Depends(get_db)):
 
 
 @router.get(
+    "",
+    response_model=EmailListResponse,
+    include_in_schema=False
+)
+@router.get(
     "/inbox",
     response_model=EmailListResponse,
     summary="List incoming emails in the agency inbox / staff review queue",

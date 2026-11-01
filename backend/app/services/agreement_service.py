@@ -834,14 +834,17 @@ class AgreementService:
         db.flush()
 
         # Create Standard Payment Milestones
+        ref_wedding_date = client.wedding_date or (datetime.now().date() + timedelta(days=180))
         m1 = AgreementPaymentMilestone(
             id=f"{agreement_id}-M1",
             agreement_id=agreement.id,
             name="Initial Advance Retainer",
+            milestone_name="Initial Advance Retainer",
             percentage=Decimal("25.00"),
             amount=(total_amt * Decimal("0.25")).quantize(Decimal("0.01")),
             description="Due immediately upon contract signing to lock calendar",
-            due_date=client.wedding_date - timedelta(days=120) if client.wedding_date else None,
+            due_description="Due immediately upon contract signing to lock calendar",
+            due_date=ref_wedding_date - timedelta(days=120),
             status="PENDING",
             sequence_order=1
         )
@@ -849,10 +852,12 @@ class AgreementService:
             id=f"{agreement_id}-M2",
             agreement_id=agreement.id,
             name="Design Approval & Vendor Locks",
+            milestone_name="Design Approval & Vendor Locks",
             percentage=Decimal("35.00"),
             amount=(total_amt * Decimal("0.35")).quantize(Decimal("0.01")),
             description="Due 90 days prior to wedding date",
-            due_date=client.wedding_date - timedelta(days=90) if client.wedding_date else None,
+            due_description="Due 90 days prior to wedding date",
+            due_date=ref_wedding_date - timedelta(days=90),
             status="PENDING",
             sequence_order=2
         )
@@ -860,10 +865,12 @@ class AgreementService:
             id=f"{agreement_id}-M3",
             agreement_id=agreement.id,
             name="Final Palace Balance",
+            milestone_name="Final Palace Balance",
             percentage=Decimal("40.00"),
             amount=(total_amt * Decimal("0.40")).quantize(Decimal("0.01")),
             description="Due 30 days prior to celebration launch",
-            due_date=client.wedding_date - timedelta(days=30) if client.wedding_date else None,
+            due_description="Due 30 days prior to celebration launch",
+            due_date=ref_wedding_date - timedelta(days=30),
             status="PENDING",
             sequence_order=3
         )

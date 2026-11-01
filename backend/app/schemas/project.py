@@ -3,13 +3,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-ProjectStatusType = Literal[
-    "Planning",
-    "In Progress",
-    "On Hold",
-    "Completed",
-    "Cancelled"
-]
+ProjectStatusType = str
 
 FunctionStatusType = Literal[
     "Scheduled",

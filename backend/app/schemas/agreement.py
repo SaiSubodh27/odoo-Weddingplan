@@ -163,7 +163,7 @@ class ServiceAgreementResponse(BaseModel):
     total_amount: Decimal
     currency: str
     current_version_number: int
-    agreement_version: str
+    agreement_version: Optional[str] = "v1.0"
     is_internally_approved: bool
     approved_by: Optional[str] = None
     approved_at: Optional[datetime] = None
@@ -172,8 +172,8 @@ class ServiceAgreementResponse(BaseModel):
     signed_by_name: Optional[str] = None
     signed_by_email: Optional[str] = None
     signed_pdf_url: Optional[str] = None
-    signing_otp_verified: bool
-    consent_confirmed: bool
+    signing_otp_verified: Optional[bool] = False
+    consent_confirmed: Optional[bool] = False
     created_at: datetime
     updated_at: datetime
     milestones: List[PaymentMilestoneResponse] = []

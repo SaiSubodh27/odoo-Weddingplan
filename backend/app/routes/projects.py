@@ -150,12 +150,16 @@ def list_projects(
     """
     Returns list of wedding projects with milestone progress metrics.
     """
+    clean_search = search if isinstance(search, str) else None
+    clean_status = status if isinstance(status, str) else None
+    clean_page = page if isinstance(page, int) else 1
+    clean_page_size = page_size if isinstance(page_size, int) else 50
     projects, total = project_service.list_projects(
         db=db,
-        search=search,
-        status=status,
-        page=page,
-        page_size=page_size
+        search=clean_search,
+        status=clean_status,
+        page=clean_page,
+        page_size=clean_page_size
     )
 
     items = []

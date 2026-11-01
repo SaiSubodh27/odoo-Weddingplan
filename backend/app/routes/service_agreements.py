@@ -65,6 +65,9 @@ def _format_agreement_response(a: ServiceAgreement) -> ServiceAgreementResponse:
         verified_by=a.verified_by,
         verified_at=a.verified_at,
         verification_notes=a.verification_notes,
+        agreement_version=getattr(a, 'agreement_version', 'v1.0') or 'v1.0',
+        signing_otp_verified=getattr(a, 'signing_otp_verified', False) or False,
+        consent_confirmed=getattr(a, 'consent_confirmed', False) or False,
         created_by=a.created_by,
         created_at=a.created_at,
         updated_at=a.updated_at,
@@ -121,12 +124,18 @@ def list_agreements(
 ):
     query = db.query(ServiceAgreement).filter(ServiceAgreement.is_deleted == False)
 
-    if client_id:
-        query = query.filter(ServiceAgreement.client_id == client_id)
-    if status and status != "All":
-        query = query.filter(ServiceAgreement.status == status)
-    if search:
-        search_filter = f"%{search}%"
+    clean_client_id = client_id if isinstance(client_id, str) else None
+    clean_status = status if isinstance(status, str) else None
+    clean_search = search if isinstance(search, str) else None
+    clean_page = page if isinstance(page, int) else 1
+    clean_page_size = page_size if isinstance(page_size, int) else 20
+
+    if clean_client_id:
+        query = query.filter(ServiceAgreement.client_id == clean_client_id)
+    if clean_status and clean_status != "All":
+        query = query.filter(ServiceAgreement.status == clean_status)
+    if clean_search:
+        search_filter = f"%{clean_search}%"
         query = query.join(Client).filter(
             (ServiceAgreement.agreement_number.ilike(search_filter)) |
             (Client.partner1_name.ilike(search_filter)) |
