@@ -972,11 +972,20 @@ class AgreementService:
             import logging
             logging.getLogger("royal_knot.otp").warning(f"OTP email dispatch failed: {e}")
 
+        import logging
+        logging.getLogger("royal_knot.otp").info(
+            f"[THE ROYAL KNOT OTP] Agreement {agreement.agreement_number} code for {client.email}: {raw_otp}"
+        )
+        print(f"\n[THE ROYAL KNOT OTP] Code for {agreement.agreement_number} ({client.email}): {raw_otp}\n", flush=True)
+
+        dev_otp_val = raw_otp if (not EmailService.is_smtp_configured() or settings.ENVIRONMENT == "development") else None
+
         return SendOTPResponse(
             success=True,
             message="Verification code successfully dispatched to your registered email.",
             email_destination=client.email,
-            expires_in_seconds=600
+            expires_in_seconds=600,
+            dev_otp=dev_otp_val
         )
 
     def verify_signing_otp(self, db: Session, agreement_id: str, raw_otp: str) -> VerifyOTPResponse:

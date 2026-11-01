@@ -155,7 +155,12 @@ export const ClientAgreementSigningPage: React.FC = () => {
     try {
       const res = await agreementApi.sendOtp(agreement.id);
       setOtpSent(true);
-      setOtpMessage(`Verification code dispatched to ${res.email_destination || agreement.client_email}. Code valid for 10 minutes.`);
+      if (res.dev_otp) {
+        setOtpCode(res.dev_otp);
+        setOtpMessage(`Verification code dispatched to ${res.email_destination || agreement.client_email}. (Code: ${res.dev_otp})`);
+      } else {
+        setOtpMessage(`Verification code dispatched to ${res.email_destination || agreement.client_email}. Code valid for 10 minutes.`);
+      }
     } catch (err: any) {
       setOtpError(err.message || 'Failed to send verification code.');
     } finally {

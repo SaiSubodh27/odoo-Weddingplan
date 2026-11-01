@@ -154,6 +154,7 @@ class AgreementDocument(Base):
     # Document type: 'generated_unsigned_pdf', 'signed_agreement_pdf', 'leegality_audit_trail', 'completion_certificate'
     document_type = Column(String(50), nullable=False, index=True)
 
+    file_name = Column(String(255), nullable=True)
     original_filename = Column(String(255), nullable=False)
     stored_filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
