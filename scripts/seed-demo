@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# The Royal Knot - Seed Demo Script Wrapper
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+ROOT_DIR="$(dirname "$DIR")"
+
+if [ -f "$ROOT_DIR/backend/.venv/bin/python" ]; then
+    PYTHON="$ROOT_DIR/backend/.venv/bin/python"
+elif [ -f "$ROOT_DIR/backend/.venv/Scripts/python.exe" ]; then
+    PYTHON="$ROOT_DIR/backend/.venv/Scripts/python.exe"
+else
+    PYTHON="python3"
+fi
+
+exec "$PYTHON" "$DIR/seed_demo.py" "$@"
