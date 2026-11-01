@@ -52,6 +52,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Wedding Projects', path: '/projects', icon: HeartHandshake },
     { name: 'Palace Calendar', path: '/weddings', icon: Calendar },
     { name: 'Vendor Directory', path: '/vendors', icon: Store },
+    { name: 'Founder Portal', path: '/founder-portal', icon: Sparkles },
+    { name: 'Vendor Portal', path: '/vendor-portal', icon: Store },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 

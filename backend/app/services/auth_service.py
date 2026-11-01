@@ -275,6 +275,13 @@ class AuthService:
         client_name = None
         if user.client:
             client_name = f"{user.client.partner1_name} & {user.client.partner2_name}"
+        elif user.role == "founder":
+            client_name = "Vikramaditya Rathore"
+        elif user.role == "vendor":
+            v_match = db.query(Vendor).filter(Vendor.email == user.email).first()
+            client_name = v_match.name if v_match else "Rajwada Floral Couture"
+        elif user.role in ("staff", "employee"):
+            client_name = "Maharani Gayatri Singh"
 
         # Evaluate Details intake & Agreement status for client
         has_completed_details = True
