@@ -89,3 +89,21 @@
   - Runs full lifecycle from Aarav & Meera hero enquiry through digital agreement signing, 3 caterer quote comparison, atomic winner selection, deposit payment, 28-task template generation, Big Day live schedule check-in, settlement extras, idempotent vendor payouts, and founder profitability.
   - 100% hand-written financial expectations (₹3,54,00,000 receipts, ₹2,02,75,000 vendor costs, ₹18,00,000 labor costs -> ₹1,33,25,000 founder gross profit, 37.64% margin).
   - All assertions green and verified.
+
+## Step 4: User Manual & Final Verification (COMPLETED)
+- [x] **Screenshots Captured (docs/screenshots/):**
+  - Captured authentic browser screens via Playwright for all four personas:
+    - Client Agreement Signing (client-agreement-signing.png)
+    - Client Intake Form (client-intake.png)
+    - Employee Enquiries Pipeline (mployee-enquiries.png)
+    - Employee Active Weddings Roster (mployee-weddings.png)
+    - Employee Big Day Live Schedule (mployee-big-day.png)
+    - Mobile Big Day Live View (mobile-big-day.png)
+    - Vendor Portal Dashboard (endor-portal.png)
+    - Founder Season View (ounder-season.png)
+- [x] **Comprehensive User Manual (docs/USER_MANUAL.md):**
+  - Covers all four perspectives: Client, Employee / Planner, Vendor, and Founder.
+  - Documents verified, real working capabilities from Step 3 with step-by-step guides.
+  - Includes explicit 'Not Available Yet' section for future planned roadmap items.
+- [x] **PDF Document Compiled (docs/USER_MANUAL.pdf):**
+  - Rendered via Playwright and Marked into an executive A4 PDF with embedded high-resolution screenshots.

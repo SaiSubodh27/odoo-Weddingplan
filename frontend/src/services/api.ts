@@ -329,6 +329,25 @@ export const emailApi = {
 };
 
 export const authApi = {
+  async registerWebsite(payload: any) {
+    const res = await fetch(`${API_BASE}/auth/register-website`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Website registration failed');
+    }
+    return res.json();
+  },
+
+  async getClientDossier(email: string) {
+    const res = await fetch(`${API_BASE}/auth/client-dossier?email=${encodeURIComponent(email)}`);
+    if (!res.ok) throw new Error('Failed to fetch client celebration dossier');
+    return res.json();
+  },
+
   async verifyToken(token: string) {
     const res = await fetch(`${API_BASE}/auth/verify-token?token=${encodeURIComponent(token)}`);
     return res.json();
@@ -813,6 +832,99 @@ export const cateringApi = {
 };
 
 export const agreementApi = {
+  async getMetrics() {
+    const res = await fetch(`${API_BASE}/service-agreements/metrics`);
+    if (!res.ok) return { totalAgreements: 0, pendingSigning: 0, signed: 0, verified: 0, confirmedBookings: 0 };
+    return res.json();
+  },
+
+  async list(params?: any) {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.status && params.status !== 'All') searchParams.set('status', params.status);
+    if (params?.client_id) searchParams.set('client_id', params.client_id);
+    const res = await fetch(`${API_BASE}/service-agreements?${searchParams.toString()}`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async get(id: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}`);
+    if (!res.ok) throw new Error(`Failed to fetch agreement ${id}`);
+    return res.json();
+  },
+
+  async create(data: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/service-agreements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to create service agreement');
+    }
+    return res.json();
+  },
+
+  async generatePdf(id: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/generate-pdf`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to generate PDF');
+    return res.json();
+  },
+
+  async approve(id: string, approvedBy: string = 'Maharani Gayatri Singh', notes?: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approved_by: approvedBy, notes }),
+    });
+    if (!res.ok) throw new Error('Failed to approve agreement');
+    return res.json();
+  },
+
+  async sendForSignature(id: string, provider: string = 'leegality') {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/send-for-signature?provider=${provider}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) throw new Error('Failed to submit signing request');
+    return res.json();
+  },
+
+  async getSignatureStatus(id: string, provider: string = 'leegality') {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/signature-status?provider=${provider}`);
+    if (!res.ok) throw new Error('Failed to fetch signature status');
+    return res.json();
+  },
+
+  async refreshSignatureStatus(id: string, provider: string = 'leegality') {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/refresh-signature-status?provider=${provider}`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to refresh signature status');
+    return res.json();
+  },
+
+  async verify(id: string, reviewerName: string, decision: 'VERIFIED' | 'REJECTED' | 'NEEDS_CORRECTION', remarks: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewer_name: reviewerName, decision, remarks }),
+    });
+    if (!res.ok) throw new Error('Failed to verify agreement');
+    return res.json();
+  },
+
+  async confirmBooking(id: string, confirmedBy: string = 'Maharani Gayatri Singh', confirmationNotes?: string) {
+    const res = await fetch(`${API_BASE}/service-agreements/${id}/confirm-booking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmed_by: confirmedBy, confirmation_notes: confirmationNotes }),
+    });
+    if (!res.ok) throw new Error('Failed to confirm booking');
+    return res.json();
+  },
+
   async getMyAgreement(clientId?: string) {
     const token = localStorage.getItem('the_royal_knot_token_v1') || '';
     const headers: Record<string, string> = {};
@@ -891,7 +1003,7 @@ export const agreementApi = {
     return res.json();
   },
 
-  getPdfUrl(agreementId: string) {
-    return `${API_BASE}/agreements/${agreementId}/pdf`;
+  getPdfUrl(agreementId: string, inline: boolean = true) {
+    return `${API_BASE}/agreements/${agreementId}/pdf?inline=${inline}`;
   }
 };

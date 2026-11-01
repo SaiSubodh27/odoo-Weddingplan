@@ -216,6 +216,11 @@ export const ClientAgreementSigningPage: React.FC = () => {
 
       setHasSignedAgreement(true);
       setAgreement(prev => prev ? { ...prev, status: 'SIGNED', is_verified: true, signed_at: res.signed_at } : null);
+
+      // Automatically advance to dashboard upon successful execution
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1200);
     } catch (err: any) {
       setError(err.message || 'Failed to execute digital signature.');
     } finally {

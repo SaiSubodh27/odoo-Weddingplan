@@ -5,10 +5,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   RefreshCw,
-  MapPin,
   User,
   ArrowLeft,
-  Filter,
   Sparkles,
 } from 'lucide-react';
 

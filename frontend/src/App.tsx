@@ -23,6 +23,7 @@ import { VendorDirectoryPage } from './pages/VendorDirectoryPage';
 import { VendorPortalPage } from './pages/VendorPortalPage';
 import { FounderPortalPage } from './pages/FounderPortalPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { BigDayLivePage } from './pages/BigDayLivePage';
 import { ClientIntakePage } from './pages/ClientIntakePage';
 
 // Protected Route wrapper with intake details and agreement gate enforcement
@@ -101,6 +102,8 @@ export const AppContent: React.FC = () => {
         <Route path="projects/:id" element={<ProjectDetailsPage />} />
         <Route path="weddings" element={<WeddingsPage />} />
         <Route path="weddings/:id" element={<WeddingProjectPage />} />
+        <Route path="weddings/:id/big-day" element={<BigDayLivePage />} />
+        <Route path="big-day" element={<BigDayLivePage />} />
         <Route path="weddings-calendar" element={<WeddingsPage />} />
         <Route path="vendors" element={<VendorsPage />} />
         <Route path="vendor-directory" element={<VendorDirectoryPage />} />
