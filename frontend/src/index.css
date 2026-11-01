@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @theme {
   --font-serif: 'Playfair Display', Georgia, serif;
@@ -39,3 +39,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @import './dashboard-theme.css';
+
+/* Legible ampersands for couple names */
+.royal-ampersand { font-family:Arial,'DM Sans',sans-serif; font-size:1em; font-weight:600; letter-spacing:0; padding-inline:.04em; }
+

@@ -47,7 +47,7 @@ class UserSignupRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=150, alias="fullName")
     email: str = Field(..., min_length=5, max_length=255)
     phone: Optional[str] = Field(None, max_length=50)
-    password: Optional[str] = Field("RoyalKnot2026!", min_length=6, description="Password")
+    password: str = Field(..., min_length=6, description="User-chosen password")
     role: str = Field("client", description="client | staff | vendor")
 
     @field_validator("email")

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
 import { authApi } from '../services/api';
@@ -23,7 +23,8 @@ export const LoginPage: React.FC = () => {
   const [signupNotice,setSignupNotice]=useState('');
   const [email, setEmail] = useState('planner@theroyalknot.in');
   const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('RoyalKnot2026!');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -45,7 +46,7 @@ export const LoginPage: React.FC = () => {
         fullName: fullName.trim(),
         email: finalEmail,
         phone: signupMethod === 'phone' ? phone.trim() : undefined,
-        password: signupPassword.trim() || 'RoyalKnot2026!',
+        password: signupPassword,
         role
       });
 
@@ -127,23 +128,24 @@ export const LoginPage: React.FC = () => {
   return <main className="lovable-login">
     <div className="lovable-overlay" aria-hidden="true" />
     <section aria-labelledby="brand" className="lovable-card">
-      <p className="lovable-eyebrow">✦ AGENCY AND CLIENT PORTAL ✦</p>
+      <p className="lovable-eyebrow">âœ¦ AGENCY AND CLIENT PORTAL âœ¦</p>
       <div className="lovable-lotus-row"><Lotus /></div>
       <h1 id="brand">THE <span>ROYAL</span> KNOT</h1>
       <p className="lovable-subtitle">WEDDING MANAGEMENT</p>
-      <div className="lovable-divider" aria-hidden="true"><i />◆<i /></div>
+      <div className="lovable-divider" aria-hidden="true"><i />â—†<i /></div>
       <div className="lovable-auth-switch" role="tablist" aria-label="Account access"><button type="button" role="tab" aria-selected={mode==='login'} className={mode==='login'?'active':''} onClick={()=>{setMode('login');setSignupNotice('')}}>Sign in</button><button type="button" role="tab" aria-selected={mode==='signup'} className={mode==='signup'?'active':''} onClick={()=>{setMode('signup');setSignupNotice('')}}>Sign up</button></div>
-      {mode==='signup'?<div className="lovable-signup"><p className="lovable-signup-label">I AM JOINING AS</p><div className="lovable-role-picker">{(['User','Employee','Vendor'] as const).map(role=><button key={role} type="button" className={accountType===role?'selected':''} onClick={()=>{setAccountType(role);setSignupNotice('')}}>{role}</button>)}</div><p className="lovable-signup-help">{accountType==='User'?'Create an account to manage your wedding experience.':accountType==='Employee'?'Employee accounts require approval from your agency administrator.':'Vendor accounts require verification before portal access.'}</p><div className="lovable-role-picker lovable-method-picker"><button type="button" className={signupMethod==='email'?'selected':''} onClick={()=>setSignupMethod('email')}>Email</button><button type="button" className={signupMethod==='phone'?'selected':''} onClick={()=>setSignupMethod('phone')}>Phone number</button></div><form className="lovable-form lovable-signup-form" onSubmit={handleSignup}><div><label htmlFor="signup-name">FULL NAME</label><div className="lovable-input"><input id="signup-name" value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Your full name" required/></div></div>{signupMethod==='email'?<div><label htmlFor="signup-email">EMAIL ADDRESS</label><div className="lovable-input"><Mail size={16}/><input id="signup-email" type="email" value={signupEmail} onChange={e=>setSignupEmail(e.target.value)} placeholder="name@example.com" required/></div></div>:<div><label htmlFor="signup-phone">PHONE NUMBER</label><div className="lovable-input"><input id="signup-phone" type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+91 98765 43210" required/></div></div>}<div><label htmlFor="signup-password">CONFIDENTIAL PASSWORD</label><div className="lovable-input"><Lock size={16}/><input id="signup-password" type="password" value={signupPassword} onChange={e=>setSignupPassword(e.target.value)} placeholder="••••••••" minLength={6} required/></div></div><button className="lovable-submit" type="submit" disabled={isSigningUp}>{isSigningUp?'CREATING ACCOUNT…':'CREATE ACCOUNT'} <ArrowRight size={16}/></button></form>{signupNotice&&<p role="status" className="lovable-signup-notice">{signupNotice}</p>}<p className="lovable-signup-foot">Secure registration and account creation connected to The Royal Knot heritage portal.</p></div>:<form onSubmit={handleLogin} className="lovable-form">
+      {mode==='signup'?<div className="lovable-signup"><p className="lovable-signup-label">I AM JOINING AS</p><div className="lovable-role-picker">{(['User','Employee','Vendor'] as const).map(role=><button key={role} type="button" className={accountType===role?'selected':''} onClick={()=>{setAccountType(role);setSignupNotice('')}}>{role}</button>)}</div><p className="lovable-signup-help">{accountType==='User'?'Create an account to manage your wedding experience.':accountType==='Employee'?'Employee accounts require approval from your agency administrator.':'Vendor accounts require verification before portal access.'}</p><div className="lovable-role-picker lovable-method-picker"><button type="button" className={signupMethod==='email'?'selected':''} onClick={()=>setSignupMethod('email')}>Email</button><button type="button" className={signupMethod==='phone'?'selected':''} onClick={()=>setSignupMethod('phone')}>Phone number</button></div><form className="lovable-form lovable-signup-form" onSubmit={handleSignup}><div><label htmlFor="signup-name">FULL NAME</label><div className="lovable-input"><input id="signup-name" value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Your full name" required/></div></div>{signupMethod==='email'?<div><label htmlFor="signup-email">EMAIL ADDRESS</label><div className="lovable-input"><Mail size={16}/><input id="signup-email" type="email" value={signupEmail} onChange={e=>setSignupEmail(e.target.value)} placeholder="name@example.com" required/></div></div>:<div><label htmlFor="signup-phone">PHONE NUMBER</label><div className="lovable-input"><input id="signup-phone" type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+91 98765 43210" required/></div></div>}<div><label htmlFor="signup-password">CONFIDENTIAL PASSWORD</label><div className="lovable-input"><Lock size={16}/><input id="signup-password" type={showSignupPassword ? "text" : "password"} autoComplete="new-password" value={signupPassword} onChange={e=>setSignupPassword(e.target.value)} placeholder="Create your own password" minLength={6} required/><button type="button" aria-label={showSignupPassword ? "Hide password" : "Show password"} aria-pressed={showSignupPassword} onClick={()=>setShowSignupPassword(!showSignupPassword)}>{showSignupPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></div><button className="lovable-submit" type="submit" disabled={isSigningUp}>{isSigningUp?'CREATING ACCOUNTâ€¦':'CREATE ACCOUNT'} <ArrowRight size={16}/></button></form>{signupNotice&&<p role="status" className="lovable-signup-notice">{signupNotice}</p>}<p className="lovable-signup-foot">Secure registration and account creation connected to The Royal Knot heritage portal.</p></div>:<form onSubmit={handleLogin} className="lovable-form">
         {error && <p role="alert" className="lovable-error">{error}</p>}
         <div><label htmlFor="email">EMAIL ADDRESS</label><div className="lovable-input"><Mail size={16} /><input id="email" type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} placeholder="planner@theroyalknot.in" required /></div></div>
         <div><div className="lovable-label-row"><label htmlFor="password">PASSWORD</label><button type="button" onClick={()=>alert('Please contact your agency administrator for password assistance.')}>Forgot password?</button></div>
-          <div className="lovable-input"><Lock size={16}/><input id="password" type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required/><button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)}>{show?<EyeOff size={16}/>:<Eye size={16}/>}</button></div>
+          <div className="lovable-input"><Lock size={16}/><input id="password" type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required/><button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)}>{show?<EyeOff size={16}/>:<Eye size={16}/>}</button></div>
         </div>
         <label className="lovable-remember"><input type="checkbox" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)}/><span className="lovable-checkbox">{rememberMe&&<Check size={12} strokeWidth={3}/>}</span>Remember this terminal</label>
-        <button className="lovable-submit" type="submit" disabled={isLoading}>{isLoading?'VERIFYING…':'ENTER AGENCY SYSTEM'}<ArrowRight size={16}/></button>
+        <button className="lovable-submit" type="submit" disabled={isLoading}>{isLoading?'VERIFYINGâ€¦':'ENTER AGENCY SYSTEM'}<ArrowRight size={16}/></button>
       </form>}
       <p className="lovable-authorized"><ShieldCheck size={16}/>Secure access for authorised agency staff and registered clients</p>
     </section>
     <footer className="lovable-footer">JAIPUR OFFICE: RAMBAGH ENCLAVE <span>|</span> UDAIPUR OFFICE: PICHOLA PROMENADE</footer>
   </main>;
 };
+

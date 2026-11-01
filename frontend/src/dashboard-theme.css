@@ -1,4 +1,4 @@
-
+﻿
 /* Dashboard-only visual treatment, matching the approved understated heritage mockup. */
 .rk-dashboard-shell { background: #FCF8F3; color:#2C211B; }
 .rk-dashboard-shell > div > main { max-width:none; padding: 0 28px 28px; }
@@ -77,3 +77,66 @@ aside nav .rk-workspace-group .rk-workspace-item { height: 34px; min-height: 34p
 aside nav .rk-workspace-group .rk-workspace-item svg { width: 15px; height: 15px; }
 .rk-dashboard-shell aside nav .rk-workspace-group .rk-workspace-item { height: 36px; min-height: 36px; padding: 0 9px; font-size: 12px; }
 .rk-dashboard-shell aside nav .rk-workspace-toggle { height: 40px; min-height: 40px; }
+
+/* Employee dashboard palette alignment with the Founder, Vendor and Client portals. */
+.rk-dashboard-shell { background:#F8F5F0; color:#382C28; }
+.rk-dashboard-shell > div > header { background:#FFFFFF; border-color:#E9E0D5; }
+.rk-dashboard-shell > div > header h1 { color:#382C28; }
+.rk-dashboard-shell > div > footer { color:#897A6A; }
+.rk-dashboard-shell aside { background:#342A27; border-color:#493B34; }
+.rk-dashboard-shell aside > div:first-of-type { border-color:#54443B; }
+.rk-dashboard-shell aside > div:first-of-type span.font-serif { color:#FFFFFF; }
+.rk-dashboard-shell aside > div:first-of-type span:last-child { color:#D4B89C; }
+.rk-dashboard-shell aside nav a { color:#D6C7BC; }
+.rk-dashboard-shell aside nav a svg { color:#D4B89C; }
+.rk-dashboard-shell aside nav a[aria-current="page"] { background:#685044; color:#FFFFFF; border-color:transparent; }
+.rk-dashboard-shell aside nav a:hover { background:#554137; color:#FFFFFF; }
+.rk-dashboard-shell aside .rk-workspace-group { background:#3D302B; border-color:#604B40; }
+.rk-dashboard-shell aside .rk-workspace-group .rk-side-link[aria-current="page"] { background:#685044; }
+.rk-dashboard-shell aside .rk-workspace-toggle { color:#D6C7BC; }
+.rk-dashboard-shell aside > div:last-child { border-color:#54443B; }
+.rk-dashboard-shell aside > div:last-child button { border-color:#604B40; color:#D6C7BC; }
+.rk-overview-intro { color:#7D6D60; }
+.rk-overview-intro svg { color:#A17D57; }
+.rk-overview-stat,.rk-overview-panel { background:#FFFFFF; border-color:#E8DFD5; box-shadow:none; border-radius:12px; color:#382C28; }
+.rk-overview-stat:hover { border-color:#B99B7F; }
+.rk-stat-icon { background:#F1E9DF; color:#98754E; }
+.rk-overview-stat p { color:#776A60; }
+.rk-overview-action { border-color:#E8DFD5; color:#382C28; }
+.rk-overview-action:hover { background:#F8F3ED; }
+.rk-overview-panel > h2 svg,.rk-overview-action > svg,.rk-overview-wedding small svg { color:#A17D57; }
+.rk-overview-wedding { color:#382C28; border-color:#E8DFD5; }
+.rk-overview-wedding:hover b { color:#806046; }
+
+/* Shared employee workspace shell: identical navigation palette on every route. */
+.rk-agency-shell { background:#F8F5F0; color:#382C28; }
+.rk-agency-shell > div > header { background:#FFFFFF; border-color:#E9E0D5; }
+.rk-agency-shell > div > header h1 { color:#382C28; }
+.rk-agency-shell > div > footer { background:#FFFFFF; border-color:#E9E0D5; color:#897A6A; }
+.rk-agency-shell aside { background:#342A27; border-color:#493B34; color:#FFFFFF; }
+.rk-agency-shell aside > div:first-of-type { background:#342A27; border-color:#54443B; }
+.rk-agency-shell aside > div:first-of-type span.font-serif { color:#FFFFFF; }
+.rk-agency-shell aside > div:first-of-type span:last-child { color:#D4B89C; }
+.rk-agency-shell aside > div:nth-of-type(2) { background:#3D302B; border-color:#54443B; color:#D6C7BC; }
+.rk-agency-shell aside nav > div:first-child { color:#D4B89C; }
+.rk-agency-shell aside nav a { color:#D6C7BC; }
+.rk-agency-shell aside nav a svg { color:#D4B89C; }
+.rk-agency-shell aside nav a[aria-current="page"] { background:#685044; color:#FFFFFF; border-color:transparent; }
+.rk-agency-shell aside nav a:hover { background:#554137; color:#FFFFFF; }
+.rk-agency-shell aside .rk-workspace-group { background:#3D302B; border-color:#604B40; }
+.rk-agency-shell aside .rk-workspace-toggle { color:#D6C7BC; }
+.rk-agency-shell aside .rk-workspace-toggle svg { color:#D4B89C; }
+.rk-agency-shell aside .rk-workspace-group .rk-side-link[aria-current="page"] { background:#685044; color:#FFFFFF; }
+.rk-agency-shell aside > div:nth-last-child(2) { background:#3D302B; border-color:#604B40; }
+.rk-agency-shell aside > div:nth-last-child(2) p { color:#D6C7BC; }
+.rk-agency-shell aside > div:last-child { background:#342A27; border-color:#54443B; }
+.rk-agency-shell aside > div:last-child button { border-color:#604B40; color:#D6C7BC; }
+.rk-agency-shell aside > div:last-child button:hover { background:#554137; color:#FFFFFF; }
+/* Dashboard retains its distinctive overview spacing; other employee pages retain theirs. */
+
+/* Accessible high-contrast season note on all employee sidebar routes. */
+.rk-agency-shell aside > div:nth-last-child(2) p { color:#FFFFFF; opacity:1; }
+.rk-agency-shell aside > div:nth-last-child(2) > div { color:#E8BC73; }
+.rk-dashboard-shell aside > div:nth-last-child(2) { display:block; }
+.rk-dashboard-shell aside > div:nth-last-child(2) p { color:#FFFFFF; }
+

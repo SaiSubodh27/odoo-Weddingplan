@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClients } from '../context/ClientContext';
 import { VendorDirectoryPage } from './VendorDirectoryPage';
@@ -71,7 +71,7 @@ export const WeddingsPage: React.FC = () => {
               </div>
 
               <h2 className="font-serif text-xl font-semibold text-[#1F2421] mb-1">
-                {w.partner1Name} and {w.partner2Name}
+                {w.partner1Name} <span className="royal-ampersand">&amp;</span> {w.partner2Name}
               </h2>
 
               <p className="text-[11px] text-[#9E7D3B] font-medium mb-4">
@@ -125,4 +125,5 @@ export const WeddingsPage: React.FC = () => {
     </div>
   );
 };
+
 

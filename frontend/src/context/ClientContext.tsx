@@ -41,7 +41,7 @@ const CLIENT_ID_KEY = 'the_royal_knot_client_id_v1';
 const DETAILS_COMPLETED_KEY = 'the_royal_knot_details_completed_v1';
 const AGREEMENT_SIGNED_KEY = 'the_royal_knot_agreement_signed_v1';
 const AGREEMENT_ID_KEY = 'the_royal_knot_agreement_id_v1';
-const API_BASE = 'http://localhost:8000/api/v1';
+const API_BASE = '/api/v1';
 
 export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [clients, setClients] = useState<Client[]>(() => {

@@ -313,7 +313,7 @@ export const ClientDetailsPage: React.FC = () => {
 
                 <div className="flex items-center gap-3">
                   <a
-                    href={`http://localhost:8000/api/v1/agreements/${agreement.id}/pdf`}
+                    href={`/api/v1/agreements/${agreement.id}/pdf`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs font-semibold hover:bg-[#333333] transition-colors"

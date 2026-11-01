@@ -760,7 +760,7 @@ export const EnquiryDetailsPage: React.FC = () => {
                         {m.attachments.map((att) => (
                           <a
                             key={att.id}
-                            href={att.downloadUrl || `http://localhost:8000/api/v1/emails/${m.id}/attachments/${att.id}/download`}
+                            href={att.downloadUrl || `/api/v1/emails/${m.id}/attachments/${att.id}/download`}
                             className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-[#FFFFFF] border border-[#E5E0D8] text-[#1F2421] hover:bg-[#F2EFE8]"
                           >
                             <Paperclip size={10} className="text-[#9E7D3B]" />

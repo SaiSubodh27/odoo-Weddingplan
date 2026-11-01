@@ -155,12 +155,8 @@ export const ClientAgreementSigningPage: React.FC = () => {
     try {
       const res = await agreementApi.sendOtp(agreement.id);
       setOtpSent(true);
-      if (res.dev_otp) {
-        setOtpCode(res.dev_otp);
-        setOtpMessage(`Verification code dispatched to ${res.email_destination || agreement.client_email}. (Code: ${res.dev_otp})`);
-      } else {
-        setOtpMessage(`Verification code dispatched to ${res.email_destination || agreement.client_email}. Code valid for 10 minutes.`);
-      }
+      setOtpCode('');
+      setOtpMessage(`Verification code sent to ${res.email_destination || agreement.client_email}. Code valid for 10 minutes.`);
     } catch (err: any) {
       setOtpError(err.message || 'Failed to send verification code.');
     } finally {
@@ -363,7 +359,7 @@ export const ClientAgreementSigningPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <a
-                  href={`http://localhost:8000/api/v1/agreements/${agreement?.id}/pdf`}
+                  href={`/api/v1/agreements/${agreement?.id}/pdf`}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FFFFFF] border border-[#C3D9C9] text-xs font-medium text-[#2D5A3C] hover:bg-[#F2F7F4] transition-colors"

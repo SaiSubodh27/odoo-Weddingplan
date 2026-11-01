@@ -934,6 +934,9 @@ class AgreementService:
                 detail="No client record linked to this agreement."
             )
 
+        if not EmailService.is_smtp_configured():
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Email verification is temporarily unavailable. SMTP delivery is not configured; please contact the administrator.")
+
         # Generate 6-digit cryptographic random OTP
         raw_otp = f"{secrets.randbelow(900000) + 100000}"
         now = datetime.now(timezone.utc)
@@ -970,22 +973,20 @@ class AgreementService:
         """
 
         try:
-            EmailService.send_email(
+            email_result = EmailService.send_email(
                 to_email=client.email,
                 subject=f"[The Royal Knot] Verification Code for Agreement {agreement.agreement_number}",
                 html_content=email_body
             )
+            if not email_result.get("success") or email_result.get("mode") != "live_smtp":
+                raise RuntimeError("SMTP delivery was not confirmed")
         except Exception as e:
             import logging
-            logging.getLogger("royal_knot.otp").warning(f"OTP email dispatch failed: {e}")
+            logging.getLogger("royal_knot.otp").error("OTP email dispatch failed: %s", type(e).__name__)
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Could not send verification email. Please try again later or contact the administrator.") from e
 
-        import logging
-        logging.getLogger("royal_knot.otp").info(
-            f"[THE ROYAL KNOT OTP] Agreement {agreement.agreement_number} code for {client.email}: {raw_otp}"
-        )
-        print(f"\n[THE ROYAL KNOT OTP] Code for {agreement.agreement_number} ({client.email}): {raw_otp}\n", flush=True)
-
-        dev_otp_val = raw_otp if (not EmailService.is_smtp_configured() or settings.ENVIRONMENT == "development") else None
+        # Never log, print, or return the verification code.
+        dev_otp_val = None
 
         return SendOTPResponse(
             success=True,

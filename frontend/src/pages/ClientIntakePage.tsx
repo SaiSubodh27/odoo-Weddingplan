@@ -86,7 +86,7 @@ export const ClientIntakePage: React.FC = () => {
   useEffect(() => {
     // If client already has a record in backend, try to pre-fill
     if (currentUser.clientId) {
-      fetch(`http://localhost:8000/api/v1/clients/${currentUser.clientId}`)
+      fetch(`/api/v1/clients/${currentUser.clientId}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data) {
@@ -159,7 +159,7 @@ export const ClientIntakePage: React.FC = () => {
       // If clientId is not set, try finding by email
       if (!clientId && clientEmail) {
         try {
-          const sRes = await fetch(`http://localhost:8000/api/v1/clients/search?query=${encodeURIComponent(clientEmail)}`);
+          const sRes = await fetch(`/api/v1/clients/search?query=${encodeURIComponent(clientEmail)}`);
           if (sRes.ok) {
             const sData = await sRes.json();
             const match = sData.items?.find((c: any) => c.email.toLowerCase() === clientEmail);
@@ -170,7 +170,7 @@ export const ClientIntakePage: React.FC = () => {
 
       if (clientId) {
         // Update client dossier in backend
-        const res = await fetch(`http://localhost:8000/api/v1/clients/${clientId}`, {
+        const res = await fetch(`/api/v1/clients/${clientId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -182,7 +182,7 @@ export const ClientIntakePage: React.FC = () => {
         }
       } else {
         // Create new client record if not already present
-        const cRes = await fetch('http://localhost:8000/api/v1/clients', {
+        const cRes = await fetch('/api/v1/clients', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -199,7 +199,7 @@ export const ClientIntakePage: React.FC = () => {
         localStorage.setItem('the_royal_knot_client_id_v1', clientId);
         // Fetch or create agreement for client
         try {
-          const agrRes = await fetch(`http://localhost:8000/api/v1/agreements/client/${clientId}`);
+          const agrRes = await fetch(`/api/v1/agreements/client/${clientId}`);
           if (agrRes.ok) {
             const agrData = await agrRes.json();
             if (agrData && agrData.id) {

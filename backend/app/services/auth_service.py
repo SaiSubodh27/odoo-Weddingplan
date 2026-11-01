@@ -136,7 +136,7 @@ class AuthService:
 
         now = datetime.now(timezone.utc)
         user_id = f"USR-{secrets.token_hex(4).upper()}"
-        hashed = hash_password(req.password or "RoyalKnot2026!")
+        hashed = hash_password(req.password)
 
         client_id = None
         has_completed_details = True

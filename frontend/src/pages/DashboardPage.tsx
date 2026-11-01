@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Inbox, Clock3, Users, ClipboardCheck, CalendarDays, ArrowRight, MapPin } from 'lucide-react';
 import { enquiryApi } from '../services/api';
@@ -41,7 +41,7 @@ export const DashboardPage: React.FC = () => {
         <h2><ClipboardCheck size={27}/> Action Required</h2>
         <div className="rk-overview-action-list">
           {pending.slice(0,4).map(c => <Link key={c.id} to={'/clients/'+c.id} className="rk-overview-action">
-            <span><b>{c.partner1Name} and {c.partner2Name}</b><small>{c.status}</small></span><ArrowRight size={20}/>
+            <span><b>{c.partner1Name} <span className="royal-ampersand">&amp;</span> {c.partner2Name}</b><small>{c.status}</small></span><ArrowRight size={20}/>
           </Link>)}
           {enquiries.slice(0,3).map(e => <Link key={e.id} to={'/enquiries/'+e.id} className="rk-overview-action">
             <span><b>{e.clientName}</b><small>New enquiry to review</small></span><ArrowRight size={20}/>
@@ -53,8 +53,8 @@ export const DashboardPage: React.FC = () => {
         <h2><CalendarDays size={27}/> Upcoming Weddings</h2>
         <div className="rk-overview-wedding-list">
           {weddings.map(w => <Link key={w.id} to={'/weddings/'+w.id} className="rk-overview-wedding">
-            <b>{w.partner1Name} and {w.partner2Name}</b>
-            <small><CalendarDays size={14}/>{new Date(w.weddingDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} · {w.weddingLocation}</small>
+            <b>{w.partner1Name} <span className="royal-ampersand">&amp;</span> {w.partner2Name}</b>
+            <small><CalendarDays size={14}/>{new Date(w.weddingDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} Â· {w.weddingLocation}</small>
           </Link>)}
           {weddings.length===0 && <p className="rk-overview-empty">No confirmed weddings scheduled yet.</p>}
         </div>
@@ -62,3 +62,4 @@ export const DashboardPage: React.FC = () => {
     </div>
   </div>;
 };
+

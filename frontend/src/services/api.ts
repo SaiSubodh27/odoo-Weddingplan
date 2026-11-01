@@ -1,6 +1,6 @@
 import { demoEnquiries, isDemoEnquiry } from '../data/demoEnquiries';
 
-const API_BASE = 'http://localhost:8000/api/v1';
+const API_BASE = '/api/v1';
 
 export const enquiryApi = {
   async list(params?: { search?: string; status?: string; source?: string; page?: number; pageSize?: number }) {
