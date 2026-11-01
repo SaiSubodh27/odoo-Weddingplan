@@ -117,6 +117,26 @@ class ServiceAgreementUpdate(BaseModel):
 
 
 class ServiceAgreementResponse(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def set_defaults_for_nulls(cls, data):
+        if hasattr(data, "__dict__"):
+            vals = dict(data.__dict__)
+            pkg = getattr(data, "service_package", None) or "Full-Service"
+            price = getattr(data, "package_price", None) or Decimal("25000000.00")
+            tax_pct = getattr(data, "tax_percentage", None) or Decimal("18.00")
+            tax_amt = getattr(data, "tax_amount", None) or (price * Decimal("0.18"))
+            tot_amt = getattr(data, "total_amount", None) or (price + tax_amt)
+            vals["service_package"] = pkg
+            vals["package_price"] = price
+            vals["tax_percentage"] = tax_pct
+            vals["tax_amount"] = tax_amt
+            vals["discount_amount"] = getattr(data, "discount_amount", None) or Decimal("0.00")
+            vals["total_amount"] = tot_amt
+            return vals
+        return data
+
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str

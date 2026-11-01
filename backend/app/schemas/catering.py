@@ -196,7 +196,8 @@ QuotationStatusType = Literal[
     "Received",
     "Under Review",
     "Accepted",
-    "Rejected"
+    "Rejected",
+    "Closed"
 ]
 
 

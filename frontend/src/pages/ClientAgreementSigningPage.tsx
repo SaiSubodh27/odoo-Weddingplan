@@ -86,7 +86,8 @@ export const ClientAgreementSigningPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const data = await agreementApi.getMyAgreement(currentUser.clientId);
+      const targetClientId = currentUser.clientId || localStorage.getItem('the_royal_knot_client_id_v1') || undefined;
+      const data = await agreementApi.getMyAgreement(targetClientId);
       setAgreement(data);
       setAgreementId(data.id);
       if (data.client_name) setSignerName(data.client_name);

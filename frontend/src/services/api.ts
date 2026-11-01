@@ -819,7 +819,10 @@ export const agreementApi = {
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const url = clientId ? `${API_BASE}/agreements/my-agreement?client_id=${clientId}` : `${API_BASE}/agreements/my-agreement`;
     const res = await fetch(url, { headers });
-    if (!res.ok) throw new Error('Failed to fetch service agreement');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch service agreement');
+    }
     return res.json();
   },
 
