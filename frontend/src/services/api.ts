@@ -348,6 +348,28 @@ export const authApi = {
     return res.json();
   },
 
+  async getClientVendors(email: string) {
+    const res = await fetch(`${API_BASE}/auth/client-vendors?email=${encodeURIComponent(email)}`);
+    if (!res.ok) throw new Error('Failed to fetch client vendor selections');
+    return res.json();
+  },
+
+  async saveClientVendors(payload: {
+    email: string;
+    vendorIds: string[];
+    customBudget?: number;
+    vendorCosts?: Record<string, number>;
+    vendorStatuses?: Record<string, string>;
+  }) {
+    const res = await fetch(`${API_BASE}/auth/client-vendors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to save client vendor selections');
+    return res.json();
+  },
+
   async verifyToken(token: string) {
     const res = await fetch(`${API_BASE}/auth/verify-token?token=${encodeURIComponent(token)}`);
     return res.json();
@@ -374,7 +396,10 @@ export const authApi = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Login failed');
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        throw new Error(`Backend service is unreachable (HTTP ${res.status}). Ensure FastAPI is running on port 8000.`);
+      }
+      throw new Error(err.detail || (res.status === 401 ? 'Invalid email or password.' : 'Login failed'));
     }
     return res.json();
   },
