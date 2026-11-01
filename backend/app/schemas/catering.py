@@ -210,6 +210,7 @@ class CateringQuotationBase(BaseModel):
     equipment_charges: Decimal = Field(Decimal("0.00"), alias="equipmentCharges", ge=0, description="Additional charges for kitchen setup, crockery, live counters, etc.")
     gst_rate_percent: Decimal = Field(Decimal("18.00"), alias="gstRatePercent", ge=0, description="Configurable GST rate percentage (e.g. 0%, 5%, 12%, 18%, or custom)")
     validity_date: Optional[date] = Field(None, alias="validityDate", description="Quotation validity deadline")
+    line_items: Optional[List[Dict[str, Any]]] = Field(None, alias="lineItems", description="Detailed line items: item_name, quantity, unit_price, total_price")
     notes: Optional[str] = Field(None, description="Inclusions, payment terms, or setup specifications")
 
     @field_validator("per_person_rate", "equipment_charges", "gst_rate_percent", mode="before")
@@ -257,6 +258,7 @@ class CateringQuotationResponse(CateringQuotationBase):
     vendor_contact_person: Optional[str] = Field(None, alias="vendorContactPerson")
     vendor_city: Optional[str] = Field(None, alias="vendorCity")
     vendor_rating: Optional[Decimal] = Field(None, alias="vendorRating")
+    normalized_price_per_plate: Optional[Decimal] = Field(None, alias="normalizedPricePerPlate")
 
 
 class CateringQuotationSelectResponse(BaseModel):
@@ -290,5 +292,41 @@ class CateringWhatsAppShareResponse(BaseModel):
     message_text: str = Field(..., alias="messageText")
     communication_id: str = Field(..., alias="communicationId")
 
+class CateringRFQCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    vendor_ids: List[str] = Field(..., alias="vendorIds", description="List of vendor IDs to send RFQ to")
+    notes: Optional[str] = Field(None, description="Scope notes for RFQ")
+    validity_date: Optional[date] = Field(None, alias="validityDate")
 
 
+class CateringQuotationComparisonItem(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    id: str
+    vendor_id: str = Field(..., alias="vendorId")
+    vendor_name: Optional[str] = Field(None, alias="vendorName")
+    vendor_city: Optional[str] = Field(None, alias="vendorCity")
+    vendor_rating: Optional[Decimal] = Field(None, alias="vendorRating")
+    per_person_rate: Decimal = Field(..., alias="perPersonRate")
+    normalized_price_per_plate: Decimal = Field(..., alias="normalizedPricePerPlate")
+    food_subtotal: Decimal = Field(..., alias="foodSubtotal")
+    equipment_charges: Decimal = Field(..., alias="equipmentCharges")
+    gst_rate_percent: Decimal = Field(..., alias="gstRatePercent")
+    gst_amount: Decimal = Field(..., alias="gstAmount")
+    total_amount: Decimal = Field(..., alias="totalAmount")
+    line_items: Optional[List[Dict[str, Any]]] = Field(None, alias="lineItems")
+    status: str
+    is_winner: bool = Field(False, alias="isWinner")
+    is_lowest_price: bool = Field(False, alias="isLowestPrice")
+
+
+class CateringQuotationComparisonResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    catering_plan_id: str = Field(..., alias="cateringPlanId")
+    guest_count: int = Field(..., alias="guestCount")
+    budget: Decimal
+    quotations: List[CateringQuotationComparisonItem]
+    lowest_price_quotation_id: Optional[str] = Field(None, alias="lowestPriceQuotationId")
+    selected_quotation_id: Optional[str] = Field(None, alias="selectedQuotationId")

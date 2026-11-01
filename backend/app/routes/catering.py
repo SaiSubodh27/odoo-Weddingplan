@@ -23,6 +23,8 @@ from app.schemas.catering import (
     CateringQuotationUpdate,
     CateringQuotationResponse,
     CateringQuotationSelectResponse,
+    CateringRFQCreate,
+    CateringQuotationComparisonResponse,
     CateringWhatsAppShareRequest,
     CateringWhatsAppShareResponse,
 )
@@ -358,6 +360,20 @@ def create_quotation(
 
 
 @router.get(
+    "/catering/{catering_id}/quotations/compare",
+    response_model=CateringQuotationComparisonResponse,
+    summary="Side-by-side comparison of all submitted vendor quotations",
+    tags=["Catering Quotations"]
+)
+def compare_catering_quotations(
+    catering_id: str,
+    db: Session = Depends(get_db)
+):
+    comparison = catering_service.compare_quotations(db=db, catering_id=catering_id)
+    return CateringQuotationComparisonResponse.model_validate(comparison)
+
+
+@router.get(
     "/catering/{catering_id}/quotations/{quotation_id}",
     response_model=CateringQuotationResponse,
     summary="Retrieve vendor quotation dossier by ID",
@@ -397,6 +413,21 @@ def update_quotation(
         db=db, catering_id=catering_id, quotation_id=quotation_id, quotation_in=quotation_in
     )
     return CateringQuotationResponse.model_validate(quotation)
+
+
+@router.post(
+    "/catering/{catering_id}/rfq",
+    response_model=List[CateringQuotationResponse],
+    summary="Dispatch multi-vendor RFQ requests for an event catering plan",
+    tags=["Catering Quotations"]
+)
+def create_catering_rfq(
+    catering_id: str,
+    rfq_in: CateringRFQCreate,
+    db: Session = Depends(get_db)
+):
+    quotes = catering_service.create_rfq(db=db, catering_id=catering_id, rfq_in=rfq_in)
+    return [CateringQuotationResponse.model_validate(q) for q in quotes]
 
 
 @router.post(

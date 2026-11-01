@@ -5,7 +5,7 @@ from app.models.registration import ClientRegistration
 from app.models.document import RegistrationDocument
 from app.models.user import UserAccount, ActivationToken
 from app.models.email_message import EmailMessage, EmailAttachment
-from app.models.project import WeddingProject, WeddingFunction, ProjectMilestone, ProjectStatusHistory
+from app.models.project import WeddingProject, WeddingFunction, ProjectMilestone, ProjectStatusHistory, ProjectVendor
 from app.models.vendor import Vendor
 from app.models.catering import (
     CateringPlan,
@@ -40,6 +40,7 @@ __all__ = [
     "WeddingFunction",
     "ProjectMilestone",
     "ProjectStatusHistory",
+    "ProjectVendor",
     "Vendor",
     "CateringPlan",
     "CateringMenuItem",

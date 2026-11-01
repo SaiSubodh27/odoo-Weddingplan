@@ -105,3 +105,24 @@ class ProjectStatusHistory(Base):
 
     def __repr__(self):
         return f"<ProjectStatusHistory {self.id}: {self.old_status} -> {self.new_status} at {self.changed_at}>"
+
+class ProjectVendor(Base):
+    __tablename__ = "project_vendors"
+
+    id = Column(String(50), primary_key=True, index=True)
+    project_id = Column(String(50), ForeignKey("wedding_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    vendor_id = Column(String(50), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    category = Column(String(50), nullable=False, default="Catering")
+    contract_amount = Column(Numeric(15, 2), nullable=False, default=0.00)
+    status = Column(String(50), nullable=False, default="Contracted")
+    notes = Column(Text, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    project = relationship("WeddingProject", backref=backref("assigned_vendors", cascade="all, delete-orphan"))
+    vendor = relationship("Vendor", backref=backref("project_assignments", cascade="all, delete-orphan"))
+
+    def __repr__(self):
+        return f"<ProjectVendor {self.id}: Vendor {self.vendor_id} on Project {self.project_id} ({self.status})>"

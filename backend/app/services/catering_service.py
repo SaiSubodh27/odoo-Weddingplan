@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from fastapi import HTTPException, status
 
-from app.models.project import WeddingProject, WeddingFunction
+from app.models.project import WeddingProject, WeddingFunction, ProjectVendor
 from app.models.vendor import Vendor
 from app.models.catering import CateringPlan, CateringMenuItem, CateringQuotation, CateringCommunicationLog
 from app.schemas.catering import (
@@ -24,6 +24,9 @@ from app.schemas.catering import (
     CateringQuotationUpdate,
     CateringQuotationResponse,
     CateringQuotationSelectResponse,
+    CateringRFQCreate,
+    CateringQuotationComparisonResponse,
+    CateringQuotationComparisonItem,
 )
 from app.schemas.vendor import VendorResponse
 from app.services.catering_presets import (
@@ -564,6 +567,8 @@ class CateringService:
             "gstAmount": q.gst_amount,
             "totalAmount": q.total_amount,
             "status": q.status,
+            "lineItems": getattr(q, "line_items", None),
+            "normalizedPricePerPlate": (Decimal(str(q.total_amount)) / Decimal(str(q.total_guest_count))).quantize(Decimal("0.01")) if q.total_guest_count and q.total_amount and q.total_amount > 0 else q.per_person_rate,
             "validityDate": q.validity_date,
             "notes": q.notes,
             "createdAt": q.created_at,
@@ -650,6 +655,7 @@ class CateringService:
             gst_rate_percent=quotation_in.gst_rate_percent,
             gst_amount=gst_amount,
             total_amount=total_amount,
+            line_items=getattr(quotation_in, "line_items", None),
             status="Received",
             validity_date=quotation_in.validity_date,
             notes=quotation_in.notes,
@@ -709,45 +715,66 @@ class CateringService:
         self, db: Session, catering_id: str, quotation_id: str
     ) -> Dict[str, Any]:
         """
-        Selects winning quotation for a catering plan:
-        1. Validates quotation exists and belongs to this catering plan.
-        2. Sets catering_plans.selected_vendor_id to winning vendor.
-        3. Sets catering_plans.agreed_cost to winning total amount.
-        4. Sets winning quotation status to 'Accepted'.
-        5. Sets other quotations for this plan to 'Rejected' (preserving audit trail).
+        Selects winning quotation for a catering plan in ONE atomic DB transaction:
+        1. Sets catering_plans.selected_vendor_id to winning vendor.
+        2. Sets catering_plans.agreed_cost to winning total amount.
+        3. Sets winning quotation status to 'Accepted'.
+        4. Sets other competing quotations to 'Closed' (or 'Rejected').
+        5. Links winning vendor to wedding project as ProjectVendor.
         """
-        plan = db.query(CateringPlan).filter(CateringPlan.id == catering_id).first()
-        if not plan:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Catering plan '{catering_id}' not found."
+        with db.begin_nested():
+            plan = db.query(CateringPlan).filter(CateringPlan.id == catering_id).first()
+            if not plan:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Catering plan '{catering_id}' not found."
+                )
+
+            quotation = (
+                db.query(CateringQuotation)
+                .filter(CateringQuotation.id == quotation_id, CateringQuotation.catering_plan_id == catering_id)
+                .options(joinedload(CateringQuotation.vendor))
+                .first()
             )
+            if not quotation:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Quotation '{quotation_id}' not found under catering plan '{catering_id}'."
+                )
 
-        quotation = (
-            db.query(CateringQuotation)
-            .filter(CateringQuotation.id == quotation_id, CateringQuotation.catering_plan_id == catering_id)
-            .options(joinedload(CateringQuotation.vendor))
-            .first()
-        )
-        if not quotation:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Quotation '{quotation_id}' not found under catering plan '{catering_id}'."
-            )
+            # 1. Update Catering Plan
+            plan.selected_vendor_id = quotation.vendor_id
+            plan.agreed_cost = quotation.total_amount
+            plan.status = "Vendor Selected"
 
-        # Update catering plan
-        plan.selected_vendor_id = quotation.vendor_id
-        plan.agreed_cost = quotation.total_amount
+            # 2. Mark winning quotation as Accepted
+            quotation.status = "Accepted"
 
-        # Mark winning quotation as Accepted
-        quotation.status = "Accepted"
+            # 3. Mark all other competing quotations as Closed
+            db.query(CateringQuotation).filter(
+                CateringQuotation.catering_plan_id == catering_id,
+                CateringQuotation.id != quotation_id,
+            ).update({"status": "Closed"}, synchronize_session=False)
 
-        # Mark other quotations as Rejected
-        db.query(CateringQuotation).filter(
-            CateringQuotation.catering_plan_id == catering_id,
-            CateringQuotation.id != quotation_id,
-            CateringQuotation.status.in_(["Received", "Under Review"])
-        ).update({"status": "Rejected"}, synchronize_session=False)
+            # 4. Link vendor to wedding project atomically
+            pv = db.query(ProjectVendor).filter(
+                ProjectVendor.project_id == plan.project_id,
+                ProjectVendor.vendor_id == quotation.vendor_id
+            ).first()
+            if not pv:
+                pv = ProjectVendor(
+                    id=f"PVND-{uuid.uuid4().hex[:6].upper()}",
+                    project_id=plan.project_id,
+                    vendor_id=quotation.vendor_id,
+                    category="Catering",
+                    contract_amount=quotation.total_amount,
+                    status="Contracted",
+                    notes=f"Winning quotation {quotation.id} for catering plan {catering_id}"
+                )
+                db.add(pv)
+            else:
+                pv.contract_amount = quotation.total_amount
+                pv.status = "Contracted"
 
         db.commit()
         db.refresh(plan)
@@ -761,6 +788,124 @@ class CateringService:
             "agreedCost": plan.agreed_cost,
             "selectedQuotationId": quotation.id,
             "selectedQuotation": self.serialize_quotation(quotation),
+        }
+
+    def create_rfq(
+        self, db: Session, catering_id: str, rfq_in: CateringRFQCreate
+    ) -> List[Dict[str, Any]]:
+        """Dispatches RFQs to multiple vendors simultaneously."""
+        plan = db.query(CateringPlan).filter(CateringPlan.id == catering_id).first()
+        if not plan:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Catering plan '{catering_id}' not found.")
+
+        created_quotes = []
+        for v_id in rfq_in.vendor_ids:
+            vendor = db.query(Vendor).filter(Vendor.id == v_id).first()
+            if not vendor:
+                continue
+
+            existing = db.query(CateringQuotation).filter(
+                CateringQuotation.catering_plan_id == catering_id,
+                CateringQuotation.vendor_id == v_id
+            ).first()
+            if not existing:
+                q = CateringQuotation(
+                    id=self.generate_quotation_id(),
+                    catering_plan_id=catering_id,
+                    vendor_id=v_id,
+                    quotation_reference=f"RFQ-{uuid.uuid4().hex[:4].upper()}",
+                    per_person_rate=Decimal("0.00"),
+                    total_guest_count=plan.guest_count,
+                    food_subtotal=Decimal("0.00"),
+                    equipment_charges=Decimal("0.00"),
+                    gst_rate_percent=Decimal("18.00"),
+                    gst_amount=Decimal("0.00"),
+                    total_amount=Decimal("0.00"),
+                    status="Received",
+                    validity_date=rfq_in.validity_date,
+                    notes=rfq_in.notes or f"RFQ dispatched for {plan.guest_count} guests",
+                )
+                db.add(q)
+                db.flush()
+                existing = q
+
+            comm = CateringCommunicationLog(
+                id=f"COM-{uuid.uuid4().hex[:6].upper()}",
+                catering_plan_id=catering_id,
+                vendor_id=v_id,
+                communication_type="RFQ Invitation",
+                recipient_phone=vendor.phone,
+                message_text=f"RFQ dispatched to {vendor.name} for catering plan {catering_id}",
+                status="Delivered",
+                initiated_by="Agency Staff"
+            )
+            db.add(comm)
+            created_quotes.append(existing)
+
+        plan.status = "Quotation Requested"
+        db.commit()
+        return [self.serialize_quotation(q) for q in created_quotes]
+
+    def compare_quotations(self, db: Session, catering_id: str) -> Dict[str, Any]:
+        """Returns side-by-side comparison of all quotations with normalized metrics."""
+        plan = db.query(CateringPlan).filter(CateringPlan.id == catering_id).first()
+        if not plan:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Catering plan '{catering_id}' not found.")
+
+        quotes = (
+            db.query(CateringQuotation)
+            .filter(CateringQuotation.catering_plan_id == catering_id)
+            .options(joinedload(CateringQuotation.vendor))
+            .all()
+        )
+
+        comparison_items = []
+        lowest_price = None
+        lowest_id = None
+
+        for q in quotes:
+            norm_rate = (
+                (Decimal(str(q.total_amount)) / Decimal(str(q.total_guest_count))).quantize(Decimal("0.01"))
+                if q.total_guest_count and q.total_amount and q.total_amount > 0
+                else q.per_person_rate
+            )
+            is_winner = (q.status == "Accepted") or (plan.selected_vendor_id == q.vendor_id and q.status != "Rejected" and q.status != "Closed")
+
+            if q.total_amount > 0 and (lowest_price is None or q.total_amount < lowest_price):
+                lowest_price = q.total_amount
+                lowest_id = q.id
+
+            item = {
+                "id": q.id,
+                "vendorId": q.vendor_id,
+                "vendorName": q.vendor.name if q.vendor else q.vendor_id,
+                "vendorCity": q.vendor.city if q.vendor else "Jaipur",
+                "vendorRating": q.vendor.rating if q.vendor else Decimal("5.00"),
+                "perPersonRate": q.per_person_rate,
+                "normalizedPricePerPlate": norm_rate,
+                "foodSubtotal": q.food_subtotal,
+                "equipmentCharges": q.equipment_charges,
+                "gstRatePercent": q.gst_rate_percent,
+                "gstAmount": q.gst_amount,
+                "totalAmount": q.total_amount,
+                "lineItems": getattr(q, "line_items", None),
+                "status": q.status,
+                "isWinner": is_winner,
+                "isLowestPrice": False,
+            }
+            comparison_items.append(item)
+
+        for item in comparison_items:
+            if item["id"] == lowest_id:
+                item["isLowestPrice"] = True
+
+        return {
+            "cateringPlanId": plan.id,
+            "guestCount": plan.guest_count,
+            "budget": plan.budget,
+            "quotations": comparison_items,
+            "lowestPriceQuotationId": lowest_id,
+            "selectedQuotationId": plan.selected_vendor_id,
         }
 
     # =====================================================================

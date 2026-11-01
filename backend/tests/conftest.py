@@ -55,3 +55,11 @@ def override_get_db():
     finally:
         app.dependency_overrides.pop(get_db, None)
 
+@pytest.fixture
+def db_session():
+    Base.metadata.create_all(bind=test_engine)
+    db = TestSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Text, Numeric, Date, DateTime, ForeignKey, func
+from sqlalchemy import Column, String, Integer, Text, Numeric, Date, DateTime, ForeignKey, func, JSON
 from sqlalchemy.orm import relationship, backref
 from app.database.base import Base
 
@@ -32,6 +32,7 @@ class CateringPlan(Base):
 
     # Lifecycle Status: Draft, Requirements Confirmed, Vendor Selected, Menu Finalized, Sent to Vendor, Vendor Confirmed
     status = Column(String(50), nullable=False, default="Draft", index=True)
+    line_items = Column(JSON, nullable=True)
     notes = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -109,6 +110,7 @@ class CateringQuotation(Base):
 
     status = Column(String(50), nullable=False, default="Received", index=True)  # Received, Under Review, Accepted, Rejected
     validity_date = Column(Date, nullable=True)
+    line_items = Column(JSON, nullable=True)
     notes = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

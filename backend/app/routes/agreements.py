@@ -111,6 +111,20 @@ def get_my_agreement(
     summary="Get service agreement by ID",
     tags=["Service Agreements"]
 )
+@router.get(
+    "/agreements/client/{client_id}",
+    response_model=ServiceAgreementResponse,
+    summary="Get or instantiate service agreement for specific client ID",
+    tags=["Service Agreements"]
+)
+def get_agreement_by_client_id(
+    client_id: str = Path(..., description="Client ID"),
+    db: Session = Depends(get_db)
+):
+    agreement = agreement_service.get_or_create_agreement_for_client(db, client_id)
+    return _format_agreement_response(agreement)
+
+
 def get_agreement_by_id(
     agreement_id: str = Path(..., description="Agreement ID"),
     db: Session = Depends(get_db)

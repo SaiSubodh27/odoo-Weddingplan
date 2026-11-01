@@ -12,3 +12,10 @@
   - Frontend auto-redirect to `/agreement` via `ProtectedRoute` and global fetch interceptor.
   - Planners can access and download executed signed PDF.
   - 37/37 tests passing (`test_service_agreement_otp_signing.py`, `test_zoho_sign_polling.py`, `test_service_agreement_workflow.py`).
+
+- **P0 Item 2: Quotes & Multi-Vendor RFQ Comparison (COMPLETED)**
+  - Added multi-vendor RFQ dispatch endpoint `POST /api/v1/catering/{id}/rfq` creating quotes and communication logs.
+  - Implemented itemized quotation line items with decimal-safe costing engine and normalized price-per-plate calculation.
+  - Implemented side-by-side comparison endpoint `GET /api/v1/catering/{id}/quotations/compare` returning vendor ratings, normalized rates, breakdowns, and lowest-price indicators.
+  - Implemented atomic "select winner" transaction: winning quote -> Accepted, competing quotes -> Closed, catering plan updated, and vendor linked directly to wedding project in `project_vendors` in one single DB transaction.
+  - 4/4 tests passing (`backend/tests/test_p0_quotes_comparison.py`).
