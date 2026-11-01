@@ -14,7 +14,7 @@ import {
   BriefcaseBusiness,
   Calendar,
   Store,
-  Building2
+  FileText
 } from 'lucide-react';
 import { useClients } from '../../context/ClientContext';
 
@@ -24,9 +24,10 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { logout } = useClients();
+  const { logout, currentUser } = useClients();
   const navigate = useNavigate();
   const location = useLocation();
+  const isClient = currentUser?.role?.toLowerCase().includes('client');
   const inWorkspace = ['/inbox', '/enquiries', '/clients'].some(path => location.pathname.startsWith(path));
   const [expanded, setExpanded] = useState(true);
 
@@ -34,6 +35,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     logout(); 
     navigate('/login'); 
   };
+
+  const clientNav = [
+    { name: 'Celebration Portal', path: '/client-portal', icon: Sparkles },
+    { name: 'Service Agreement', path: '/agreement', icon: FileText },
+    { name: 'Celebration Details', path: '/client-intake', icon: Inbox },
+  ];
 
   const workspace = [
     { name: 'Email Inbox', path: '/inbox', icon: Mail },
@@ -45,8 +52,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Wedding Projects', path: '/projects', icon: HeartHandshake },
     { name: 'Palace Calendar', path: '/weddings', icon: Calendar },
     { name: 'Vendor Directory', path: '/vendors', icon: Store },
-    { name: 'Founder Portal', path: '/founder-portal', icon: Building2 },
-    { name: 'Vendor Portal', path: '/vendor-portal', icon: BriefcaseBusiness },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
@@ -84,66 +89,89 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         {/* Subtitle */}
         <div className="px-6 py-3.5 bg-[#F5F2EB] border-b border-[#E5E0D8] flex items-center gap-2 text-[#736F68] text-xs">
           <MapPin size={13} className="text-[#9E7D3B] shrink-0" />
-          <span className="tracking-wide text-[11px]">Luxury Destination Concierge</span>
+          <span className="tracking-wide text-[11px]">
+            {isClient ? 'Private Couple Suite' : 'Luxury Destination Concierge'}
+          </span>
         </div>
 
         {/* Navigation links */}
         <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-          <div className="text-[10px] font-semibold text-[#8C877D] uppercase tracking-[0.15em] px-3 mb-1">
-            Agency Management
-          </div>
-
-          <NavLink 
-            to="/dashboard" 
-            onClick={onClose} 
-            className={({ isActive }) => navClass(isActive)}
-          >
-            <LayoutDashboard size={16} className="text-[#9E7D3B]" />
-            <span>Dashboard</span>
-          </NavLink>
-
-          {/* Workspace Collapsible Group */}
-          <div className={'rk-workspace-group mt-2 mb-2 rounded-md border ' + (inWorkspace ? 'border-[#C9A67D] bg-[#F7F1E8]' : 'border-[#E5E0D8] bg-[#F8F5F0]')}>
-            <button 
-              type="button" 
-              onClick={() => setExpanded(v => !v)} 
-              aria-expanded={expanded} 
-              aria-controls="rk-workspace-links" 
-              className="rk-workspace-toggle w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-semibold tracking-wide text-[#42372D]"
-            >
-              <BriefcaseBusiness size={15} className="text-[#9E7D3B]" />
-              <span className="flex-1 text-[11px] uppercase tracking-wider">WORKSPACE</span>
-              <ChevronDown size={14} className={'transition-transform ' + (expanded ? '' : '-rotate-90')} />
-            </button>
-            {expanded && (
-              <div id="rk-workspace-links" className="px-1.5 pb-1.5 space-y-0.5">
-                {workspace.map(item => (
-                  <NavLink 
-                    key={item.path} 
-                    to={item.path} 
-                    onClick={onClose} 
-                    className={({ isActive }) => navClass(isActive) + ' rk-workspace-item rounded-md pl-4 py-2'}
-                  >
-                    <item.icon size={15} className="text-[#9E7D3B]" />
-                    <span>{item.name}</span>
-                  </NavLink>
-                ))}
+          {isClient ? (
+            <>
+              <div className="text-[10px] font-semibold text-[#8C877D] uppercase tracking-[0.15em] px-3 mb-1">
+                My Celebration
               </div>
-            )}
-          </div>
+              {clientNav.map(item => (
+                <NavLink 
+                  key={item.path} 
+                  to={item.path} 
+                  onClick={onClose} 
+                  className={({ isActive }) => navClass(isActive)}
+                >
+                  <item.icon size={16} className="text-[#9E7D3B]" />
+                  <span>{item.name}</span>
+                </NavLink>
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="text-[10px] font-semibold text-[#8C877D] uppercase tracking-[0.15em] px-3 mb-1">
+                Agency Management
+              </div>
 
-          {/* Main Navigation Items */}
-          {mainNav.map(item => (
-            <NavLink 
-              key={item.path} 
-              to={item.path} 
-              onClick={onClose} 
-              className={({ isActive }) => navClass(isActive)}
-            >
-              <item.icon size={16} className="text-[#9E7D3B]" />
-              <span>{item.name}</span>
-            </NavLink>
-          ))}
+              <NavLink 
+                to="/dashboard" 
+                onClick={onClose} 
+                className={({ isActive }) => navClass(isActive)}
+              >
+                <LayoutDashboard size={16} className="text-[#9E7D3B]" />
+                <span>Dashboard</span>
+              </NavLink>
+
+              {/* Workspace Collapsible Group */}
+              <div className={'rk-workspace-group mt-2 mb-2 rounded-md border ' + (inWorkspace ? 'border-[#C9A67D] bg-[#F7F1E8]' : 'border-[#E5E0D8] bg-[#F8F5F0]')}>
+                <button 
+                  type="button" 
+                  onClick={() => setExpanded(v => !v)} 
+                  aria-expanded={expanded} 
+                  aria-controls="rk-workspace-links" 
+                  className="rk-workspace-toggle w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-semibold tracking-wide text-[#42372D]"
+                >
+                  <BriefcaseBusiness size={15} className="text-[#9E7D3B]" />
+                  <span className="flex-1 text-[11px] uppercase tracking-wider">WORKSPACE</span>
+                  <ChevronDown size={14} className={'transition-transform ' + (expanded ? '' : '-rotate-90')} />
+                </button>
+                {expanded && (
+                  <div id="rk-workspace-links" className="px-1.5 pb-1.5 space-y-0.5">
+                    {workspace.map(item => (
+                      <NavLink 
+                        key={item.path} 
+                        to={item.path} 
+                        onClick={onClose} 
+                        className={({ isActive }) => navClass(isActive) + ' rk-workspace-item rounded-md pl-4 py-2'}
+                      >
+                        <item.icon size={15} className="text-[#9E7D3B]" />
+                        <span>{item.name}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Main Navigation Items */}
+              {mainNav.map(item => (
+                <NavLink 
+                  key={item.path} 
+                  to={item.path} 
+                  onClick={onClose} 
+                  className={({ isActive }) => navClass(isActive)}
+                >
+                  <item.icon size={16} className="text-[#9E7D3B]" />
+                  <span>{item.name}</span>
+                </NavLink>
+              ))}
+            </>
+          )}
         </nav>
 
         {/* Agency Season Info */}
@@ -153,7 +181,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <span>Winter Season '26</span>
           </div>
           <p className="text-[10px] text-[#736F68] leading-relaxed">
-            High destination wedding intake active across Rajasthan heritage properties.
+            {isClient
+              ? 'Your royal celebration directors are dedicated to perfection in Rajasthan.'
+              : 'High destination wedding intake active across Rajasthan heritage properties.'}
           </p>
         </div>
 

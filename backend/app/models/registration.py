@@ -7,7 +7,13 @@ class ClientRegistration(Base):
     __tablename__ = "client_registrations"
 
     id = Column(String(50), primary_key=True, index=True)
-    enquiry_id = Column(String(50), ForeignKey("enquiries.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    enquiry_id = Column(String(50), ForeignKey("enquiries.id", ondelete="CASCADE"), nullable=True, index=True)
+
+    # Google Forms & Source Tracking
+    google_form_response_id = Column(String(100), unique=True, nullable=True, index=True)
+    google_sheet_row = Column(Integer, nullable=True)
+    enquiry_reference = Column(String(100), nullable=True, index=True)
+    source = Column(String(50), nullable=False, default="Google Forms")
 
     # Couple Information
     full_name = Column(String(150), nullable=False)

@@ -64,6 +64,19 @@ async def lifespan(app: FastAPI):
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE wedding_functions ADD COLUMN estimated_cost NUMERIC(15, 2) DEFAULT 0.00 NOT NULL"))
                     conn.commit()
+
+        if "client_registrations" in inspector.get_table_names():
+            reg_cols = [col["name"] for col in inspector.get_columns("client_registrations")]
+            with engine.connect() as conn:
+                if "google_form_response_id" not in reg_cols:
+                    conn.execute(text("ALTER TABLE client_registrations ADD COLUMN google_form_response_id VARCHAR(100)"))
+                if "google_sheet_row" not in reg_cols:
+                    conn.execute(text("ALTER TABLE client_registrations ADD COLUMN google_sheet_row INTEGER"))
+                if "enquiry_reference" not in reg_cols:
+                    conn.execute(text("ALTER TABLE client_registrations ADD COLUMN enquiry_reference VARCHAR(100)"))
+                if "source" not in reg_cols:
+                    conn.execute(text("ALTER TABLE client_registrations ADD COLUMN source VARCHAR(50) DEFAULT 'Google Forms' NOT NULL"))
+                conn.commit()
         from app.services.project_service import project_service
         db = SessionLocal()
         try:

@@ -69,7 +69,7 @@ export const LoginPage: React.FC = () => {
         } else if (!hasSigned) {
           navigate('/agreement');
         } else {
-          navigate('/dashboard');
+          navigate('/client-portal');
         }
       } else if (res.role === 'vendor') {
         navigate('/vendor-portal');
@@ -98,6 +98,7 @@ export const LoginPage: React.FC = () => {
       const isClient = res.role === 'client';
       const hasCompletedDetails = res.hasCompletedDetails ?? res.has_completed_details ?? (!isClient);
       const hasSigned = res.hasSignedAgreement ?? res.has_signed_agreement ?? (!isClient);
+
       login(res.email, {
         name: res.clientName || res.client_name,
         role: isClient ? 'Client Workspace' : 'Principal Wedding Planner',
@@ -113,7 +114,7 @@ export const LoginPage: React.FC = () => {
         } else if (!hasSigned) {
           navigate('/agreement');
         } else {
-          navigate('/dashboard');
+          navigate('/client-portal');
         }
       } else {
         navigate('/dashboard');

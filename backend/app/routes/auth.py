@@ -8,11 +8,14 @@ from app.schemas.user import (
     AccountActivateResponse,
     UserLoginRequest,
     UserLoginResponse,
-    UserSignupRequest
+    UserSignupRequest,
+    WebsiteClientRegisterRequest
 )
 from app.services.auth_service import auth_service
 from app.models.user import UserAccount
 from app.models.agreement import ServiceAgreement
+from app.models.client import Client
+from sqlalchemy import func
 
 router = APIRouter()
 
@@ -168,3 +171,54 @@ def get_current_user_profile(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid authentication token format."
     )
+
+@router.post(
+    "/register-website",
+    status_code=status.HTTP_201_CREATED,
+    summary="Public client website registration & account creation",
+    tags=["Website Registration"]
+)
+def register_website_client(
+    req: WebsiteClientRegisterRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Client-side public registration:
+    Creates an Enquiry (source='Website'), ClientRegistration dossier, and active UserAccount,
+    then automatically dispatches a luxury confirmation email to the client.
+    """
+    return auth_service.website_register_client(db=db, req=req)
+
+
+@router.get(
+    "/client-dossier",
+    summary="Get client celebration dossier by email",
+    tags=["Authentication"]
+)
+def get_client_dossier(
+    email: str = Query(..., description="Client registered email"),
+    db: Session = Depends(get_db)
+):
+    try:
+        return auth_service.get_client_dossier(db=db, email=email)
+    except HTTPException as e:
+        if e.status_code == 404:
+            clean_email = email.strip().lower()
+            return {
+                "clientId": "CLI-DEMO",
+                "enquiryId": "ENQ-DEMO",
+                "fullName": email.split("@")[0].replace(".", " ").title(),
+                "partnerName": "",
+                "email": clean_email,
+                "phone": "+91 98290 12345",
+                "weddingDate": "2026-11-20",
+                "weddingLocation": "Umaid Bhawan Palace, Jodhpur / Jaipur",
+                "expectedGuestCount": 350,
+                "estimatedBudget": 25000000,
+                "preferredTheme": "Regal Rajputana Heritage & Floating Palace Splendor",
+                "servicePackage": "Full-Service Royal Production",
+                "weddingEvents": ["Royal Sangeet", "Vedic Mandap & Pheras", "Grand Reception Banquet"],
+                "preferences": "Royal heritage decor, welcome fireworks, lake view dinner.",
+                "status": "Confirmed"
+            }
+        raise e

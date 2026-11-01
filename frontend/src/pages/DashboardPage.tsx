@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { Inbox, Clock3, Users, ClipboardCheck, CalendarDays, ArrowRight, MapPin } from 'lucide-react';
 import { enquiryApi } from '../services/api';
 import { useClients } from '../context/ClientContext';
 
 type NewEnquiry = { id: string; clientName: string; status: string };
 export const DashboardPage: React.FC = () => {
-  const { clients } = useClients();
+  const { clients, currentUser } = useClients();
+  const isClient = currentUser?.role?.toLowerCase().includes('client');
+  if (isClient) {
+    return <Navigate to="/client-portal" replace />;
+  }
+
   const [enquiries, setEnquiries] = useState<NewEnquiry[]>([]);
   useEffect(() => {
     let mounted = true;

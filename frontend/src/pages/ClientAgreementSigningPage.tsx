@@ -224,7 +224,7 @@ export const ClientAgreementSigningPage: React.FC = () => {
 
       // Automatically advance to dashboard upon successful execution
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/client-portal');
       }, 1200);
     } catch (err: any) {
       setError(err.message || 'Failed to execute digital signature.');
@@ -371,10 +371,10 @@ export const ClientAgreementSigningPage: React.FC = () => {
                   <Download size={13} /> Download Signed PDF
                 </a>
                 <button
-                  onClick={() => navigate('/dashboard')}
+                  onClick={() => navigate('/client-portal')}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1F2421] text-[#FAF8F5] text-xs font-medium hover:bg-[#333333] transition-colors"
                 >
-                  Go to Dashboard <ArrowRight size={13} />
+                  Enter Celebration Portal <ArrowRight size={13} />
                 </button>
               </div>
             </div>

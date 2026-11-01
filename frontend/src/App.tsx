@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ClientActivationPage } from './pages/ClientActivationPage';
 import { ClientRegistrationPage } from './pages/ClientRegistrationPage';
 import { ClientAgreementSigningPage } from './pages/ClientAgreementSigningPage';
+import { ClientPortalPage } from './pages/ClientPortalPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EmailInboxPage } from './pages/EmailInboxPage';
 import { EnquiriesPage } from './pages/EnquiriesPage';
@@ -45,6 +46,15 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     if (hasCompletedDetails && !hasSignedAgreement && location.pathname !== '/agreement') {
       return <Navigate to="/agreement" replace />;
     }
+    // Restrict clients from viewing internal agency/staff management pages
+    const employeeRoutes = [
+      '/', '/dashboard', '/inbox', '/enquiries', '/clients', '/projects',
+      '/weddings', '/vendors', '/vendor-directory', '/quotations',
+      '/settings', '/founder-portal', '/big-day'
+    ];
+    if (employeeRoutes.some(r => location.pathname === r || location.pathname.startsWith(r + '/'))) {
+      return <Navigate to="/client-portal" replace />;
+    }
   }
 
   return <>{children}</>;
@@ -80,7 +90,17 @@ export const AppContent: React.FC = () => {
         }
       />
 
-      {/* Protected Routes inside Dashboard Layout */}
+      {/* Stage 3: Client Celebration Portal */}
+      <Route
+        path="/client-portal"
+        element={
+          <ProtectedRoute>
+            <ClientPortalPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Protected Routes inside Dashboard Layout (Staff & Agency Management) */}
       <Route
         path="/"
         element={
