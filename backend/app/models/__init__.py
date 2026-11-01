@@ -14,6 +14,9 @@ from app.models.project import (
     PlanningTask,
     PaymentStage,
     TeamTimeEntry,
+    BigDayScheduleEvent,
+    WeddingExtra,
+    VendorPayout,
 )
 from app.models.vendor import Vendor
 from app.models.catering import (
@@ -53,6 +56,9 @@ __all__ = [
     "PlanningTask",
     "PaymentStage",
     "TeamTimeEntry",
+    "BigDayScheduleEvent",
+    "WeddingExtra",
+    "VendorPayout",
     "Vendor",
     "CateringPlan",
     "CateringMenuItem",

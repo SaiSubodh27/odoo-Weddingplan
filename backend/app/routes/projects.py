@@ -28,6 +28,16 @@ from app.schemas.project import (
     TeamTimeEntryResponse,
     FounderProfitabilityResponse,
     DepositPaidResponse,
+    BigDayScheduleEventCreate,
+    BigDayScheduleEventUpdate,
+    BigDayScheduleEventResponse,
+    BigDayScheduleOverviewResponse,
+    WeddingExtraCreate,
+    WeddingExtraResponse,
+    VendorPayoutCreate,
+    VendorPayoutResponse,
+    FinalSettlementResponse,
+    ClientWeddingOverviewResponse,
 )
 
 router = APIRouter()
@@ -605,5 +615,176 @@ def get_project_profitability(
     try:
         prof = project_service.get_profitability(db=db, project_id=project_id)
         return FounderProfitabilityResponse.model_validate(prof)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# =====================================================================
+# P1 Item 5: Big Day Live Schedule & Check-in
+# =====================================================================
+
+@router.post(
+    "/{project_id}/big-day/schedule",
+    response_model=BigDayScheduleEventResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add an event to the Big Day live schedule",
+    tags=["Big Day Coordinator"]
+)
+def add_schedule_event(
+    project_id: str,
+    event_in: BigDayScheduleEventCreate,
+    db: Session = Depends(get_db)
+):
+    try:
+        ev = project_service.add_schedule_event(db=db, project_id=project_id, event_in=event_in)
+        return BigDayScheduleEventResponse.model_validate(ev)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/{project_id}/big-day/schedule",
+    response_model=BigDayScheduleOverviewResponse,
+    summary="Get Big Day live schedule with real-time late alerts and 30s polling support",
+    tags=["Big Day Coordinator"]
+)
+def get_live_schedule(
+    project_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        return project_service.list_schedule_events(db=db, project_id=project_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/{project_id}/big-day/events/{event_id}/check-in",
+    response_model=BigDayScheduleEventResponse,
+    summary="Check-in arriving vendor on the Big Day",
+    tags=["Big Day Coordinator"]
+)
+def check_in_vendor_event(
+    project_id: str,
+    event_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        ev = project_service.check_in_event(db=db, project_id=project_id, event_id=event_id)
+        return BigDayScheduleEventResponse.model_validate(ev)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# =====================================================================
+# P1 Item 6: Extras & Final Settlement
+# =====================================================================
+
+@router.post(
+    "/{project_id}/extras",
+    response_model=WeddingExtraResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add an extra charge (extra plates, DJ overtime, etc.)",
+    tags=["Settlement & Extras"]
+)
+def add_wedding_extra(
+    project_id: str,
+    extra_in: WeddingExtraCreate,
+    db: Session = Depends(get_db)
+):
+    try:
+        extra = project_service.add_extra(db=db, project_id=project_id, extra_in=extra_in)
+        return WeddingExtraResponse.model_validate(extra)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/{project_id}/extras",
+    response_model=List[WeddingExtraResponse],
+    summary="List all extras for wedding project",
+    tags=["Settlement & Extras"]
+)
+def list_wedding_extras(
+    project_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        extras = project_service.list_extras(db=db, project_id=project_id)
+        return [WeddingExtraResponse.model_validate(e) for e in extras]
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/{project_id}/settlement/payout",
+    response_model=VendorPayoutResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create idempotent vendor settlement payout",
+    tags=["Settlement & Extras"]
+)
+def create_vendor_payout(
+    project_id: str,
+    payout_in: VendorPayoutCreate,
+    db: Session = Depends(get_db)
+):
+    try:
+        payout = project_service.create_vendor_payout(db=db, project_id=project_id, payout_in=payout_in)
+        v_name = payout.vendor.name if payout.vendor else "Vendor"
+        return VendorPayoutResponse(
+            id=payout.id,
+            project_id=payout.project_id,
+            vendor_id=payout.vendor_id,
+            vendor_name=v_name,
+            idempotency_key=payout.idempotency_key,
+            agreed_amount=payout.agreed_amount,
+            approved_extras=payout.approved_extras,
+            advance_paid=payout.advance_paid,
+            final_payout_amount=payout.final_payout_amount,
+            status=payout.status,
+            notes=payout.notes,
+            created_at=payout.created_at,
+            updated_at=payout.updated_at
+        )
+    except ValueError as e:
+        if "Duplicate payout" in str(e):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/{project_id}/settlement",
+    response_model=FinalSettlementResponse,
+    summary="View final settlement statement (client invoice, payments, vendor payouts)",
+    tags=["Settlement & Extras"]
+)
+def get_final_settlement(
+    project_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        settlement = project_service.get_final_settlement(db=db, project_id=project_id)
+        return FinalSettlementResponse.model_validate(settlement)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# =====================================================================
+# P1 Item 7: Client Wedding Overview (Read-Only)
+# =====================================================================
+
+@router.get(
+    "/{project_id}/client-overview",
+    response_model=ClientWeddingOverviewResponse,
+    summary="Client read-only portal wedding overview",
+    tags=["Client Portal Overview"]
+)
+def get_client_wedding_overview(
+    project_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        overview = project_service.get_client_wedding_overview(db=db, project_id=project_id)
+        return ClientWeddingOverviewResponse.model_validate(overview)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

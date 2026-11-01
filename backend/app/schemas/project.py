@@ -433,3 +433,199 @@ class DepositPaidResponse(BaseModel):
     payment_stages_count: int = Field(..., alias="paymentStagesCount")
     package_tier: str = Field(..., alias="packageTier")
     message: str
+
+
+# =====================================================================
+# P1 Item 5: Big Day Live Schedule & Check-in
+# =====================================================================
+
+class BigDayScheduleEventBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    title: str = Field(..., min_length=2, max_length=255)
+    event_time: str = Field(..., alias="eventTime", max_length=20)
+    expected_arrival_time: Optional[datetime] = Field(None, alias="expectedArrivalTime")
+    owner_name: str = Field("Maharani Gayatri Singh", alias="ownerName", max_length=150)
+    vendor_id: Optional[str] = Field(None, alias="vendorId")
+    vendor_name: Optional[str] = Field(None, alias="vendorName")
+    grace_period_minutes: int = Field(15, alias="gracePeriodMinutes", ge=0)
+    status: str = Field("Scheduled")
+    notes: Optional[str] = None
+
+
+class BigDayScheduleEventCreate(BigDayScheduleEventBase):
+    pass
+
+
+class BigDayScheduleEventUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    title: Optional[str] = None
+    event_time: Optional[str] = Field(None, alias="eventTime")
+    expected_arrival_time: Optional[datetime] = Field(None, alias="expectedArrivalTime")
+    owner_name: Optional[str] = Field(None, alias="ownerName")
+    vendor_id: Optional[str] = Field(None, alias="vendorId")
+    vendor_name: Optional[str] = Field(None, alias="vendorName")
+    grace_period_minutes: Optional[int] = Field(None, alias="gracePeriodMinutes")
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class BigDayScheduleEventResponse(BigDayScheduleEventBase):
+    id: str
+    project_id: str = Field(..., alias="projectId")
+    arrived_at: Optional[datetime] = Field(None, alias="arrivedAt")
+    is_late: bool = Field(False, alias="isLate")
+    minutes_late: int = Field(0, alias="minutesLate")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+
+
+class BigDayScheduleOverviewResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    project_id: str = Field(..., alias="projectId")
+    total_events: int = Field(0, alias="totalEvents")
+    arrived_count: int = Field(0, alias="arrivedCount")
+    late_count: int = Field(0, alias="lateCount")
+    pending_count: int = Field(0, alias="pendingCount")
+    server_time: datetime = Field(..., alias="serverTime")
+    events: List[BigDayScheduleEventResponse] = []
+
+
+# =====================================================================
+# P1 Item 6: Extras & Final Settlement
+# =====================================================================
+
+class WeddingExtraBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    description: str = Field(..., min_length=2, max_length=255)
+    category: str = Field("Catering")
+    quantity: Decimal = Field(Decimal("1.00"), ge=0)
+    unit_price: Decimal = Field(Decimal("0.00"), alias="unitPrice", ge=0)
+    client_amount: Decimal = Field(Decimal("0.00"), alias="clientAmount", ge=0)
+    vendor_amount: Decimal = Field(Decimal("0.00"), alias="vendorAmount", ge=0)
+    is_approved: bool = Field(True, alias="isApproved")
+    approved_by: str = Field("Maharani Gayatri Singh", alias="approvedBy")
+    vendor_id: Optional[str] = Field(None, alias="vendorId")
+
+
+class WeddingExtraCreate(WeddingExtraBase):
+    pass
+
+
+class WeddingExtraResponse(WeddingExtraBase):
+    id: str
+    project_id: str = Field(..., alias="projectId")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+
+
+class VendorPayoutCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    vendor_id: str = Field(..., alias="vendorId")
+    agreed_amount: Decimal = Field(..., alias="agreedAmount", ge=0)
+    approved_extras: Decimal = Field(Decimal("0.00"), alias="approvedExtras", ge=0)
+    advance_paid: Decimal = Field(Decimal("0.00"), alias="advancePaid", ge=0)
+    notes: Optional[str] = None
+
+
+class VendorPayoutResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    id: str
+    project_id: str = Field(..., alias="projectId")
+    vendor_id: str = Field(..., alias="vendorId")
+    vendor_name: Optional[str] = Field(None, alias="vendorName")
+    idempotency_key: str = Field(..., alias="idempotencyKey")
+    agreed_amount: Decimal = Field(..., alias="agreedAmount")
+    approved_extras: Decimal = Field(..., alias="approvedExtras")
+    advance_paid: Decimal = Field(..., alias="advancePaid")
+    final_payout_amount: Decimal = Field(..., alias="finalPayoutAmount")
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+
+
+class ClientInvoiceSummary(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    package_budget: Decimal = Field(..., alias="packageBudget")
+    approved_extras: Decimal = Field(..., alias="approvedExtras")
+    total_invoice: Decimal = Field(..., alias="totalInvoice")
+    payments_received: Decimal = Field(..., alias="paymentsReceived")
+    balance_due: Decimal = Field(..., alias="balanceDue")
+
+
+class FinalSettlementResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    project_id: str = Field(..., alias="projectId")
+    project_code: str = Field(..., alias="projectCode")
+    project_name: str = Field(..., alias="projectName")
+    client_invoice: ClientInvoiceSummary = Field(..., alias="clientInvoice")
+    vendor_payouts: List[VendorPayoutResponse] = Field([], alias="vendorPayouts")
+    total_vendor_payouts: Decimal = Field(Decimal("0.00"), alias="totalVendorPayouts")
+    agency_gross_retainage: Decimal = Field(Decimal("0.00"), alias="agencyGrossRetainage")
+    is_settled: bool = Field(False, alias="isSettled")
+
+
+# =====================================================================
+# P1 Item 7: Client Wedding Overview (Read-Only)
+# =====================================================================
+
+class ConfirmedVendorItem(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    vendor_id: str = Field(..., alias="vendorId")
+    name: str
+    category: str
+    status: str
+    contact_person: Optional[str] = Field(None, alias="contactPerson")
+
+
+class TaskProgressSummary(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    total_tasks: int = Field(..., alias="totalTasks")
+    completed_tasks: int = Field(..., alias="completedTasks")
+    completion_percentage: Decimal = Field(..., alias="completionPercentage")
+
+
+class PaymentProgressSummary(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    deposit_paid: bool = Field(..., alias="depositPaid")
+    total_budget: Decimal = Field(..., alias="totalBudget")
+    total_paid: Decimal = Field(..., alias="totalPaid")
+    balance_remaining: Decimal = Field(..., alias="balanceRemaining")
+    stages: List[PaymentStageResponse] = []
+
+
+class FinalCostsSummary(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    base_budget: Decimal = Field(..., alias="baseBudget")
+    extras_total: Decimal = Field(..., alias="extrasTotal")
+    final_total_cost: Decimal = Field(..., alias="finalTotalCost")
+
+
+class ClientWeddingOverviewResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    project_id: str = Field(..., alias="projectId")
+    project_code: str = Field(..., alias="projectCode")
+    project_name: str = Field(..., alias="projectName")
+    wedding_date: date = Field(..., alias="weddingDate")
+    location: str
+    guest_count: int = Field(..., alias="guestCount")
+    package_tier: str = Field(..., alias="packageTier")
+    events: List[WeddingFunctionResponse] = []
+    live_schedule: List[BigDayScheduleEventResponse] = Field([], alias="liveSchedule")
+    task_progress: TaskProgressSummary = Field(..., alias="taskProgress")
+    confirmed_vendors: List[ConfirmedVendorItem] = Field([], alias="confirmedVendors")
+    payment_status: PaymentProgressSummary = Field(..., alias="paymentStatus")
+    final_costs: FinalCostsSummary = Field(..., alias="finalCosts")

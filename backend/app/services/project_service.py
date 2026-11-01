@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_, func
 
 from app.models.client import Client
+from app.models.vendor import Vendor
 from app.models.project import (
     WeddingProject,
     WeddingFunction,
@@ -16,6 +17,9 @@ from app.models.project import (
     PlanningTask,
     PaymentStage,
     TeamTimeEntry,
+    BigDayScheduleEvent,
+    WeddingExtra,
+    VendorPayout,
 )
 from app.models.catering import CateringPlan
 from app.schemas.project import (
@@ -24,6 +28,7 @@ from app.schemas.project import (
     ProjectStatusUpdate,
     WeddingFunctionCreate,
     WeddingFunctionUpdate,
+    WeddingFunctionResponse,
     ProjectMilestoneCreate,
     ProjectMilestoneUpdate,
     EligibleBookingResponse,
@@ -37,6 +42,16 @@ from app.schemas.project import (
     TeamTimeEntryResponse,
     FounderProfitabilityResponse,
     DepositPaidResponse,
+    BigDayScheduleEventCreate,
+    BigDayScheduleEventUpdate,
+    BigDayScheduleEventResponse,
+    BigDayScheduleOverviewResponse,
+    WeddingExtraCreate,
+    WeddingExtraResponse,
+    VendorPayoutCreate,
+    VendorPayoutResponse,
+    FinalSettlementResponse,
+    ClientWeddingOverviewResponse,
 )
 
 
@@ -885,6 +900,362 @@ class ProjectService:
             "profit_margin_percentage": profit_margin_percentage,
             "time_entries_count": len(time_entries),
             "total_team_hours": total_team_hours
+        }
+
+
+
+    # =====================================================================
+    # P1 Item 5: Big Day Live Schedule & Vendor Check-in
+    # =====================================================================
+
+    @classmethod
+    def add_schedule_event(cls, db: Session, project_id: str, event_in: BigDayScheduleEventCreate) -> BigDayScheduleEvent:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        ev_id = f"SCH-{uuid.uuid4().hex[:8].upper()}"
+        vendor_name = event_in.vendor_name
+        if event_in.vendor_id and not vendor_name:
+            v = db.query(Vendor).filter(Vendor.id == event_in.vendor_id).first()
+            if v:
+                vendor_name = v.name
+
+        db_event = BigDayScheduleEvent(
+            id=ev_id,
+            project_id=project.id,
+            vendor_id=event_in.vendor_id,
+            title=event_in.title,
+            event_time=event_in.event_time,
+            expected_arrival_time=event_in.expected_arrival_time,
+            owner_name=event_in.owner_name,
+            vendor_name=vendor_name,
+            grace_period_minutes=event_in.grace_period_minutes,
+            status=event_in.status,
+            notes=event_in.notes
+        )
+        db.add(db_event)
+        db.commit()
+        db.refresh(db_event)
+        return db_event
+
+    @classmethod
+    def list_schedule_events(cls, db: Session, project_id: str) -> dict:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        events = db.query(BigDayScheduleEvent).filter(
+            BigDayScheduleEvent.project_id == project.id
+        ).order_by(BigDayScheduleEvent.event_time.asc()).all()
+
+        now = datetime.now(timezone.utc)
+        items = []
+        arrived_count = 0
+        late_count = 0
+        pending_count = 0
+
+        for ev in events:
+            is_late = False
+            minutes_late = 0
+
+            if ev.arrived_at:
+                arrived_count += 1
+            else:
+                pending_count += 1
+                if ev.expected_arrival_time:
+                    exp = ev.expected_arrival_time if ev.expected_arrival_time.tzinfo else ev.expected_arrival_time.replace(tzinfo=timezone.utc)
+                    deadline = exp + timedelta(minutes=ev.grace_period_minutes)
+                    if now > deadline:
+                        is_late = True
+                        diff = now - deadline
+                        minutes_late = int(diff.total_seconds() // 60)
+                        late_count += 1
+
+            items.append(BigDayScheduleEventResponse(
+                id=ev.id,
+                project_id=ev.project_id,
+                title=ev.title,
+                event_time=ev.event_time,
+                expected_arrival_time=ev.expected_arrival_time,
+                owner_name=ev.owner_name,
+                vendor_id=ev.vendor_id,
+                vendor_name=ev.vendor_name,
+                grace_period_minutes=ev.grace_period_minutes,
+                arrived_at=ev.arrived_at,
+                is_late=is_late,
+                minutes_late=minutes_late,
+                status="Arrived" if ev.arrived_at else ("Late" if is_late else ev.status),
+                notes=ev.notes,
+                created_at=ev.created_at,
+                updated_at=ev.updated_at
+            ))
+
+        return {
+            "project_id": project.id,
+            "total_events": len(events),
+            "arrived_count": arrived_count,
+            "late_count": late_count,
+            "pending_count": pending_count,
+            "server_time": now,
+            "events": items
+        }
+
+    @classmethod
+    def check_in_event(cls, db: Session, project_id: str, event_id: str) -> BigDayScheduleEvent:
+        ev = db.query(BigDayScheduleEvent).filter(BigDayScheduleEvent.id == event_id).first()
+        if not ev:
+            raise ValueError(f"Schedule event '{event_id}' not found.")
+
+        now = datetime.now(timezone.utc)
+        ev.arrived_at = now
+        ev.status = "Arrived"
+        db.commit()
+        db.refresh(ev)
+        return ev
+
+    # =====================================================================
+    # P1 Item 6: Extras & Final Settlement
+    # =====================================================================
+
+    @classmethod
+    def add_extra(cls, db: Session, project_id: str, extra_in: WeddingExtraCreate) -> WeddingExtra:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        extra_id = f"EXT-{uuid.uuid4().hex[:8].upper()}"
+        client_amt = extra_in.client_amount if extra_in.client_amount > Decimal("0.00") else (extra_in.quantity * extra_in.unit_price)
+        vendor_amt = extra_in.vendor_amount if extra_in.vendor_amount > Decimal("0.00") else client_amt
+
+        db_extra = WeddingExtra(
+            id=extra_id,
+            project_id=project.id,
+            vendor_id=extra_in.vendor_id,
+            description=extra_in.description,
+            category=extra_in.category,
+            quantity=extra_in.quantity,
+            unit_price=extra_in.unit_price,
+            client_amount=client_amt,
+            vendor_amount=vendor_amt,
+            is_approved=extra_in.is_approved,
+            approved_by=extra_in.approved_by
+        )
+        db.add(db_extra)
+        db.commit()
+        db.refresh(db_extra)
+        return db_extra
+
+    @classmethod
+    def list_extras(cls, db: Session, project_id: str) -> List[WeddingExtra]:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        return db.query(WeddingExtra).filter(WeddingExtra.project_id == project.id).all()
+
+    @classmethod
+    def create_vendor_payout(cls, db: Session, project_id: str, payout_in: VendorPayoutCreate) -> VendorPayout:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        # Unique idempotency key so a payout cannot be created twice
+        idempotency_key = f"PAYOUT-{project.id}-{payout_in.vendor_id}"
+        existing = db.query(VendorPayout).filter_by(idempotency_key=idempotency_key).first()
+        if existing:
+            raise ValueError(f"Duplicate payout rejected: Payout for vendor '{payout_in.vendor_id}' on project '{project.id}' already exists.")
+
+        final_amount = payout_in.agreed_amount + payout_in.approved_extras - payout_in.advance_paid
+        if final_amount < Decimal("0.00"):
+            final_amount = Decimal("0.00")
+
+        payout_id = f"VPO-{uuid.uuid4().hex[:8].upper()}"
+        db_payout = VendorPayout(
+            id=payout_id,
+            project_id=project.id,
+            vendor_id=payout_in.vendor_id,
+            idempotency_key=idempotency_key,
+            agreed_amount=payout_in.agreed_amount,
+            approved_extras=payout_in.approved_extras,
+            advance_paid=payout_in.advance_paid,
+            final_payout_amount=final_amount,
+            status="Approved",
+            notes=payout_in.notes
+        )
+        db.add(db_payout)
+        db.commit()
+        db.refresh(db_payout)
+        return db_payout
+
+    @classmethod
+    def get_final_settlement(cls, db: Session, project_id: str) -> dict:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        # 1. Approved Extras for Client
+        approved_extras = db.query(WeddingExtra).filter(
+            WeddingExtra.project_id == project.id,
+            WeddingExtra.is_approved == True
+        ).all()
+        client_extras_total = sum([Decimal(str(e.client_amount)) for e in approved_extras], Decimal("0.00"))
+
+        package_budget = project.estimated_budget or Decimal("0.00")
+        total_invoice = package_budget + client_extras_total
+
+        paid_stages = db.query(PaymentStage).filter(
+            PaymentStage.project_id == project.id,
+            PaymentStage.status == "Paid"
+        ).all()
+        payments_received = sum([Decimal(str(p.amount)) for p in paid_stages], Decimal("0.00"))
+        balance_due = max(total_invoice - payments_received, Decimal("0.00"))
+
+        # 2. Vendor Payouts
+        payouts = db.query(VendorPayout).filter(VendorPayout.project_id == project.id).all()
+        payout_items = []
+        for p in payouts:
+            v_name = p.vendor.name if p.vendor else "Vendor"
+            payout_items.append(VendorPayoutResponse(
+                id=p.id,
+                project_id=p.project_id,
+                vendor_id=p.vendor_id,
+                vendor_name=v_name,
+                idempotency_key=p.idempotency_key,
+                agreed_amount=p.agreed_amount,
+                approved_extras=p.approved_extras,
+                advance_paid=p.advance_paid,
+                final_payout_amount=p.final_payout_amount,
+                status=p.status,
+                notes=p.notes,
+                created_at=p.created_at,
+                updated_at=p.updated_at
+            ))
+
+        total_vendor_payouts = sum([Decimal(str(p.final_payout_amount)) for p in payouts], Decimal("0.00"))
+        agency_retainage = total_invoice - total_vendor_payouts
+
+        return {
+            "project_id": project.id,
+            "project_code": project.project_code,
+            "project_name": project.project_name,
+            "client_invoice": {
+                "package_budget": package_budget,
+                "approved_extras": client_extras_total,
+                "total_invoice": total_invoice,
+                "payments_received": payments_received,
+                "balance_due": balance_due
+            },
+            "vendor_payouts": payout_items,
+            "total_vendor_payouts": total_vendor_payouts,
+            "agency_gross_retainage": agency_retainage,
+            "is_settled": balance_due == Decimal("0.00") and len(payouts) > 0
+        }
+
+    # =====================================================================
+    # P1 Item 7: Client Wedding Overview (Read-Only)
+    # =====================================================================
+
+    @classmethod
+    def get_client_wedding_overview(cls, db: Session, project_id: str) -> dict:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Wedding project '{project_id}' not found.")
+
+        # Events
+        functions = [WeddingFunctionResponse.model_validate(f) for f in project.functions]
+
+        # Live Schedule
+        schedule_data = cls.list_schedule_events(db=db, project_id=project.id)
+        live_schedule = schedule_data["events"]
+
+        # Tasks Progress
+        tasks = db.query(PlanningTask).filter(PlanningTask.project_id == project.id).all()
+        total_tasks = len(tasks)
+        completed_tasks = len([t for t in tasks if t.is_completed or t.stage == "Done"])
+        completion_pct = Decimal(str(round((completed_tasks / total_tasks * 100), 1))) if total_tasks > 0 else Decimal("0.00")
+
+        # Confirmed Vendors
+        assigned_vendors = db.query(ProjectVendor).filter(
+            ProjectVendor.project_id == project.id,
+            ProjectVendor.status.in_(["Contracted", "Confirmed", "Completed"])
+        ).all()
+        confirmed_vendors = []
+        for av in assigned_vendors:
+            v = av.vendor
+            if v:
+                confirmed_vendors.append({
+                    "vendor_id": v.id,
+                    "name": v.name,
+                    "category": av.category or v.category,
+                    "status": av.status,
+                    "contact_person": v.contact_person
+                })
+
+        # Payment Status
+        stages = db.query(PaymentStage).filter(PaymentStage.project_id == project.id).order_by(PaymentStage.due_date.asc()).all()
+        total_budget = project.estimated_budget or Decimal("0.00")
+        paid_stages = [s for s in stages if s.status == "Paid"]
+        total_paid = sum([Decimal(str(s.amount)) for s in paid_stages], Decimal("0.00"))
+        balance_rem = max(total_budget - total_paid, Decimal("0.00"))
+
+        # Final Costs & Extras
+        approved_extras = db.query(WeddingExtra).filter(
+            WeddingExtra.project_id == project.id,
+            WeddingExtra.is_approved == True
+        ).all()
+        extras_total = sum([Decimal(str(e.client_amount)) for e in approved_extras], Decimal("0.00"))
+        final_total_cost = total_budget + extras_total
+
+        return {
+            "project_id": project.id,
+            "project_code": project.project_code,
+            "project_name": project.project_name,
+            "wedding_date": project.wedding_date,
+            "location": project.location,
+            "guest_count": project.guest_count,
+            "package_tier": project.package_tier,
+            "events": functions,
+            "live_schedule": live_schedule,
+            "task_progress": {
+                "total_tasks": total_tasks,
+                "completed_tasks": completed_tasks,
+                "completion_percentage": completion_pct
+            },
+            "confirmed_vendors": confirmed_vendors,
+            "payment_status": {
+                "deposit_paid": project.deposit_paid,
+                "total_budget": total_budget,
+                "total_paid": total_paid,
+                "balance_remaining": balance_rem,
+                "stages": [PaymentStageResponse.model_validate(s) for s in stages]
+            },
+            "final_costs": {
+                "base_budget": total_budget,
+                "extras_total": extras_total,
+                "final_total_cost": final_total_cost
+            }
         }
 
 

@@ -46,6 +46,9 @@ class WeddingProject(Base):
     tasks = relationship("PlanningTask", back_populates="project", cascade="all, delete-orphan", order_by="PlanningTask.due_date")
     payment_stages = relationship("PaymentStage", back_populates="project", cascade="all, delete-orphan", order_by="PaymentStage.due_date")
     time_entries = relationship("TeamTimeEntry", back_populates="project", cascade="all, delete-orphan", order_by="desc(TeamTimeEntry.entry_date)")
+    schedule_events = relationship("BigDayScheduleEvent", back_populates="project", cascade="all, delete-orphan", order_by="BigDayScheduleEvent.event_time")
+    extras = relationship("WeddingExtra", back_populates="project", cascade="all, delete-orphan", order_by="desc(WeddingExtra.created_at)")
+    vendor_payouts = relationship("VendorPayout", back_populates="project", cascade="all, delete-orphan", order_by="desc(VendorPayout.created_at)")
 
     def __repr__(self):
         return f"<WeddingProject {self.project_code}: {self.project_name} ({self.status})>"
@@ -206,3 +209,81 @@ class TeamTimeEntry(Base):
 
     def __repr__(self):
         return f"<TeamTimeEntry {self.id}: {self.employee_name} ({self.hours}h @ {self.hourly_rate})>"
+
+
+class BigDayScheduleEvent(Base):
+    __tablename__ = "big_day_schedule_events"
+
+    id = Column(String(50), primary_key=True, index=True)
+    project_id = Column(String(50), ForeignKey("wedding_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    vendor_id = Column(String(50), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    title = Column(String(255), nullable=False)
+    event_time = Column(String(20), nullable=False)  # e.g. "17:30"
+    expected_arrival_time = Column(DateTime(timezone=True), nullable=True)
+    owner_name = Column(String(150), nullable=False, default="Maharani Gayatri Singh")
+    vendor_name = Column(String(255), nullable=True)
+    grace_period_minutes = Column(Integer, nullable=False, default=15)
+    arrived_at = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(50), nullable=False, default="Scheduled")  # Scheduled, Arrived, In Progress, Completed
+    notes = Column(Text, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    project = relationship("WeddingProject", back_populates="schedule_events")
+    vendor = relationship("Vendor")
+
+    def __repr__(self):
+        return f"<BigDayScheduleEvent {self.id}: {self.title} @ {self.event_time} ({self.status})>"
+
+
+class WeddingExtra(Base):
+    __tablename__ = "wedding_extras"
+
+    id = Column(String(50), primary_key=True, index=True)
+    project_id = Column(String(50), ForeignKey("wedding_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    vendor_id = Column(String(50), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    description = Column(String(255), nullable=False)
+    category = Column(String(50), nullable=False, default="Catering")
+    quantity = Column(Numeric(10, 2), nullable=False, default=1.00)
+    unit_price = Column(Numeric(15, 2), nullable=False, default=0.00)
+    client_amount = Column(Numeric(15, 2), nullable=False, default=0.00)
+    vendor_amount = Column(Numeric(15, 2), nullable=False, default=0.00)
+    is_approved = Column(Boolean, nullable=False, default=True)
+    approved_by = Column(String(100), nullable=False, default="Maharani Gayatri Singh")
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    project = relationship("WeddingProject", back_populates="extras")
+    vendor = relationship("Vendor")
+
+    def __repr__(self):
+        return f"<WeddingExtra {self.id}: {self.description} (Client: {self.client_amount}, Vendor: {self.vendor_amount})>"
+
+
+class VendorPayout(Base):
+    __tablename__ = "vendor_payouts"
+
+    id = Column(String(50), primary_key=True, index=True)
+    project_id = Column(String(50), ForeignKey("wedding_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    vendor_id = Column(String(50), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True)
+    idempotency_key = Column(String(100), unique=True, nullable=False, index=True)
+
+    agreed_amount = Column(Numeric(15, 2), nullable=False, default=0.00)
+    approved_extras = Column(Numeric(15, 2), nullable=False, default=0.00)
+    advance_paid = Column(Numeric(15, 2), nullable=False, default=0.00)
+    final_payout_amount = Column(Numeric(15, 2), nullable=False, default=0.00)
+    status = Column(String(50), nullable=False, default="Approved")
+    notes = Column(Text, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    project = relationship("WeddingProject", back_populates="vendor_payouts")
+    vendor = relationship("Vendor")
+
+    def __repr__(self):
+        return f"<VendorPayout {self.id}: {self.idempotency_key} -> {self.final_payout_amount} INR ({self.status})>"
