@@ -62,6 +62,14 @@ class CateringPlan(Base):
         order_by="desc(CateringCommunicationLog.created_at)"
     )
 
+    @property
+    def title(self):
+        return self.function.function_name if self.function else "Catering Plan"
+
+    @property
+    def meal_type(self):
+        return self.service_style
+
     def __repr__(self):
         return f"<CateringPlan {self.id}: Function {self.function_id} ({self.status})>"
 
@@ -119,6 +127,33 @@ class CateringQuotation(Base):
     # Relationships
     catering_plan = relationship("CateringPlan", back_populates="quotations")
     vendor = relationship("Vendor", back_populates="quotations")
+
+    def __init__(self, **kwargs):
+        if "price_per_plate" in kwargs and "per_person_rate" not in kwargs:
+            kwargs["per_person_rate"] = kwargs.pop("price_per_plate")
+        if "total_cost" in kwargs and "total_amount" not in kwargs:
+            kwargs["total_amount"] = kwargs.pop("total_cost")
+        super().__init__(**kwargs)
+
+    @property
+    def plan(self):
+        return self.catering_plan
+
+    @property
+    def price_per_plate(self):
+        return self.per_person_rate
+
+    @price_per_plate.setter
+    def price_per_plate(self, val):
+        self.per_person_rate = val
+
+    @property
+    def total_cost(self):
+        return self.total_amount
+
+    @total_cost.setter
+    def total_cost(self, val):
+        self.total_amount = val
 
     def __repr__(self):
         return f"<CateringQuotation {self.id}: Vendor {self.vendor_id} - Total {self.total_amount} ({self.status})>"
