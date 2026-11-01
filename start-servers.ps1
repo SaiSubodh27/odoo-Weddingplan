@@ -1,8 +1,8 @@
-# The Royal Knot — Start All Servers
+# The Royal Knot - Start All Servers
 # Run this from the project root: .\start-servers.ps1
 
 Write-Host ""
-Write-Host "  ✦ THE ROYAL KNOT — Wedding Management System" -ForegroundColor DarkYellow
+Write-Host "  * THE ROYAL KNOT - Wedding Management System" -ForegroundColor DarkYellow
 Write-Host "  Starting all servers..." -ForegroundColor Gray
 Write-Host ""
 
@@ -26,9 +26,11 @@ $backendDir = Join-Path $rootDir "backend"
 $pythonExe = "python"
 if (Test-Path "C:\RoyalKnot\venv\Scripts\python.exe") {
     $pythonExe = "C:\RoyalKnot\venv\Scripts\python.exe"
-} elseif (Test-Path (Join-Path $backendDir ".venv\Scripts\python.exe")) {
+}
+elseif (Test-Path (Join-Path $backendDir ".venv\Scripts\python.exe")) {
     $pythonExe = Join-Path $backendDir ".venv\Scripts\python.exe"
-} elseif (Test-Path (Join-Path $rootDir ".venv\Scripts\python.exe")) {
+}
+elseif (Test-Path (Join-Path $rootDir ".venv\Scripts\python.exe")) {
     $pythonExe = Join-Path $rootDir ".venv\Scripts\python.exe"
 }
 
@@ -49,14 +51,21 @@ while ($retries -lt 6 -and -not $backendOk) {
     try {
         $r = Invoke-RestMethod "http://127.0.0.1:8000/api/v1/health" -TimeoutSec 3 -ErrorAction Stop
         if ($r.status -eq "operational") { $backendOk = $true }
-    } catch {}
-    if (-not $backendOk) { Start-Sleep -Seconds 2; $retries++ }
+    }
+    catch {
+        # waiting for server startup
+    }
+    if (-not $backendOk) {
+        Start-Sleep -Seconds 2
+        $retries++
+    }
 }
 
 if ($backendOk) {
-    Write-Host "  ✓ Backend healthy (database connected)" -ForegroundColor Green
-} else {
-    Write-Host "  ✗ Backend failed to start — check logs" -ForegroundColor Red
+    Write-Host "  [OK] Backend healthy (database connected)" -ForegroundColor Green
+}
+else {
+    Write-Host "  [ERROR] Backend failed to start - check logs" -ForegroundColor Red
 }
 
 # Start Frontend
@@ -70,12 +79,12 @@ $frontendJob = Start-Job -ScriptBlock {
 Start-Sleep -Seconds 3
 
 Write-Host ""
-Write-Host "  ✦ All servers running!" -ForegroundColor DarkYellow
-Write-Host "  ┌─────────────────────────────────────────────┐" -ForegroundColor DarkGray
-Write-Host "  │  Employee Portal  →  http://localhost:5173  │" -ForegroundColor White
-Write-Host "  │  Client Register  →  http://localhost:5173/client-register │" -ForegroundColor White
-Write-Host "  │  Backend API      →  http://localhost:8000  │" -ForegroundColor White
-Write-Host "  └─────────────────────────────────────────────┘" -ForegroundColor DarkGray
+Write-Host "  * All servers running!" -ForegroundColor DarkYellow
+Write-Host "  +---------------------------------------------+" -ForegroundColor DarkGray
+Write-Host "  |  Employee Portal  ->  http://localhost:5173  |" -ForegroundColor White
+Write-Host "  |  Client Register  ->  http://localhost:5173/client-register |" -ForegroundColor White
+Write-Host "  |  Backend API      ->  http://localhost:8000  |" -ForegroundColor White
+Write-Host "  +---------------------------------------------+" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Press Ctrl+C to stop all servers." -ForegroundColor Gray
 Write-Host ""
@@ -87,7 +96,8 @@ try {
         Receive-Job $frontendJob -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  [frontend] $_" -ForegroundColor DarkMagenta }
         Start-Sleep -Seconds 2
     }
-} finally {
+}
+finally {
     Stop-Job $backendJob, $frontendJob -ErrorAction SilentlyContinue
     Remove-Job $backendJob, $frontendJob -ErrorAction SilentlyContinue
     Write-Host ""
