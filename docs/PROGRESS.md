@@ -38,3 +38,22 @@
     - Founder Gross Profit = client payments received - vendor contracted costs - team labor costs (hours x rate).
     - Profit Margin Percentage = (founder_gross_profit / client_payments_received) * 100.
   - Verified with hand-written expected numbers in tests (`backend/tests/test_p0_founder_profit.py`).
+
+- **P1 Item 5: Big Day Live Schedule & Check-in (COMPLETED)**
+  - Added `BigDayScheduleEvent` model with expected arrival times, owner names, grace periods, and actual arrival tracking (`arrived_at`).
+  - Implemented real-time late alert engine: evaluates `is_late` when `now > expected_arrival_time + grace_period` and vendor has not arrived.
+  - Implemented 30-second live polling schedule endpoint `GET /api/v1/projects/{id}/big-day/schedule` with summary status counts (`total_events`, `arrived_count`, `late_count`, `pending_count`).
+  - Implemented one-tap coordinator check-in `POST /api/v1/projects/{id}/big-day/events/{event_id}/check-in`.
+  - Tests passing (`backend/tests/test_p1_big_day_schedule.py`).
+
+- **P1 Item 6: Extras, Settlement & Idempotent Vendor Payouts (COMPLETED)**
+  - Added `WeddingExtra` model tracking client billing additions (extra plates, DJ overtime) and vendor compensation.
+  - Added `VendorPayout` model with unique constraint / idempotency key `PAYOUT-{project_id}-{vendor_id}`.
+  - Implemented payout calculation: `final_payout_amount = agreed_amount + approved_extras - advance_paid`.
+  - Enforced idempotency: duplicate payout creation attempts return 409 Conflict.
+  - Implemented final settlement view `GET /api/v1/projects/{id}/settlement`.
+
+- **P1 Item 7: Client Wedding Overview (Read-Only) (COMPLETED)**
+  - Implemented consolidated couple read-only endpoint `GET /api/v1/projects/{id}/client-overview`.
+  - Delivers ceremony schedules, task progress percentage, confirmed vendor rosters, milestone payment tracking, and final cost summaries.
+  - Tests passing (`backend/tests/test_p1_settlement_and_overview.py`).
