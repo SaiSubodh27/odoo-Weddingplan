@@ -295,3 +295,141 @@ class EligibleBookingResponse(BaseModel):
     status: str
     created_at: datetime = Field(..., alias="createdAt")
 
+
+
+# =====================================================================
+# Planning Tasks
+# =====================================================================
+
+class PlanningTaskBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    title: str = Field(..., min_length=2, max_length=255)
+    category: str = Field(..., max_length=100)
+    stage: str = Field("To Plan")  # To Plan, In Progress, Review, Done
+    assigned_to: str = Field("Maharani Gayatri Singh", alias="assignedTo", max_length=150)
+    priority: str = Field("Medium")
+    due_date: date = Field(..., alias="dueDate")
+    notes: Optional[str] = None
+    is_completed: bool = Field(False, alias="isCompleted")
+    function_id: Optional[str] = Field(None, alias="functionId")
+
+
+class PlanningTaskCreate(PlanningTaskBase):
+    pass
+
+
+class PlanningTaskUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    title: Optional[str] = None
+    category: Optional[str] = None
+    stage: Optional[str] = None
+    assigned_to: Optional[str] = Field(None, alias="assignedTo")
+    priority: Optional[str] = None
+    due_date: Optional[date] = Field(None, alias="dueDate")
+    notes: Optional[str] = None
+    is_completed: Optional[bool] = Field(None, alias="isCompleted")
+    function_id: Optional[str] = Field(None, alias="functionId")
+
+
+class PlanningTaskResponse(PlanningTaskBase):
+    id: str
+    project_id: str = Field(..., alias="projectId")
+    completed_at: Optional[datetime] = Field(None, alias="completedAt")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+
+
+# =====================================================================
+# Payment Stages
+# =====================================================================
+
+class PaymentStageBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    stage_name: str = Field(..., alias="stageName", max_length=150)
+    percentage: Decimal = Field(..., ge=0, le=100)
+    amount: Decimal = Field(Decimal("0.00"), ge=0)
+    due_date: date = Field(..., alias="dueDate")
+    due_description: Optional[str] = Field(None, alias="dueDescription")
+    status: str = Field("Pending")
+    paid_at: Optional[datetime] = Field(None, alias="paidAt")
+
+
+class PaymentStageCreate(PaymentStageBase):
+    pass
+
+
+class PaymentStageUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    stage_name: Optional[str] = Field(None, alias="stageName")
+    percentage: Optional[Decimal] = None
+    amount: Optional[Decimal] = None
+    due_date: Optional[date] = Field(None, alias="dueDate")
+    due_description: Optional[str] = Field(None, alias="dueDescription")
+    status: Optional[str] = None
+    paid_at: Optional[datetime] = Field(None, alias="paidAt")
+
+
+class PaymentStageResponse(PaymentStageBase):
+    id: str
+    project_id: str = Field(..., alias="projectId")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+
+
+# =====================================================================
+# Team Time Entries & Profitability (P0 Item 4)
+# =====================================================================
+
+class TeamTimeEntryBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    employee_name: str = Field(..., alias="employeeName", max_length=150)
+    role: str = Field("Wedding Planner")
+    hours: Decimal = Field(..., ge=0)
+    hourly_rate: Decimal = Field(..., alias="hourlyRate", ge=0)
+    task_description: Optional[str] = Field(None, alias="taskDescription")
+    entry_date: date = Field(..., alias="entryDate")
+
+
+class TeamTimeEntryCreate(TeamTimeEntryBase):
+    pass
+
+
+class TeamTimeEntryResponse(TeamTimeEntryBase):
+    id: str
+    project_id: str = Field(..., alias="projectId")
+    total_cost: Decimal = Field(Decimal("0.00"), alias="totalCost")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+
+
+class FounderProfitabilityResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    project_id: str = Field(..., alias="projectId")
+    project_code: str = Field(..., alias="projectCode")
+    project_name: str = Field(..., alias="projectName")
+    client_payments_received: Decimal = Field(Decimal("0.00"), alias="clientPaymentsReceived")
+    vendor_contracted_costs: Decimal = Field(Decimal("0.00"), alias="vendorContractedCosts")
+    team_labor_costs: Decimal = Field(Decimal("0.00"), alias="teamLaborCosts")
+    founder_gross_profit: Decimal = Field(Decimal("0.00"), alias="founderGrossProfit")
+    profit_margin_percentage: Decimal = Field(Decimal("0.00"), alias="profitMarginPercentage")
+    time_entries_count: int = Field(0, alias="timeEntriesCount")
+    total_team_hours: Decimal = Field(Decimal("0.00"), alias="totalTeamHours")
+
+
+class DepositPaidResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    project_id: str = Field(..., alias="projectId")
+    project_code: str = Field(..., alias="projectCode")
+    deposit_paid: bool = Field(..., alias="depositPaid")
+    deposit_paid_at: datetime = Field(..., alias="depositPaidAt")
+    tasks_count: int = Field(..., alias="tasksCount")
+    payment_stages_count: int = Field(..., alias="paymentStagesCount")
+    package_tier: str = Field(..., alias="packageTier")
+    message: str

@@ -28,6 +28,10 @@ class WeddingProject(Base):
     status = Column(String(50), nullable=False, default="Planning", index=True)
     notes = Column(Text, nullable=True)
 
+    # Booking Deposit State
+    deposit_paid = Column(Boolean, nullable=False, default=False)
+    deposit_paid_at = Column(DateTime(timezone=True), nullable=True)
+
     # Audit & Soft Delete
     is_deleted = Column(Boolean, nullable=False, default=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -39,6 +43,9 @@ class WeddingProject(Base):
     milestones = relationship("ProjectMilestone", back_populates="project", cascade="all, delete-orphan", order_by="ProjectMilestone.due_date")
     status_history = relationship("ProjectStatusHistory", back_populates="project", cascade="all, delete-orphan", order_by="desc(ProjectStatusHistory.id)")
     catering_plans = relationship("CateringPlan", back_populates="project", cascade="all, delete-orphan")
+    tasks = relationship("PlanningTask", back_populates="project", cascade="all, delete-orphan", order_by="PlanningTask.due_date")
+    payment_stages = relationship("PaymentStage", back_populates="project", cascade="all, delete-orphan", order_by="PaymentStage.due_date")
+    time_entries = relationship("TeamTimeEntry", back_populates="project", cascade="all, delete-orphan", order_by="desc(TeamTimeEntry.entry_date)")
 
     def __repr__(self):
         return f"<WeddingProject {self.project_code}: {self.project_name} ({self.status})>"
@@ -106,6 +113,7 @@ class ProjectStatusHistory(Base):
     def __repr__(self):
         return f"<ProjectStatusHistory {self.id}: {self.old_status} -> {self.new_status} at {self.changed_at}>"
 
+
 class ProjectVendor(Base):
     __tablename__ = "project_vendors"
 
@@ -126,3 +134,75 @@ class ProjectVendor(Base):
 
     def __repr__(self):
         return f"<ProjectVendor {self.id}: Vendor {self.vendor_id} on Project {self.project_id} ({self.status})>"
+
+
+class PlanningTask(Base):
+    __tablename__ = "planning_tasks"
+
+    id = Column(String(50), primary_key=True, index=True)
+    project_id = Column(String(50), ForeignKey("wedding_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    function_id = Column(String(50), ForeignKey("wedding_functions.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    title = Column(String(255), nullable=False)
+    category = Column(String(100), nullable=False, index=True)  # Venue, Design, Vendors, Mehendi, Sangeet, Wedding Day, Reception
+    stage = Column(String(50), nullable=False, default="To Plan", index=True)  # To Plan, In Progress, Review, Done
+    assigned_to = Column(String(150), nullable=False, default="Maharani Gayatri Singh")
+    priority = Column(String(50), nullable=False, default="Medium")
+    due_date = Column(Date, nullable=False)
+    notes = Column(Text, nullable=True)
+    is_completed = Column(Boolean, nullable=False, default=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    project = relationship("WeddingProject", back_populates="tasks")
+    function = relationship("WeddingFunction")
+
+    def __repr__(self):
+        return f"<PlanningTask {self.id}: {self.title} [{self.stage}] ({self.assigned_to})>"
+
+
+class PaymentStage(Base):
+    __tablename__ = "payment_stages"
+
+    id = Column(String(50), primary_key=True, index=True)
+    project_id = Column(String(50), ForeignKey("wedding_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    stage_name = Column(String(150), nullable=False)  # Retainer, Advance, Final
+    percentage = Column(Numeric(5, 2), nullable=False)
+    amount = Column(Numeric(15, 2), nullable=False, default=0.00)
+    due_date = Column(Date, nullable=False)
+    due_description = Column(String(255), nullable=True)
+    status = Column(String(50), nullable=False, default="Pending")  # Pending, Paid, Overdue
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    project = relationship("WeddingProject", back_populates="payment_stages")
+
+    def __repr__(self):
+        return f"<PaymentStage {self.id}: {self.stage_name} ({self.amount} INR - {self.status})>"
+
+
+class TeamTimeEntry(Base):
+    __tablename__ = "team_time_entries"
+
+    id = Column(String(50), primary_key=True, index=True)
+    project_id = Column(String(50), ForeignKey("wedding_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    employee_name = Column(String(150), nullable=False)
+    role = Column(String(100), nullable=False, default="Wedding Planner")
+    hours = Column(Numeric(6, 2), nullable=False)
+    hourly_rate = Column(Numeric(10, 2), nullable=False)
+    task_description = Column(Text, nullable=True)
+    entry_date = Column(Date, nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    project = relationship("WeddingProject", back_populates="time_entries")
+
+    def __repr__(self):
+        return f"<TeamTimeEntry {self.id}: {self.employee_name} ({self.hours}h @ {self.hourly_rate})>"

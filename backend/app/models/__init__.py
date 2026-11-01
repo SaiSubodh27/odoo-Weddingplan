@@ -5,7 +5,16 @@ from app.models.registration import ClientRegistration
 from app.models.document import RegistrationDocument
 from app.models.user import UserAccount, ActivationToken
 from app.models.email_message import EmailMessage, EmailAttachment
-from app.models.project import WeddingProject, WeddingFunction, ProjectMilestone, ProjectStatusHistory, ProjectVendor
+from app.models.project import (
+    WeddingProject,
+    WeddingFunction,
+    ProjectMilestone,
+    ProjectStatusHistory,
+    ProjectVendor,
+    PlanningTask,
+    PaymentStage,
+    TeamTimeEntry,
+)
 from app.models.vendor import Vendor
 from app.models.catering import (
     CateringPlan,
@@ -41,13 +50,21 @@ __all__ = [
     "ProjectMilestone",
     "ProjectStatusHistory",
     "ProjectVendor",
+    "PlanningTask",
+    "PaymentStage",
+    "TeamTimeEntry",
     "Vendor",
     "CateringPlan",
     "CateringMenuItem",
     "CateringQuotation",
     "CateringCommunicationLog",
     "ServiceAgreement",
+    "ServiceAgreementVersion",
     "AgreementPaymentMilestone",
     "AgreementDocument",
+    "AgreementSignatureRequest",
+    "AgreementWebhookEvent",
     "AgreementStatusHistory",
+    "AgreementReview",
+    "WeddingBooking",
 ]

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.services.project_service import project_service
+from decimal import Decimal
 from app.schemas.project import (
     WeddingProjectCreate,
     WeddingProjectUpdate,
@@ -17,6 +18,16 @@ from app.schemas.project import (
     WeddingProjectResponse,
     WeddingProjectListItem,
     EligibleBookingResponse,
+    PlanningTaskCreate,
+    PlanningTaskUpdate,
+    PlanningTaskResponse,
+    PaymentStageCreate,
+    PaymentStageUpdate,
+    PaymentStageResponse,
+    TeamTimeEntryCreate,
+    TeamTimeEntryResponse,
+    FounderProfitabilityResponse,
+    DepositPaidResponse,
 )
 
 router = APIRouter()
@@ -410,3 +421,189 @@ def delete_project_milestone(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Milestone '{ms_id}' not found.")
     return {"success": True, "message": f"Milestone '{ms_id}' deleted."}
 
+
+
+# =====================================================================
+# Deposit & Planning Tasks (P0 Item 3)
+# =====================================================================
+
+@router.post(
+    "/{project_id}/deposit-paid",
+    response_model=DepositPaidResponse,
+    summary="Mark booking deposit paid and generate template planning tasks and payment stages",
+    tags=["Wedding Plans"]
+)
+def mark_deposit_paid(
+    project_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        res = project_service.mark_deposit_paid(db=db, project_id=project_id)
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/{project_id}/tasks",
+    response_model=List[PlanningTaskResponse],
+    summary="List all planning tasks for a wedding project",
+    tags=["Wedding Plans"]
+)
+def list_tasks(
+    project_id: str,
+    stage: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    assigned_to: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    try:
+        tasks = project_service.list_tasks(
+            db=db,
+            project_id=project_id,
+            stage=stage,
+            category=category,
+            assigned_to=assigned_to
+        )
+        return [PlanningTaskResponse.model_validate(t) for t in tasks]
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch(
+    "/{project_id}/tasks/{task_id}",
+    response_model=PlanningTaskResponse,
+    summary="Update task stage, owner, due date, or notes",
+    tags=["Wedding Plans"]
+)
+def update_task(
+    project_id: str,
+    task_id: str,
+    task_in: PlanningTaskUpdate,
+    db: Session = Depends(get_db)
+):
+    task = project_service.update_task(db=db, project_id=project_id, task_id=task_id, task_in=task_in)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task '{task_id}' not found.")
+    return PlanningTaskResponse.model_validate(task)
+
+
+@router.get(
+    "/{project_id}/payment-stages",
+    response_model=List[PaymentStageResponse],
+    summary="List 3-stage payment milestones for the wedding",
+    tags=["Wedding Plans"]
+)
+def list_payment_stages(
+    project_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        stages = project_service.list_payment_stages(db=db, project_id=project_id)
+        return [PaymentStageResponse.model_validate(s) for s in stages]
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch(
+    "/{project_id}/payment-stages/{stage_id}",
+    response_model=PaymentStageResponse,
+    summary="Update payment milestone status or details",
+    tags=["Wedding Plans"]
+)
+def update_payment_stage(
+    project_id: str,
+    stage_id: str,
+    stage_in: PaymentStageUpdate,
+    db: Session = Depends(get_db)
+):
+    stage = project_service.update_payment_stage(db=db, project_id=project_id, stage_id=stage_id, stage_in=stage_in)
+    if not stage:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Payment stage '{stage_id}' not found.")
+    return PaymentStageResponse.model_validate(stage)
+
+
+# =====================================================================
+# Time Tracking & Profitability (P0 Item 4)
+# =====================================================================
+
+@router.post(
+    "/{project_id}/time-entries",
+    response_model=TeamTimeEntryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Log employee working hours against wedding project",
+    tags=["Team Time Tracking"]
+)
+def add_time_entry(
+    project_id: str,
+    entry_in: TeamTimeEntryCreate,
+    db: Session = Depends(get_db)
+):
+    try:
+        entry = project_service.add_time_entry(db=db, project_id=project_id, entry_in=entry_in)
+        total_cost = Decimal(str(entry.hours)) * Decimal(str(entry.hourly_rate)) * Decimal("1.00")
+        return TeamTimeEntryResponse(
+            id=entry.id,
+            project_id=entry.project_id,
+            employee_name=entry.employee_name,
+            role=entry.role,
+            hours=entry.hours,
+            hourly_rate=entry.hourly_rate,
+            total_cost=total_cost,
+            task_description=entry.task_description,
+            entry_date=entry.entry_date,
+            created_at=entry.created_at,
+            updated_at=entry.updated_at,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/{project_id}/time-entries",
+    response_model=List[TeamTimeEntryResponse],
+    summary="List team time tracking entries for project",
+    tags=["Team Time Tracking"]
+)
+def list_time_entries(
+    project_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        entries = project_service.list_time_entries(db=db, project_id=project_id)
+        res = []
+        for entry in entries:
+            total_cost = Decimal(str(entry.hours)) * Decimal(str(entry.hourly_rate)) * Decimal("1.00")
+            res.append(TeamTimeEntryResponse(
+                id=entry.id,
+                project_id=entry.project_id,
+                employee_name=entry.employee_name,
+                role=entry.role,
+                hours=entry.hours,
+                hourly_rate=entry.hourly_rate,
+                total_cost=total_cost,
+                task_description=entry.task_description,
+                entry_date=entry.entry_date,
+                created_at=entry.created_at,
+                updated_at=entry.updated_at,
+            ))
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get(
+    "/{project_id}/profitability",
+    response_model=FounderProfitabilityResponse,
+    summary="Founder gross profit analysis (client payments - vendor costs - team costs)",
+    tags=["Founder Financials"]
+)
+def get_project_profitability(
+    project_id: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        prof = project_service.get_profitability(db=db, project_id=project_id)
+        return FounderProfitabilityResponse.model_validate(prof)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

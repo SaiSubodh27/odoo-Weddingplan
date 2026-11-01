@@ -7,7 +7,17 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_, func
 
 from app.models.client import Client
-from app.models.project import WeddingProject, WeddingFunction, ProjectMilestone, ProjectStatusHistory
+from app.models.project import (
+    WeddingProject,
+    WeddingFunction,
+    ProjectMilestone,
+    ProjectStatusHistory,
+    ProjectVendor,
+    PlanningTask,
+    PaymentStage,
+    TeamTimeEntry,
+)
+from app.models.catering import CateringPlan
 from app.schemas.project import (
     WeddingProjectCreate,
     WeddingProjectUpdate,
@@ -17,6 +27,16 @@ from app.schemas.project import (
     ProjectMilestoneCreate,
     ProjectMilestoneUpdate,
     EligibleBookingResponse,
+    PlanningTaskCreate,
+    PlanningTaskUpdate,
+    PlanningTaskResponse,
+    PaymentStageCreate,
+    PaymentStageUpdate,
+    PaymentStageResponse,
+    TeamTimeEntryCreate,
+    TeamTimeEntryResponse,
+    FounderProfitabilityResponse,
+    DepositPaidResponse,
 )
 
 
@@ -487,6 +507,385 @@ class ProjectService:
         db.delete(ms)
         db.commit()
         return True
+
+
+
+    # =====================================================================
+    # P0 Item 3: Deposit -> Plan Generation (Tasks & Payment Stages)
+    # =====================================================================
+
+    FULL_PACKAGE_TASKS = [
+        # Venue (4)
+        ("Venue Recce & Technical Feasibility Sign-off", "Venue", -90, "Maharani Gayatri Singh", "High", "Check load limits, power backups, and lawn drainage."),
+        ("Palace Courtyard & Ballroom Floor Plan Approval", "Venue", -75, "Raghav Sharma", "High", "Finalize seating, stage buffer, and emergency egress corridors."),
+        ("Hotel Room Block Allocation & Key Handover Protocol", "Venue", -45, "Pooja Verma", "Medium", "Allocate royal suites and guest wings with concierge desk."),
+        ("Sound Decibel & Municipal Curfew Permits", "Venue", -30, "Aditya Rathore", "Urgent", "Obtain Rajasthan police and municipal sound clearance for outdoors."),
+        # Design & Decor (4)
+        ("Royal Rajasthani Moodboard & Theme Sign-off", "Design", -80, "Maharani Gayatri Singh", "High", "Finalize color palettes, fabrics, and heritage motif detailing."),
+        ("Floral Architecture & Mandap 3D Render Sign-off", "Design", -60, "Raghav Sharma", "High", "Review marigold, lotus, and exotic tuberose installations."),
+        ("Ambient Lighting & Palace Facade Projection Mapping", "Design", -40, "Aditya Rathore", "Medium", "Program moving heads and architectural warm wash gobos."),
+        ("Custom Stationery, Welcome Hampers & Itinerary Print", "Design", -25, "Pooja Verma", "Medium", "Distribute gold-embossed wax-sealed cards in guest rooms."),
+        # Vendors (4)
+        ("Royal Catering Menu Tasting & Executive Chef Sign-off", "Vendors", -50, "Maharani Gayatri Singh", "High", "Approve live counters, chaat station, and thali sequences."),
+        ("Celebrity Artist & Band Hospitality Riders Contract", "Vendors", -45, "Raghav Sharma", "High", "Coordinate green rooms, technical rider, and backstage security."),
+        ("Lead Cinematographer & Drone Pilot Permitting", "Vendors", -35, "Aditya Rathore", "Medium", "Verify 4K camera crew positions and airspace authorization."),
+        ("Bridal Hair & Makeup Artist Schedule Finalization", "Vendors", -20, "Pooja Verma", "High", "Coordinate staggered call times for bride, groom, and mothers."),
+        # Mehendi Ceremony (4)
+        ("Mehendi Master Artists Crew Briefing (15 Artists)", "Mehendi", -15, "Pooja Verma", "High", "Verify organic sojat heena cones and speed-artist stations."),
+        ("Poolside Cabana & Colorful Diwan Seating Arrangement", "Mehendi", -10, "Raghav Sharma", "Medium", "Install bandhani drapes, umbrellas, and embroidered cushions."),
+        ("Bangle Bar, Lac Craftsmen & Live Folk Dancers Booking", "Mehendi", -7, "Pooja Verma", "Medium", "Coordinate authentic Rajasthani cultural craft experiences."),
+        ("Mehendi Cocktail & Mocktail Bar Menu Finalization", "Mehendi", -5, "Aditya Rathore", "Medium", "Approve summer coolers, spiced gin bar, and coconut water station."),
+        # Sangeet Night (4)
+        ("Concert Trussing & High-Res LED Screen Calibration", "Sangeet", -12, "Aditya Rathore", "High", "Setup 60ft stage truss and calibrate video playback."),
+        ("Family Sangeet Choreographer Run-through & Cue Sheet", "Sangeet", -8, "Raghav Sharma", "High", "Rehearse 14 family group performances and lighting transitions."),
+        ("DJ Console & Line-Array Audio Sound Check", "Sangeet", -4, "Aditya Rathore", "Urgent", "Conduct pink noise audio calibration across the ballroom."),
+        ("Midnight Afterparty Bar & Snack Buffet Setup", "Sangeet", -2, "Pooja Verma", "Medium", "Finalize late night sliders, chaat, and coffee bar for 2 AM."),
+        # Wedding Ceremony / Pheras (4)
+        ("Royal Baraat Route, Elephants & Brass Band Coordination", "Wedding Day", -5, "Maharani Gayatri Singh", "High", "Escort vintage convertibles and royal nagada drummers."),
+        ("Vedic Head Priest (Pandit Ji) & Samagri Inspection", "Wedding Day", -3, "Pooja Verma", "High", "Verify havan kund wood, pure ghee, and auspicious muhurat timing."),
+        ("Varmala Floating Stage & Hydraulic Rose Shower Test", "Wedding Day", -2, "Aditya Rathore", "Urgent", "Test dual mechanical lifts and pneumatic rose petal cannons."),
+        ("Mandap Sacred Fire Safety Protocol & Heritage Guards", "Wedding Day", -1, "Raghav Sharma", "Urgent", "Deploy heritage security and discrete water/sand safeguards."),
+        # Reception (4)
+        ("Formal Banquet Table Placement & VIP Card Embossing", "Reception", -3, "Pooja Verma", "Medium", "Seat 400 dignitaries with personalized menu cards and silver cutlery."),
+        ("Symphony Orchestra & Jazz Quartet Warm-up", "Reception", -2, "Raghav Sharma", "Medium", "Acoustic balance for sit-down dinner and reception speeches."),
+        ("5-Tier Royal Wedding Cake Transport & Cryo Storage", "Reception", -1, "Pooja Verma", "High", "Inspect sugar floral cascading and temperature-controlled room."),
+        ("Cold Pyro Stage Sparklers & Grand Send-off Fireworks", "Reception", 0, "Aditya Rathore", "High", "Coordinate Rajasthan explosives clearance and cue sparklers."),
+    ]
+
+    PARTIAL_PACKAGE_TASKS = [
+        # 25 tasks for Partial Planning
+        ("Client Existing Vendor Contracts Audit & Gap Analysis", "Vendors", -60, "Maharani Gayatri Singh", "High", "Review scopes of client-hired vendors."),
+        ("Master Event Day Run-of-Show Timeline Integration", "Venue", -45, "Raghav Sharma", "High", "Compile single minute-by-minute schedule."),
+        ("Venue Access Windows & Loading Dock Clearances", "Venue", -40, "Aditya Rathore", "Medium", "Coordinate hotel banquet freight elevators."),
+        ("Power & Generator Capacity Verification", "Venue", -35, "Aditya Rathore", "Urgent", "Validate backup power distribution."),
+        ("Design Alignment & Production Floor Plan", "Design", -30, "Raghav Sharma", "Medium", "Verify decor measurements match venue ballroom."),
+        ("Lighting & Audio Gear Technical Inspection", "Design", -25, "Aditya Rathore", "Medium", "Ensure sound checks don't clip amplifier limits."),
+        ("Signage & Guest Directional Flow Verification", "Design", -20, "Pooja Verma", "Low", "Place entry arches and easel displays."),
+        ("Catering Service Headcount Guarantee Confirmation", "Vendors", -18, "Maharani Gayatri Singh", "High", "Confirm final guest count."),
+        ("Vendor Meal Passes & Backstage Crew Badges", "Vendors", -15, "Pooja Verma", "Medium", "Distribute crew identification tags."),
+        ("Photography Shot List & VIP Group Photos Coordination", "Vendors", -12, "Raghav Sharma", "Medium", "Coordinate family coordinator for portraits."),
+        ("Mehendi Staging & Seating Setup Audit", "Mehendi", -10, "Pooja Verma", "Medium", "Check cushions, shade, and heena tables."),
+        ("Mehendi Music & Background Audio Setup", "Mehendi", -8, "Aditya Rathore", "Medium", "Ensure dhol and playlists are operational."),
+        ("Mehendi Welcome Drinks & Refreshment Station Check", "Mehendi", -6, "Pooja Verma", "Medium", "Ensure cold drinks and water service."),
+        ("Sangeet Sound & LED Video Cue Alignment", "Sangeet", -10, "Aditya Rathore", "High", "Verify multimedia audio/video sync."),
+        ("Sangeet Stage Step Safety & Edge Lighting Check", "Sangeet", -7, "Raghav Sharma", "High", "Prevent trip hazards on performance riser."),
+        ("Sangeet Green Room & Touch-up Room Setup", "Sangeet", -5, "Pooja Verma", "Medium", "Prepare dressing rooms with full mirrors."),
+        ("Sangeet Emcee Script & Announcement Run-through", "Sangeet", -4, "Raghav Sharma", "High", "Review bridal party pronunciations."),
+        ("Baraat Assembly & Traffic Management Plan", "Wedding Day", -5, "Maharani Gayatri Singh", "High", "Ensure guest parking and road clearance."),
+        ("Mandap Seating Protocol & Religious Offerings Verification", "Wedding Day", -3, "Pooja Verma", "High", "Coordinate chairs and prayer cushions."),
+        ("Varmala Stage Mic & Spotlights Cueing", "Wedding Day", -2, "Aditya Rathore", "Urgent", "Focus warm follow-spots on couple."),
+        ("Bridal Entry Walkway & Chhatra Coordination", "Wedding Day", -1, "Raghav Sharma", "High", "Direct brothers carrying the phoolon ki chaadar."),
+        ("Pheras Fire Safety Officer Standby", "Wedding Day", 0, "Aditya Rathore", "Urgent", "Verify fire extinguisher behind backdrop."),
+        ("Reception Dinner Seating Gatekeeping", "Reception", -2, "Pooja Verma", "Medium", "Direct guests toward reserved tables."),
+        ("Reception Stage Photo Session Queue Management", "Reception", -1, "Raghav Sharma", "Medium", "Smooth flow of greeting guests."),
+        ("End-of-Night Vendor Load-out Supervision", "Reception", 0, "Aditya Rathore", "High", "Ensure no damage to palace property during breakdown."),
+    ]
+
+    @classmethod
+    def mark_deposit_paid(cls, db: Session, project_id: str) -> dict:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+
+        if not project:
+            raise ValueError(f"Wedding project '{project_id}' not found.")
+
+        now = datetime.now(timezone.utc)
+        today = now.date()
+
+        if not project.deposit_paid:
+            project.deposit_paid = True
+            project.deposit_paid_at = now
+
+        # 1. Idempotent Planning Tasks Generation
+        existing_tasks_count = db.query(PlanningTask).filter_by(project_id=project.id).count()
+
+        if existing_tasks_count == 0:
+            is_partial = "partial" in (project.package_tier or "").lower()
+            template = cls.PARTIAL_PACKAGE_TASKS if is_partial else cls.FULL_PACKAGE_TASKS
+
+            for task_title, category, day_offset, owner, priority, notes in template:
+                task_due = project.wedding_date + timedelta(days=day_offset)
+                task_id = f"TSK-{uuid.uuid4().hex[:8].upper()}"
+                db_task = PlanningTask(
+                    id=task_id,
+                    project_id=project.id,
+                    title=task_title,
+                    category=category,
+                    stage="To Plan",
+                    assigned_to=owner,
+                    priority=priority,
+                    due_date=task_due,
+                    notes=notes,
+                    is_completed=False
+                )
+                db.add(db_task)
+
+        # 2. Idempotent 3 Payment Stages Generation
+        existing_stages_count = db.query(PaymentStage).filter_by(project_id=project.id).count()
+
+        if existing_stages_count == 0:
+            budget = project.estimated_budget or Decimal("5000000.00")
+            
+            # Advance due = wedding date - 30 days
+            advance_due = project.wedding_date - timedelta(days=30)
+            # Final after the event = wedding date + 3 days
+            final_due = project.wedding_date + timedelta(days=3)
+
+            stage1 = PaymentStage(
+                id=f"PAY-{uuid.uuid4().hex[:8].upper()}",
+                project_id=project.id,
+                stage_name="Booking Retainer Deposit",
+                percentage=Decimal("25.00"),
+                amount=Decimal(str(round(budget * Decimal("0.25"), 2))),
+                due_date=today,
+                due_description="Booking confirmation retainer (25%) upon contract execution",
+                status="Paid",
+                paid_at=project.deposit_paid_at
+            )
+            stage2 = PaymentStage(
+                id=f"PAY-{uuid.uuid4().hex[:8].upper()}",
+                project_id=project.id,
+                stage_name="Advance Production Milestone",
+                percentage=Decimal("40.00"),
+                amount=Decimal(str(round(budget * Decimal("0.40"), 2))),
+                due_date=advance_due,
+                due_description="Production advance (40%) due 30 days prior to event",
+                status="Pending",
+                paid_at=None
+            )
+            stage3 = PaymentStage(
+                id=f"PAY-{uuid.uuid4().hex[:8].upper()}",
+                project_id=project.id,
+                stage_name="Final Settlement Balance",
+                percentage=Decimal("35.00"),
+                amount=Decimal(str(round(budget * Decimal("0.35"), 2))),
+                due_date=final_due,
+                due_description="Final settlement balance (35%) post-event completion",
+                status="Pending",
+                paid_at=None
+            )
+            db.add_all([stage1, stage2, stage3])
+
+        db.commit()
+        db.refresh(project)
+
+        total_tasks = db.query(PlanningTask).filter_by(project_id=project.id).count()
+        total_stages = db.query(PaymentStage).filter_by(project_id=project.id).count()
+
+        return {
+            "project_id": project.id,
+            "project_code": project.project_code,
+            "deposit_paid": project.deposit_paid,
+            "deposit_paid_at": project.deposit_paid_at,
+            "tasks_count": total_tasks,
+            "payment_stages_count": total_stages,
+            "package_tier": project.package_tier,
+            "message": f"Deposit marked paid. {total_tasks} planning tasks and {total_stages} payment milestones active."
+        }
+
+    @staticmethod
+    def list_tasks(
+        db: Session,
+        project_id: str,
+        stage: Optional[str] = None,
+        category: Optional[str] = None,
+        assigned_to: Optional[str] = None
+    ) -> List[PlanningTask]:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        query = db.query(PlanningTask).filter(PlanningTask.project_id == project.id)
+        if stage:
+            query = query.filter(PlanningTask.stage == stage)
+        if category:
+            query = query.filter(PlanningTask.category == category)
+        if assigned_to:
+            query = query.filter(PlanningTask.assigned_to == assigned_to)
+
+        return query.order_by(PlanningTask.due_date.asc()).all()
+
+    @staticmethod
+    def update_task(
+        db: Session,
+        project_id: str,
+        task_id: str,
+        task_in: PlanningTaskUpdate
+    ) -> Optional[PlanningTask]:
+        task = db.query(PlanningTask).filter(PlanningTask.id == task_id).first()
+        if not task:
+            return None
+
+        update_dict = task_in.model_dump(exclude_unset=True)
+
+        if "stage" in update_dict:
+            new_stage = update_dict["stage"]
+            if new_stage == "Done":
+                task.is_completed = True
+                task.completed_at = datetime.now(timezone.utc)
+            else:
+                if update_dict.get("is_completed") is not True:
+                    task.is_completed = False
+                    task.completed_at = None
+
+        if "is_completed" in update_dict:
+            if update_dict["is_completed"] and not task.is_completed:
+                task.completed_at = datetime.now(timezone.utc)
+                if task.stage != "Done":
+                    task.stage = "Done"
+            elif not update_dict["is_completed"]:
+                task.completed_at = None
+
+        for field, value in update_dict.items():
+            if value is not None:
+                setattr(task, field, value)
+
+        db.commit()
+        db.refresh(task)
+        return task
+
+    @staticmethod
+    def list_payment_stages(db: Session, project_id: str) -> List[PaymentStage]:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        return db.query(PaymentStage).filter(PaymentStage.project_id == project.id).order_by(PaymentStage.due_date.asc()).all()
+
+    @staticmethod
+    def update_payment_stage(
+        db: Session,
+        project_id: str,
+        stage_id: str,
+        stage_in: PaymentStageUpdate
+    ) -> Optional[PaymentStage]:
+        stage = db.query(PaymentStage).filter(PaymentStage.id == stage_id).first()
+        if not stage:
+            return None
+
+        update_dict = stage_in.model_dump(exclude_unset=True)
+        if "status" in update_dict:
+            new_status = update_dict["status"]
+            if new_status == "Paid" and stage.status != "Paid":
+                stage.paid_at = datetime.now(timezone.utc)
+            elif new_status != "Paid":
+                stage.paid_at = None
+
+        for field, value in update_dict.items():
+            if value is not None:
+                setattr(stage, field, value)
+
+        db.commit()
+        db.refresh(stage)
+        return stage
+
+    # =====================================================================
+    # P0 Item 4: Team Time Entries & Founder Profitability
+    # =====================================================================
+
+    @staticmethod
+    def add_time_entry(db: Session, project_id: str, entry_in: TeamTimeEntryCreate) -> TeamTimeEntry:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        entry_id = f"TME-{uuid.uuid4().hex[:8].upper()}"
+        db_entry = TeamTimeEntry(
+            id=entry_id,
+            project_id=project.id,
+            employee_name=entry_in.employee_name,
+            role=entry_in.role,
+            hours=entry_in.hours,
+            hourly_rate=entry_in.hourly_rate,
+            task_description=entry_in.task_description,
+            entry_date=entry_in.entry_date
+        )
+        db.add(db_entry)
+        db.commit()
+        db.refresh(db_entry)
+        return db_entry
+
+    @staticmethod
+    def list_time_entries(db: Session, project_id: str) -> List[TeamTimeEntry]:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Project '{project_id}' not found.")
+
+        return db.query(TeamTimeEntry).filter(TeamTimeEntry.project_id == project.id).order_by(TeamTimeEntry.entry_date.desc()).all()
+
+    @classmethod
+    def get_profitability(cls, db: Session, project_id: str) -> dict:
+        project = db.query(WeddingProject).filter(
+            or_(WeddingProject.id == project_id, WeddingProject.project_code == project_id),
+            WeddingProject.is_deleted == False
+        ).first()
+        if not project:
+            raise ValueError(f"Wedding project '{project_id}' not found.")
+
+        # 1. Client Payments Received (sum of Paid payment stages)
+        paid_stages = db.query(PaymentStage).filter(
+            PaymentStage.project_id == project.id,
+            PaymentStage.status == "Paid"
+        ).all()
+        client_payments_received = sum([Decimal(str(p.amount)) for p in paid_stages], Decimal("0.00"))
+
+        # Fallback: if deposit is paid but stages weren't created or paid yet
+        if client_payments_received == Decimal("0.00") and project.deposit_paid:
+            client_payments_received = Decimal(str(round((project.estimated_budget or Decimal("0.00")) * Decimal("0.25"), 2)))
+
+        # 2. Vendor Contracted Costs (sum of ProjectVendor contract_amount)
+        assigned_vendors = db.query(ProjectVendor).filter(
+            ProjectVendor.project_id == project.id,
+            ProjectVendor.status.in_(["Contracted", "Confirmed", "Completed"])
+        ).all()
+        vendor_contracted_costs = sum([Decimal(str(v.contract_amount)) for v in assigned_vendors], Decimal("0.00"))
+
+        # If no ProjectVendor records, check CateringPlan agreed_cost
+        if vendor_contracted_costs == Decimal("0.00"):
+            c_plans = db.query(CateringPlan).filter(
+                CateringPlan.project_id == project.id,
+                CateringPlan.agreed_cost.isnot(None)
+            ).all()
+            vendor_contracted_costs = sum([Decimal(str(cp.agreed_cost)) for cp in c_plans], Decimal("0.00"))
+
+        # 3. Team Labor Costs (sum of hours * hourly_rate)
+        time_entries = db.query(TeamTimeEntry).filter(TeamTimeEntry.project_id == project.id).all()
+        team_labor_costs = sum([Decimal(str(t.hours)) * Decimal(str(t.hourly_rate)) for t in time_entries], Decimal("0.00"))
+        total_team_hours = sum([Decimal(str(t.hours)) for t in time_entries], Decimal("0.00"))
+
+        # 4. Profit and Margin
+        founder_gross_profit = client_payments_received - vendor_contracted_costs - team_labor_costs
+        if client_payments_received > Decimal("0.00"):
+            profit_margin_percentage = Decimal(str(round((founder_gross_profit / client_payments_received) * Decimal("100.00"), 2)))
+        else:
+            profit_margin_percentage = Decimal("0.00")
+
+        return {
+            "project_id": project.id,
+            "project_code": project.project_code,
+            "project_name": project.project_name,
+            "client_payments_received": client_payments_received,
+            "vendor_contracted_costs": vendor_contracted_costs,
+            "team_labor_costs": team_labor_costs,
+            "founder_gross_profit": founder_gross_profit,
+            "profit_margin_percentage": profit_margin_percentage,
+            "time_entries_count": len(time_entries),
+            "total_team_hours": total_team_hours
+        }
 
 
 project_service = ProjectService()
